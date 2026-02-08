@@ -218,7 +218,7 @@ go test ./pkg/tools/... -v
 
 **问题**：WhatsApp 已连接但手机发送消息无回复，Web UI 也无会话记录。  
 **原因**：Baileys 标记手机发出的消息为 `fromMe=true`，原逻辑默认忽略该类型，导致入站消息被丢弃。  
-**修复**：新增 `channels.whatsapp.allowSelf` 开关并默认关闭；启用时允许处理 `fromMe` 消息，并加入“最近出站消息”回环过滤避免自循环。  
+**修复**：新增 `channels.whatsapp.allowSelf` 开关并默认关闭；Bridge 不再丢弃 `fromMe` 消息；启用时允许处理 `fromMe` 消息，并加入“最近出站消息”回环过滤避免自循环。  
 **验证**：
 - Bridge 输出 QR & 连接成功  
 - CLI `whatsapp bind` 能收到并打印 QR  
