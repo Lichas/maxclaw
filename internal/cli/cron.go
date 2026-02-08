@@ -73,24 +73,6 @@ var cronAddCmd = &cobra.Command{
 		if _, err := logging.Init(config.GetDataDir()); err != nil {
 			fmt.Printf("⚠ logging init error: %v\n", err)
 		}
-		if _, err := logging.Init(config.GetDataDir()); err != nil {
-			fmt.Printf("⚠ logging init error: %v\n", err)
-		}
-		if _, err := logging.Init(config.GetDataDir()); err != nil {
-			fmt.Printf("⚠ logging init error: %v\n", err)
-		}
-		if _, err := logging.Init(config.GetDataDir()); err != nil {
-			fmt.Printf("⚠ logging init error: %v\n", err)
-		}
-		if _, err := logging.Init(config.GetDataDir()); err != nil {
-			fmt.Printf("⚠ logging init error: %v\n", err)
-		}
-		if _, err := logging.Init(config.GetDataDir()); err != nil {
-			fmt.Printf("⚠ logging init error: %v\n", err)
-		}
-		if _, err := logging.Init(config.GetDataDir()); err != nil {
-			fmt.Printf("⚠ logging init error: %v\n", err)
-		}
 
 		storePath := filepath.Join(cfg.Agents.Defaults.Workspace, ".cron", "jobs.json")
 		service := cron.NewService(storePath)
