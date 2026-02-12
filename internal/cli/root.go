@@ -30,6 +30,7 @@ func init() {
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(whatsappCmd)
 	rootCmd.AddCommand(telegramCmd)
+	rootCmd.AddCommand(skillsCmd)
 	rootCmd.AddCommand(versionCmd)
 }
 

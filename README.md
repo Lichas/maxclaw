@@ -61,6 +61,25 @@
 }
 ```
 
+### Skills 支持
+技能目录位于 `<workspace>/skills`，支持两种结构：
+- `skills/<name>.md`
+- `skills/<name>/SKILL.md`
+
+触发语法：
+- `@skill:<name>`：只加载指定技能
+- `$<name>`：只加载指定技能
+- `@skill:all` / `$all`：加载全部技能
+- `@skill:none` / `$none`：本轮禁用技能加载
+
+管理命令：
+```bash
+./build/nanobot-go skills list
+./build/nanobot-go skills show <name>
+./build/nanobot-go skills validate
+./build/nanobot-go skills add https://github.com/vercel-labs/agent-skills --skill vercel-react-best-practices
+```
+
 ## Web UI
 Web UI 与 API 同端口，默认 `18890`：
 
@@ -254,6 +273,25 @@ Restrict tools to workspace only:
     "restrictToWorkspace": true
   }
 }
+```
+
+### Skills Support
+Skills are loaded from `<workspace>/skills` with two supported layouts:
+- `skills/<name>.md`
+- `skills/<name>/SKILL.md`
+
+Selectors:
+- `@skill:<name>`: load only one skill
+- `$<name>`: load only one skill
+- `@skill:all` / `$all`: load all skills
+- `@skill:none` / `$none`: disable skills for this turn
+
+Management commands:
+```bash
+./build/nanobot-go skills list
+./build/nanobot-go skills show <name>
+./build/nanobot-go skills validate
+./build/nanobot-go skills add https://github.com/vercel-labs/agent-skills --skill vercel-react-best-practices
 ```
 
 ## Web UI

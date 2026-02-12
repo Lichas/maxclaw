@@ -181,7 +181,11 @@ Skills 是一组可复用的本地指令文件。将技能放在本目录下的 
 - skills/<name>.md
 - skills/<name>/SKILL.md
 
-在对话中使用 @skill:<name> 可只加载指定技能。
+触发方式：
+- @skill:<name> 只加载指定技能
+- $<name> 只加载指定技能
+- @skill:all / $all 加载全部技能
+- @skill:none / $none 禁用技能加载
 `
 		if err := os.WriteFile(skillsReadme, []byte(skillsContent), 0644); err != nil {
 			return fmt.Errorf("failed to create skills README: %w", err)

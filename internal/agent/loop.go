@@ -13,6 +13,7 @@ import (
 	"github.com/Lichas/nanobot-go/internal/logging"
 	"github.com/Lichas/nanobot-go/internal/providers"
 	"github.com/Lichas/nanobot-go/internal/session"
+	"github.com/Lichas/nanobot-go/internal/skills"
 	"github.com/Lichas/nanobot-go/pkg/tools"
 )
 
@@ -336,6 +337,6 @@ func (a *AgentLoop) convertSessionMessages(msgs []session.Message) []providers.M
 // LoadSkills 加载技能文件
 func (a *AgentLoop) LoadSkills() error {
 	skillsDir := filepath.Join(a.Workspace, "skills")
-	_, err := loadSkills(skillsDir)
+	_, err := skills.Discover(skillsDir)
 	return err
 }

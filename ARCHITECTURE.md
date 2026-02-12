@@ -11,6 +11,10 @@
   - 负责对话轮次与工具调用
   - 调用 `pkg/tools` 完成文件/命令/web 等动作
   - 会话与记忆保存在 workspace 目录
+- **Skills (`internal/skills`)**：
+  - 从 `<workspace>/skills` 发现并加载技能文档
+  - 支持 `@skill:<name>` 与 `$<name>` 按需选择
+  - 支持 `all/none` 特殊选择器
 - **Channels (`internal/channels`)**：
   - Telegram（Bot API 轮询）
   - WhatsApp（Bridge WebSocket）
@@ -59,6 +63,21 @@
   }
 }
 ```
+
+## Skills 机制
+
+- **发现路径**：`<workspace>/skills`
+  - `skills/<name>.md`
+  - `skills/<name>/SKILL.md`
+- **过滤规则**：
+  - 未指定选择器时，默认加载全部技能
+  - `@skill:<name>` 或 `$<name>` 时仅加载匹配技能
+  - `@skill:all` / `$all`：加载全部
+  - `@skill:none` / `$none`：本轮不加载
+- **管理命令**：
+  - `nanobot skills list`
+  - `nanobot skills show <name>`
+  - `nanobot skills validate`
 
 ## WhatsApp / Telegram 绑定
 
