@@ -1,0 +1,113 @@
+name: Release Artifacts
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.goos }}-${{ matrix.goarch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            runner: ubuntu-latest
+          - goos: linux
+            goarch: arm64
+            runner: ubuntu-latest
+          - goos: darwin
+            goarch: amd64
+            runner: ubuntu-latest
+          - goos: darwin
+            goarch: arm64
+            runner: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build bridge and webui
+        run: |
+          npm ci --prefix bridge
+          npm run build --prefix bridge
+          npm ci --prefix webui
+          npm run build --prefix webui
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p dist release
+          go build -trimpath -ldflags "-s -w" -o release/nanobot-go ./cmd/nanobot
+
+      - name: Assemble package
+        run: |
+          PKG_DIR="release/package"
+          mkdir -p "$PKG_DIR"
+
+          cp release/nanobot-go "$PKG_DIR/"
+          cp README.md LICENSE "$PKG_DIR/"
+          cp install.sh install_linux.sh install_mac.sh "$PKG_DIR/"
+
+          mkdir -p "$PKG_DIR/scripts" "$PKG_DIR/deploy/systemd" "$PKG_DIR/bridge" "$PKG_DIR/webui" "$PKG_DIR/webfetcher"
+          cp scripts/run_bridge.sh scripts/run_gateway.sh "$PKG_DIR/scripts/"
+          cp deploy/systemd/*.service "$PKG_DIR/deploy/systemd/"
+
+          cp -R bridge/dist "$PKG_DIR/bridge/dist"
+          cp bridge/package.json bridge/package-lock.json "$PKG_DIR/bridge/"
+
+          cp -R webui/dist "$PKG_DIR/webui/dist"
+
+          cp webfetcher/fetch.mjs webfetcher/package.json webfetcher/package-lock.json "$PKG_DIR/webfetcher/"
+
+          tar -C "$PKG_DIR" -czf "dist/nanobot-go_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz" .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nanobot-go_${{ matrix.goos }}_${{ matrix.goarch }}
+          path: dist/nanobot-go_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum *.tar.gz > sha256sums.txt
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/sha256sums.txt

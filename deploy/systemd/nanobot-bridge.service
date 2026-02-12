@@ -1,0 +1,18 @@
+[Unit]
+Description=nanobot-go WhatsApp Bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__SERVICE_USER__
+Group=__SERVICE_USER__
+WorkingDirectory=__APP_DIR__/bridge
+Environment=HOME=__HOME_DIR__
+EnvironmentFile=-/etc/default/nanobot-go
+ExecStart=__APP_DIR__/scripts/run_bridge.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -20,6 +20,32 @@
 4. 配置：编辑 `~/.nanobot/config.json`
 5. 启动：`./build/nanobot-go gateway`
 
+## Linux / macOS 一键安装
+可直接用自动分流安装器（会按系统选择 `install_linux.sh` 或 `install_mac.sh`）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash
+```
+
+常用参数示例：
+
+```bash
+# 指定版本
+curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash -s -- --version v0.1.0
+
+# Linux 指定安装目录和端口
+curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash -s -- --dir /opt/nanobot-go --bridge-port 3001 --gateway-port 18890
+
+# macOS 不安装 launchd（仅拷贝文件）
+curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash -s -- --no-launchd
+```
+
+Linux 默认会安装并启动：
+- `nanobot-bridge.service`
+- `nanobot-gateway.service`
+
+安装后请编辑 `~/.nanobot/config.json` 填写 API Key 与模型。
+
 ## 配置文件
 路径：`~/.nanobot/config.json`
 
@@ -77,7 +103,7 @@
 ./build/nanobot-go skills list
 ./build/nanobot-go skills show <name>
 ./build/nanobot-go skills validate
-./build/nanobot-go skills add https://github.com/vercel-labs/agent-skills --skill vercel-react-best-practices
+./build/nanobot-go skills add https://github.com/vercel-labs/agent-skills --path skills --skill react-best-practices
 ```
 
 ## Web UI
@@ -235,6 +261,32 @@ make down-daemon
 4. Configure: edit `~/.nanobot/config.json`
 5. Run: `./build/nanobot-go gateway`
 
+## One-Command Install (Linux / macOS)
+Use the auto-switch installer (it dispatches to `install_linux.sh` or `install_mac.sh`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash
+```
+
+Common examples:
+
+```bash
+# Pin a specific release tag
+curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash -s -- --version v0.1.0
+
+# Linux custom install dir and ports
+curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash -s -- --dir /opt/nanobot-go --bridge-port 3001 --gateway-port 18890
+
+# macOS install files only (skip launchd)
+curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash -s -- --no-launchd
+```
+
+On Linux, installer enables and starts:
+- `nanobot-bridge.service`
+- `nanobot-gateway.service`
+
+After install, edit `~/.nanobot/config.json` and set your API key/model.
+
 ## Config File
 Path: `~/.nanobot/config.json`
 
@@ -292,7 +344,7 @@ Management commands:
 ./build/nanobot-go skills list
 ./build/nanobot-go skills show <name>
 ./build/nanobot-go skills validate
-./build/nanobot-go skills add https://github.com/vercel-labs/agent-skills --skill vercel-react-best-practices
+./build/nanobot-go skills add https://github.com/vercel-labs/agent-skills --path skills --skill react-best-practices
 ```
 
 ## Web UI
