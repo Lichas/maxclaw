@@ -126,7 +126,15 @@ else
   make webui-build >/dev/null
 
   echo "==> Starting gateway on port $GATEWAY_PORT"
-  nohup "$ROOT_DIR/build/nanobot-go" gateway -p "$GATEWAY_PORT" > "$LOG_DIR/gateway.log" 2>&1 &
+  nohup env GATEWAY_PORT="$GATEWAY_PORT" \
+    PROXY_URL="${PROXY_URL:-}" \
+    HTTPS_PROXY="${HTTPS_PROXY:-}" \
+    HTTP_PROXY="${HTTP_PROXY:-}" \
+    ALL_PROXY="${ALL_PROXY:-}" \
+    https_proxy="${https_proxy:-}" \
+    http_proxy="${http_proxy:-}" \
+    all_proxy="${all_proxy:-}" \
+    "$ROOT_DIR/build/nanobot-go" gateway -p "$GATEWAY_PORT" > "$LOG_DIR/gateway.log" 2>&1 &
   echo $! > "$PID_DIR/gateway.pid"
   echo "Gateway PID: $(cat "$PID_DIR/gateway.pid")"
 fi
