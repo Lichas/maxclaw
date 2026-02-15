@@ -110,16 +110,41 @@ func (b *ContextBuilder) buildSystemPrompt(channel, chatID, currentMessage strin
 		parts = append(parts, "## Long-term Memory\n"+string(content))
 	}
 
-	// 6. Skills
+	// 6. 读取 heartbeat.md（OpenClaw 风格：短周期状态/优先级）
+	// 优先读取 memory/heartbeat.md，兼容根目录 heartbeat.md
+	if hb := b.loadHeartbeat(); hb != "" {
+		parts = append(parts, "## Heartbeat\n"+hb)
+	}
+
+	// 7. Skills
 	if skillsSection := b.buildSkillsSection(currentMessage); skillsSection != "" {
 		parts = append(parts, skillsSection)
 	}
 
-	// 7. 动态环境信息
+	// 8. 动态环境信息
 	envSection := b.buildEnvironmentSection(channel, chatID)
 	parts = append(parts, envSection)
 
 	return strings.Join(parts, "\n\n")
+}
+
+func (b *ContextBuilder) loadHeartbeat() string {
+	candidates := []string{
+		filepath.Join(b.workspace, "memory", "heartbeat.md"),
+		filepath.Join(b.workspace, "heartbeat.md"),
+	}
+
+	for _, path := range candidates {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		text := strings.TrimSpace(string(content))
+		if text != "" {
+			return text
+		}
+	}
+	return ""
 }
 
 // buildEnvironmentSection 构建环境信息部分

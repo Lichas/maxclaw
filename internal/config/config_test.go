@@ -170,4 +170,5 @@ func TestCreateWorkspaceTemplates(t *testing.T) {
 	assert.FileExists(t, filepath.Join(workspace, "skills", "README.md"))
 	assert.FileExists(t, filepath.Join(workspace, "skills", "example", "SKILL.md"))
 	assert.FileExists(t, filepath.Join(workspace, "memory", "MEMORY.md"))
+	assert.FileExists(t, filepath.Join(workspace, "memory", "heartbeat.md"))
 }

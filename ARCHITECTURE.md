@@ -11,6 +11,7 @@
   - 负责对话轮次与工具调用
   - 调用 `pkg/tools` 完成文件/命令/web 等动作
   - 会话与记忆保存在 workspace 目录
+  - 自动注入长期记忆 `memory/MEMORY.md` 与短周期心跳 `memory/heartbeat.md`
 - **Skills (`internal/skills`)**：
   - 从 `<workspace>/skills` 发现并加载技能文档
   - 支持 `@skill:<name>` 与 `$<name>` 按需选择
@@ -85,3 +86,11 @@
   - CLI：`nanobot whatsapp bind --bridge ws://localhost:3001`
   - Web UI：状态页显示二维码
 - **Telegram**：使用 Bot Token，Web UI 显示 Bot 链接二维码用于快速打开聊天。
+
+## Heartbeat 机制（参考 OpenClaw）
+
+- 文件位置优先级：
+  1. `<workspace>/memory/heartbeat.md`
+  2. `<workspace>/heartbeat.md`（兼容）
+- 注入时机：每次 `ContextBuilder.BuildMessages` 构造 system prompt 时
+- 用途：存放短周期状态（当前重点、阻塞、下一检查点），与长期记忆 `MEMORY.md` 分层管理

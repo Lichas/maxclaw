@@ -241,5 +241,29 @@ This file stores important information that should persist across sessions.
 		}
 	}
 
+	// 创建 heartbeat.md（短周期工作状态）
+	heartbeatPath := filepath.Join(memoryDir, "heartbeat.md")
+	if _, err := os.Stat(heartbeatPath); os.IsNotExist(err) {
+		heartbeatContent := `# Heartbeat
+
+Last Updated: (fill automatically or manually)
+
+## Focus Now
+
+- Current top priorities
+
+## Blockers
+
+- What is blocked and why
+
+## Next Checkpoint
+
+- What should happen next
+`
+		if err := os.WriteFile(heartbeatPath, []byte(heartbeatContent), 0644); err != nil {
+			return fmt.Errorf("failed to create heartbeat.md: %w", err)
+		}
+	}
+
 	return nil
 }

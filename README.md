@@ -10,6 +10,7 @@
 - 多渠道接入：Telegram、WhatsApp（Bridge）、Discord、WebSocket
 - Web UI + API（同一端口，打包后静态托管）
 - 定时任务（Cron/Once/Every）
+- Heartbeat 上下文（`memory/heartbeat.md`）
 - 可选浏览器抓取（Node + Playwright）
 - 完整日志：`~/.nanobot/logs`
 
@@ -86,6 +87,13 @@ Linux 默认会安装并启动：
   }
 }
 ```
+
+### Heartbeat（短周期状态）
+受 OpenClaw 的 `heartbeat.md` 思路启发，nanobot 会在每轮对话自动加载：
+- `<workspace>/memory/heartbeat.md`（优先）
+- `<workspace>/heartbeat.md`（兼容）
+
+用于记录当前优先级、阻塞项、下一步检查点。`onboard` 会自动创建模板文件。
 
 ### Skills 支持
 技能目录位于 `<workspace>/skills`，支持两种结构：
@@ -256,6 +264,7 @@ make down-daemon
 - Multi-channel: Telegram, WhatsApp (Bridge), Discord, WebSocket
 - Web UI + API on the same port (static bundle served by gateway)
 - Cron/Once/Every scheduler
+- Heartbeat context (`memory/heartbeat.md`)
 - Optional browser fetch (Node + Playwright)
 - Structured logs in `~/.nanobot/logs`
 
@@ -332,6 +341,13 @@ Restrict tools to workspace only:
   }
 }
 ```
+
+### Heartbeat (Short-Cycle Status)
+Inspired by OpenClaw's `heartbeat.md`, nanobot auto-loads heartbeat context on each turn:
+- `<workspace>/memory/heartbeat.md` (preferred)
+- `<workspace>/heartbeat.md` (fallback)
+
+Use it to track current priorities, blockers, and next checkpoint. `onboard` creates a starter template automatically.
 
 ### Skills Support
 Skills are loaded from `<workspace>/skills` with two supported layouts:
