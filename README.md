@@ -243,6 +243,9 @@ make down-daemon
 ## 架构说明
 详见 `ARCHITECTURE.md`。
 
+## 维护与排障
+统一维护手册：`MAINTENANCE.md`
+
 </details>
 
 <details>
@@ -485,5 +488,8 @@ Files:
 
 ## Architecture
 See `ARCHITECTURE.md` for details.
+
+## Operations & Troubleshooting
+Unified runbook: `MAINTENANCE.md`
 
 </details>

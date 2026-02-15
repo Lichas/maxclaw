@@ -260,3 +260,36 @@ go test ./pkg/tools/... -v
   - 失败时打印日志 tail 并返回错误  
 **验证**：
 - 启动后立即检查 `18890` / `3001` 监听与 `/api/status` 返回正常。
+
+## 2026-02-15 ~ 2026-02-16 事件总结：Telegram 间歇性无回复
+
+**用户现象**：
+- Telegram 发送 `hi` / `how areyou` / 搜索请求后，偶发无回复。
+- `make up-daemon` 显示“启动成功”，但过一会儿又收不到消息。  
+
+**排查过程（关键证据）**：
+1. 先看运行态：`/api/status` 与 `lsof -iTCP:18890`，发现 PID 文件存在但端口未监听（网关已退出）。
+2. 查 Telegram 服务端队列：`getWebhookInfo` / `getUpdates`，确认 `pending_update_count` 增长且存在未消费消息。
+3. 查本地日志：`channels.log` 在网关存活时可看到 `telegram inbound/send`，离线期间无新记录。
+4. 对比环境变量：发现代理变量在 daemon 场景未稳定传递，导致 Telegram 轮询偶发不可用。  
+
+**最终根因（组合问题）**：
+- 代理变量传递不稳定（大小写变量与 daemon 启动环境差异）。
+- `start_daemon.sh` 早期仅写 PID，不验证进程与端口健康，出现“假启动”。
+- 仅清理 Bridge 端口，旧 Gateway 进程/占用问题会干扰重启。  
+
+**最终修复集合**：
+- Telegram 通道支持 `channels.telegram.proxy`，并增加轮询错误日志。
+- 启动脚本支持大小写代理变量并传递给 gateway/bridge。
+- `make up` / `make up-daemon` 同时强制清理 Bridge + Gateway 端口占用。
+- `start_daemon.sh` 增加启动后健康检查（PID 存活 + 端口监听），失败即报错并打印日志。  
+
+**回归检查清单**：
+```bash
+make restart-daemon
+lsof -nP -iTCP:3001 -sTCP:LISTEN
+lsof -nP -iTCP:18890 -sTCP:LISTEN
+curl -sS http://127.0.0.1:18890/api/status
+tail -f /Users/lua/.nanobot/logs/channels.log
+```
+预期：`channels` 包含 `telegram`，`telegram.status=ready`，并能看到 `telegram inbound` 与 `telegram send`。

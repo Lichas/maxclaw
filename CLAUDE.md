@@ -18,6 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **If you fix a bug**, append a concise entry to `BUGFIX.md` (what broke, root cause, fix, verification).
 - **When adding features**, update the docs (README / architecture) and validate the path end-to-end.
 - **Assume ownership of outcomes**: if something could be flaky, add logging/guards and document the caveats.
+- **For runtime incidents**, follow `MAINTENANCE.md` first (process/port/proxy/log order) before ad-hoc debugging.
 
 ## Development Commands
 
