@@ -89,6 +89,7 @@ var gatewayCmd = &cobra.Command{
 			tgChannel := channels.NewTelegramChannel(&channels.TelegramConfig{
 				Token:   cfg.Channels.Telegram.Token,
 				Enabled: cfg.Channels.Telegram.Enabled,
+				Proxy:   cfg.Channels.Telegram.Proxy,
 			})
 			tgChannel.SetMessageHandler(func(msg *channels.Message) {
 				// 转发到消息总线

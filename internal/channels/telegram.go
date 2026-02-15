@@ -19,6 +19,7 @@ import (
 type TelegramConfig struct {
 	Token   string `json:"token"`
 	Enabled bool   `json:"enabled"`
+	Proxy   string `json:"proxy,omitempty"`
 }
 
 // TelegramChannel Telegram 频道
@@ -39,10 +40,18 @@ type TelegramChannel struct {
 
 // NewTelegramChannel 创建 Telegram 频道
 func NewTelegramChannel(config *TelegramConfig) *TelegramChannel {
+	transport := &http.Transport{Proxy: http.ProxyFromEnvironment}
+	if proxy := strings.TrimSpace(config.Proxy); proxy != "" {
+		if parsed, err := url.Parse(proxy); err == nil {
+			transport.Proxy = http.ProxyURL(parsed)
+		}
+	}
+
 	return &TelegramChannel{
 		config: config,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Transport: transport,
+			Timeout:   30 * time.Second,
 		},
 		stopChan: make(chan struct{}),
 		offset:   0,
@@ -119,12 +128,22 @@ func (t *TelegramChannel) fetchUpdates() {
 
 	resp, err := t.httpClient.Get(apiURL + "?" + params.Encode())
 	if err != nil {
+		st := t.Status()
+		t.setStatus("error", st.Username, st.Name, err.Error())
+		if lg := logging.Get(); lg != nil && lg.Channels != nil {
+			lg.Channels.Printf("telegram getUpdates error: %v", err)
+		}
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		st := t.Status()
+		t.setStatus("error", st.Username, st.Name, err.Error())
+		if lg := logging.Get(); lg != nil && lg.Channels != nil {
+			lg.Channels.Printf("telegram readUpdates error: %v", err)
+		}
 		return
 	}
 
@@ -149,11 +168,26 @@ func (t *TelegramChannel) fetchUpdates() {
 	}
 
 	if err := json.Unmarshal(body, &result); err != nil {
+		st := t.Status()
+		t.setStatus("error", st.Username, st.Name, err.Error())
+		if lg := logging.Get(); lg != nil && lg.Channels != nil {
+			lg.Channels.Printf("telegram parseUpdates error: %v", err)
+		}
 		return
 	}
 
 	if !result.OK {
+		st := t.Status()
+		t.setStatus("error", st.Username, st.Name, "getUpdates returned not ok")
+		if lg := logging.Get(); lg != nil && lg.Channels != nil {
+			lg.Channels.Printf("telegram getUpdates not ok")
+		}
 		return
+	}
+
+	st := t.Status()
+	if st.Status != "ready" {
+		t.setStatus("ready", st.Username, st.Name, "")
 	}
 
 	for _, update := range result.Result {

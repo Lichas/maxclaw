@@ -149,6 +149,7 @@ WhatsApp 通过 `bridge/`（Baileys）接入，Go 侧通过 WebSocket 连接 Bri
 ./build/nanobot-go telegram bind --token "123456:AA..."
 ```
 3. Web UI：状态页显示打开聊天的二维码
+4. 如网络需要代理，可在配置中设置 `channels.telegram.proxy`（例如 `http://127.0.0.1:7897`）
 
 ## 频道配置示例
 ```json
@@ -157,7 +158,8 @@ WhatsApp 通过 `bridge/`（Baileys）接入，Go 侧通过 WebSocket 连接 Bri
     "telegram": {
       "enabled": true,
       "token": "your-bot-token",
-      "allowFrom": []
+      "allowFrom": [],
+      "proxy": ""
     },
     "discord": {
       "enabled": true,
@@ -390,6 +392,7 @@ If you use a personal WhatsApp account and want phone messages to trigger replie
 ./build/nanobot-go telegram bind --token "123456:AA..."
 ```
 3. Web UI shows a QR that opens the bot chat
+4. If your network requires a proxy, set `channels.telegram.proxy` (for example `http://127.0.0.1:7897`)
 
 ## Channel Config Example
 ```json
@@ -398,7 +401,8 @@ If you use a personal WhatsApp account and want phone messages to trigger replie
     "telegram": {
       "enabled": true,
       "token": "your-bot-token",
-      "allowFrom": []
+      "allowFrom": [],
+      "proxy": ""
     },
     "discord": {
       "enabled": true,

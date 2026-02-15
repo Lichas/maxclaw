@@ -223,3 +223,18 @@ go test ./pkg/tools/... -v
 - Bridge 输出 QR & 连接成功  
 - CLI `whatsapp bind` 能收到并打印 QR  
 - 启用 `allowSelf=true` 后，手机发消息能进入会话并触发回复  
+
+## 2026-02-15 - Telegram 收不到回复（代理变量未生效）
+
+**问题**：Telegram 机器人显示已绑定，但用户发送 `hi/how areyou` 无回复。  
+**原因**：
+- 网关进程未继承到可用代理，`getUpdates` 请求无法连通 Telegram。
+- 启动脚本仅识别大写代理变量（`HTTP_PROXY/HTTPS_PROXY/ALL_PROXY`），忽略了常见小写变量（`http_proxy/https_proxy/all_proxy`）。
+- Telegram 通道未使用 `channels.telegram.proxy` 配置，且轮询失败缺少日志，排查成本高。  
+**修复**：
+- 启动脚本支持大小写代理变量并统一导出给 bridge/gateway。
+- Telegram 通道新增 `proxy` 配置接入（`channels.telegram.proxy`），HTTP 客户端支持显式代理。
+- 补充 `getUpdates` 失败日志与状态错误信息。  
+**验证**：
+- `api/status` 显示 `channels` 包含 `telegram` 且状态为 `ready`。
+- Telegram 入站消息可被消费，不再堆积在 `getUpdates` pending 队列中。

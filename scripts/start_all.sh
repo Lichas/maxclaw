@@ -23,7 +23,7 @@ resolve_bridge_proxy() {
     echo "$BRIDGE_PROXY"
     return
   fi
-  for var in PROXY_URL HTTPS_PROXY HTTP_PROXY ALL_PROXY; do
+  for var in PROXY_URL HTTPS_PROXY HTTP_PROXY ALL_PROXY https_proxy http_proxy all_proxy; do
     val="${!var-}"
     if [ -n "$val" ]; then
       echo "$val"
