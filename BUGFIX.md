@@ -293,3 +293,18 @@ curl -sS http://127.0.0.1:18890/api/status
 tail -f /Users/lua/.nanobot/logs/channels.log
 ```
 预期：`channels` 包含 `telegram`，`telegram.status=ready`，并能看到 `telegram inbound` 与 `telegram send`。
+
+## 2026-02-16 - Agent 内 `cron` 工具提示“缺少 channel/chat_id”
+
+**问题**：在聊天里让 Agent 创建定时任务时，模型调用 `cron` 工具经常返回 `no session context (channel/chat_id)`，用户看到“理论支持但实际不可用”。  
+**根因**：
+- `CronTool` 依赖 `SetContext(channel, chatID)` 里的内部状态。
+- Agent Loop 执行工具时没有注入当前消息上下文，导致 `CronTool` 拿不到会话信息。
+- 该模式在并发请求下还存在上下文串线风险。  
+**修复措施**：
+- 新增工具运行时上下文：`pkg/tools/runtime_context.go`（`WithRuntimeContext` / `RuntimeContextFrom`）。
+- Agent Loop 在每次工具调用前注入当前 `channel/chatID` 到 `context.Context`。
+- `CronTool` 与 `MessageTool` 改为优先读取运行时上下文（保留 `SetContext` 兼容逻辑）。  
+**验证**：
+- 新增 `internal/agent/loop_test.go`，验证 Agent 工具调用创建 cron 任务时 payload 正确写入 `channel=telegram`、`to=chat-42`。
+- `go test ./pkg/tools ./internal/agent` 全部通过。

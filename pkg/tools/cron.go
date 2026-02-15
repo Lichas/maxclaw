@@ -81,7 +81,7 @@ func (t *CronTool) Execute(ctx context.Context, params map[string]interface{}) (
 
 	switch action {
 	case "add":
-		return t.addJob(params)
+		return t.addJob(ctx, params)
 	case "list":
 		return t.listJobs()
 	case "remove":
@@ -92,7 +92,7 @@ func (t *CronTool) Execute(ctx context.Context, params map[string]interface{}) (
 }
 
 // addJob 添加定时任务
-func (t *CronTool) addJob(params map[string]interface{}) (string, error) {
+func (t *CronTool) addJob(ctx context.Context, params map[string]interface{}) (string, error) {
 	message, _ := params["message"].(string)
 	if message == "" {
 		return "", fmt.Errorf("message is required for add action")
@@ -102,6 +102,16 @@ func (t *CronTool) addJob(params map[string]interface{}) (string, error) {
 	channel := t.channel
 	chatID := t.chatID
 	t.mu.RUnlock()
+
+	// 优先使用当前请求上下文，避免并发请求时的上下文串线
+	if ctxChannel, ctxChatID := RuntimeContextFrom(ctx); ctxChannel != "" || ctxChatID != "" {
+		if channel == "" {
+			channel = ctxChannel
+		}
+		if chatID == "" {
+			chatID = ctxChatID
+		}
+	}
 
 	if channel == "" || chatID == "" {
 		return "", fmt.Errorf("no session context (channel/chat_id)")

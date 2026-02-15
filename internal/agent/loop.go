@@ -266,7 +266,8 @@ func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage)
 					args = map[string]interface{}{}
 				}
 
-				result, err := a.tools.Execute(ctx, tc.Function.Name, args)
+				toolCtx := tools.WithRuntimeContext(ctx, msg.Channel, msg.ChatID)
+				result, err := a.tools.Execute(toolCtx, tc.Function.Name, args)
 				if err != nil {
 					result = fmt.Sprintf("Error: %v", err)
 				}

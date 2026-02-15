@@ -415,6 +415,18 @@ func TestMessageTool(t *testing.T) {
 		assert.Equal(t, "discord", receivedChannel)
 		assert.Equal(t, "999999", receivedChatID)
 	})
+
+	t.Run("use runtime context", func(t *testing.T) {
+		toolNoContext := NewMessageTool(callback)
+		runtimeCtx := WithRuntimeContext(ctx, "whatsapp", "556677")
+		_, err := toolNoContext.Execute(runtimeCtx, map[string]interface{}{
+			"content": "Runtime hello",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "whatsapp", receivedChannel)
+		assert.Equal(t, "556677", receivedChatID)
+		assert.Equal(t, "Runtime hello", receivedContent)
+	})
 }
 
 func TestExtractTextFromHTML(t *testing.T) {

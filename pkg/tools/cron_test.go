@@ -102,6 +102,17 @@ func TestCronToolAdd(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no session context")
 	})
+
+	t.Run("use runtime context", func(t *testing.T) {
+		toolNoContext := NewCronTool(mockService)
+		runtimeCtx := WithRuntimeContext(ctx, "whatsapp", "998877")
+		_, err := toolNoContext.Execute(runtimeCtx, map[string]interface{}{
+			"action":        "add",
+			"message":       "Runtime context add",
+			"every_seconds": 1800,
+		})
+		require.NoError(t, err)
+	})
 }
 
 func TestCronToolList(t *testing.T) {

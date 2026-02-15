@@ -68,6 +68,16 @@ func (t *MessageTool) Execute(ctx context.Context, params map[string]interface{}
 	chatID := t.chatID
 	t.mu.RUnlock()
 
+	// 优先使用当前请求上下文，避免并发请求时的上下文串线
+	if ctxChannel, ctxChatID := RuntimeContextFrom(ctx); ctxChannel != "" || ctxChatID != "" {
+		if channel == "" {
+			channel = ctxChannel
+		}
+		if chatID == "" {
+			chatID = ctxChatID
+		}
+	}
+
 	// 允许通过参数覆盖
 	if v, ok := params["channel"].(string); ok && v != "" {
 		channel = v
