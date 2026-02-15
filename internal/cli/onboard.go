@@ -49,6 +49,7 @@ var onboardCmd = &cobra.Command{
 		fmt.Println("  Created skills/README.md")
 		fmt.Println("  Created skills/example/SKILL.md")
 		fmt.Println("  Created memory/MEMORY.md")
+		fmt.Println("  Created memory/heartbeat.md")
 
 		fmt.Printf("\n%s nanobot is ready!\n\n", logo)
 		fmt.Println("Next steps:")

@@ -12,6 +12,10 @@
   - 调用 `pkg/tools` 完成文件/命令/web 等动作
   - 会话与记忆保存在 workspace 目录
   - 自动注入长期记忆 `memory/MEMORY.md` 与短周期心跳 `memory/heartbeat.md`
+- **Memory Summarizer (`internal/memory`)**：
+  - Gateway 启动后按小时检查一次
+  - 将“前一天会话摘要”幂等追加到 `memory/MEMORY.md`（`## Daily Summaries`）
+  - 无会话则跳过，不写空摘要
 - **Skills (`internal/skills`)**：
   - 从 `<workspace>/skills` 发现并加载技能文档
   - 支持 `@skill:<name>` 与 `$<name>` 按需选择
@@ -94,3 +98,10 @@
   2. `<workspace>/heartbeat.md`（兼容）
 - 注入时机：每次 `ContextBuilder.BuildMessages` 构造 system prompt 时
 - 用途：存放短周期状态（当前重点、阻塞、下一检查点），与长期记忆 `MEMORY.md` 分层管理
+
+## 每日 Memory 汇总机制
+
+- 扫描来源：`<workspace>/.sessions/*.json`
+- 汇总窗口：默认“昨天”本地时间
+- 写入位置：`<workspace>/memory/MEMORY.md`
+- 幂等策略：检测 `### YYYY-MM-DD` 标题，存在则不重复写入

@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/Lichas/nanobot-go/internal/agent"
 	"github.com/Lichas/nanobot-go/internal/bus"
@@ -14,6 +15,7 @@ import (
 	"github.com/Lichas/nanobot-go/internal/config"
 	"github.com/Lichas/nanobot-go/internal/cron"
 	"github.com/Lichas/nanobot-go/internal/logging"
+	"github.com/Lichas/nanobot-go/internal/memory"
 	"github.com/Lichas/nanobot-go/internal/providers"
 	"github.com/Lichas/nanobot-go/internal/webui"
 	"github.com/spf13/cobra"
@@ -204,6 +206,10 @@ var gatewayCmd = &cobra.Command{
 				lg.Cron.Printf("cron start error: %v", err)
 			}
 		}
+
+		// 启动每日 Memory 汇总器（每小时检查一次，幂等写入 memory/MEMORY.md）
+		dailySummary := memory.NewDailySummaryService(cfg.Agents.Defaults.Workspace, time.Hour)
+		go dailySummary.Start(ctx)
 
 		// 启动出站消息处理器
 		go handleOutboundMessages(ctx, messageBus, channelRegistry)

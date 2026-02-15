@@ -11,6 +11,7 @@
 - Web UI + API（同一端口，打包后静态托管）
 - 定时任务（Cron/Once/Every）
 - Heartbeat 上下文（`memory/heartbeat.md`）
+- 每日 Memory 汇总（自动写入 `memory/MEMORY.md`）
 - 可选浏览器抓取（Node + Playwright）
 - 完整日志：`~/.nanobot/logs`
 
@@ -94,6 +95,15 @@ Linux 默认会安装并启动：
 - `<workspace>/heartbeat.md`（兼容）
 
 用于记录当前优先级、阻塞项、下一步检查点。`onboard` 会自动创建模板文件。
+
+### 每日 Memory 汇总
+Gateway 启动后会开启每日汇总器（每小时检查一次），自动把“前一天会话摘要”追加到：
+- `<workspace>/memory/MEMORY.md` 的 `## Daily Summaries` 小节
+
+特性：
+- 幂等：同一天只写一次（按 `### YYYY-MM-DD` 去重）
+- 无会话不写入
+- 用于长期记忆沉淀与跨天回顾
 
 ### Skills 支持
 技能目录位于 `<workspace>/skills`，支持两种结构：
@@ -265,6 +275,7 @@ make down-daemon
 - Web UI + API on the same port (static bundle served by gateway)
 - Cron/Once/Every scheduler
 - Heartbeat context (`memory/heartbeat.md`)
+- Daily memory digest written to `memory/MEMORY.md`
 - Optional browser fetch (Node + Playwright)
 - Structured logs in `~/.nanobot/logs`
 
@@ -348,6 +359,15 @@ Inspired by OpenClaw's `heartbeat.md`, nanobot auto-loads heartbeat context on e
 - `<workspace>/heartbeat.md` (fallback)
 
 Use it to track current priorities, blockers, and next checkpoint. `onboard` creates a starter template automatically.
+
+### Daily Memory Digest
+When gateway starts, a daily summarizer runs (hourly check) and appends yesterday's conversation digest to:
+- `<workspace>/memory/MEMORY.md` under `## Daily Summaries`
+
+Behavior:
+- Idempotent: one summary per day (`### YYYY-MM-DD`)
+- No writes when there was no activity
+- Designed for long-term memory consolidation
 
 ### Skills Support
 Skills are loaded from `<workspace>/skills` with two supported layouts:
