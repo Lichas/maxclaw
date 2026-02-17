@@ -40,6 +40,7 @@ func TestContextBuilderHeartbeatPrefersMemoryFile(t *testing.T) {
 
 func TestContextBuilderIncludesWorkspaceAndSkillsDir(t *testing.T) {
 	workspace := t.TempDir()
+	t.Setenv("NANOBOT_SOURCE_DIR", workspace)
 	builder := NewContextBuilder(workspace)
 
 	messages := builder.BuildMessages(nil, "hello", nil, "telegram", "123")
@@ -129,4 +130,17 @@ func TestContextBuilderIncludesTwoLayerMemoryHints(t *testing.T) {
 	assert.Contains(t, systemPrompt, filepath.Join(workspace, "memory", "MEMORY.md"))
 	assert.Contains(t, systemPrompt, filepath.Join(workspace, "memory", "HISTORY.md"))
 	assert.Contains(t, systemPrompt, "grep -i")
+}
+
+func TestCommonSourceSearchPathsCoverStandardLocations(t *testing.T) {
+	roots := commonSourceSearchRoots()
+	patterns := commonSourceSearchRootPatterns()
+
+	assert.Contains(t, roots, "/usr/local/src")
+	assert.Contains(t, roots, "/usr/src")
+	assert.Contains(t, roots, "/root/git")
+	assert.Contains(t, roots, "/data/git")
+	assert.Contains(t, patterns, "/Users/*/git")
+	assert.Contains(t, patterns, "/home/*/git")
+	assert.Contains(t, patterns, "/data/*/git")
 }

@@ -300,6 +300,17 @@ func (b *ContextBuilder) sourceSearchRoots(absWorkspace string) []string {
 		if filepath.Clean(absWorkspace) == filepath.Join(home, ".nanobot", "workspace") {
 			addRoot(filepath.Join(home, "git"))
 			addRoot(filepath.Join(home, "src"))
+			addRoot(filepath.Join(home, "code"))
+		}
+	}
+
+	// Common repository roots across macOS/Linux hosts.
+	for _, root := range commonSourceSearchRoots() {
+		addRoot(root)
+	}
+	for _, pattern := range commonSourceSearchRootPatterns() {
+		for _, matched := range globPaths(pattern) {
+			addRoot(matched)
 		}
 	}
 
@@ -410,4 +421,39 @@ func sourceSearchSkipDir(name string) bool {
 	default:
 		return false
 	}
+}
+
+func commonSourceSearchRoots() []string {
+	return []string{
+		"/usr/local/src",
+		"/usr/src",
+		"/root/git",
+		"/root/src",
+		"/root/code",
+		"/data/git",
+		"/data/src",
+		"/data/code",
+	}
+}
+
+func commonSourceSearchRootPatterns() []string {
+	return []string{
+		"/Users/*/git",
+		"/Users/*/src",
+		"/Users/*/code",
+		"/home/*/git",
+		"/home/*/src",
+		"/home/*/code",
+		"/data/*/git",
+		"/data/*/src",
+		"/data/*/code",
+	}
+}
+
+func globPaths(pattern string) []string {
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil
+	}
+	return matches
 }

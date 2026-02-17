@@ -24,6 +24,10 @@
   - 当 workspace 为默认 `~/.nanobot/workspace` 时，自动扫描 `$HOME/git` 与 `$HOME/src` 查找 `.nanobot-source-root`
   - 增加单次解析缓存，避免重复扫描
   - 验证：`go test ./internal/agent`，`make build`
+- **扩展常见路径的源码根发现**（`internal/agent/context.go`, `internal/agent/context_test.go`）
+  - 新增常见源码路径候选：`/Users/*/(git|src|code)`、`/home/*/(git|src|code)`、`/data/*/(git|src|code)`、`/root/(git|src|code)`、`/usr/local/src`、`/usr/src`
+  - 保持受限深度扫描（避免对整盘目录进行无限递归）
+  - 验证：`go test ./internal/agent`，`make build`
 
 ### Bug 修复
 
