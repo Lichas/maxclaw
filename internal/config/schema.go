@@ -242,17 +242,27 @@ func (c *Config) GetAPIBase(model string) string {
 	model = strings.ToLower(model)
 
 	providerMap := c.providerConfigMap()
+	matchedProvider := false
 	for _, spec := range providers.ProviderSpecs {
 		if !spec.MatchesModel(model) {
 			continue
 		}
+		matchedProvider = true
 		if cfg, ok := providerMap[spec.Name]; ok && cfg.APIBase != "" {
 			return cfg.APIBase
 		}
 		if spec.DefaultAPIBase != "" {
 			return spec.DefaultAPIBase
 		}
-		return ""
+	}
+
+	// vLLM local models often use raw IDs like "meta-llama/Llama-3.1-8B-Instruct"
+	// (without an explicit provider prefix). If such a model is configured and
+	// providers.vllm.apiBase is set, route API base to vLLM.
+	if !matchedProvider && looksLikeRawModelID(model) {
+		if cfg, ok := providerMap["vllm"]; ok && cfg.APIBase != "" {
+			return cfg.APIBase
+		}
 	}
 
 	return ""
@@ -276,4 +286,23 @@ func (c *Config) providerConfigMap() map[string]ProviderConfig {
 		out[name] = cfg
 	}
 	return out
+}
+
+func looksLikeRawModelID(model string) bool {
+	if model == "" || !strings.Contains(model, "/") {
+		return false
+	}
+
+	prefix := strings.SplitN(model, "/", 2)[0]
+	if prefix == "" {
+		return false
+	}
+
+	for _, spec := range providers.ProviderSpecs {
+		if strings.EqualFold(prefix, spec.Name) {
+			return false
+		}
+	}
+
+	return true
 }

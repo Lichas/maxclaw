@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/Lichas/nanobot-go/internal/cron"
 	"github.com/stretchr/testify/assert"
@@ -13,6 +14,7 @@ import (
 type MockCronService struct {
 	jobs      map[string]*cron.Job
 	addCalled bool
+	lastAdded *cron.Job
 }
 
 func NewMockCronService() *MockCronService {
@@ -25,6 +27,7 @@ func (m *MockCronService) AddJob(name string, schedule cron.Schedule, payload cr
 	m.addCalled = true
 	job := cron.NewJob(name, schedule, payload)
 	m.jobs[job.ID] = job
+	m.lastAdded = job
 	return job, nil
 }
 
@@ -74,6 +77,29 @@ func TestCronToolAdd(t *testing.T) {
 		assert.Contains(t, result, "id:")
 	})
 
+	t.Run("add with at", func(t *testing.T) {
+		result, err := tool.Execute(ctx, map[string]interface{}{
+			"action":  "add",
+			"message": "One-shot reminder",
+			"at":      "2099-01-01T10:30:00",
+		})
+		require.NoError(t, err)
+		assert.Contains(t, result, "Created job")
+		require.NotNil(t, mockService.lastAdded)
+		assert.Equal(t, cron.ScheduleTypeOnce, mockService.lastAdded.Schedule.Type)
+		assert.NotZero(t, mockService.lastAdded.Schedule.AtMs)
+	})
+
+	t.Run("invalid at", func(t *testing.T) {
+		_, err := tool.Execute(ctx, map[string]interface{}{
+			"action":  "add",
+			"message": "Bad at",
+			"at":      "tomorrow morning",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid at")
+	})
+
 	t.Run("missing message", func(t *testing.T) {
 		_, err := tool.Execute(ctx, map[string]interface{}{
 			"action":        "add",
@@ -89,7 +115,7 @@ func TestCronToolAdd(t *testing.T) {
 			"message": "No schedule",
 		})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "every_seconds or cron_expr is required")
+		assert.Contains(t, err.Error(), "every_seconds, cron_expr, or at is required")
 	})
 
 	t.Run("no context", func(t *testing.T) {
@@ -126,6 +152,20 @@ func TestCronToolList(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "No scheduled jobs.", result)
+	})
+
+	t.Run("list includes once schedule", func(t *testing.T) {
+		_, err := mockService.AddJob("Once", cron.Schedule{
+			Type: cron.ScheduleTypeOnce,
+			AtMs: time.Now().Add(time.Hour).UnixMilli(),
+		}, cron.Payload{Message: "Once"})
+		require.NoError(t, err)
+
+		result, err := tool.Execute(ctx, map[string]interface{}{
+			"action": "list",
+		})
+		require.NoError(t, err)
+		assert.Contains(t, result, "at:")
 	})
 }
 

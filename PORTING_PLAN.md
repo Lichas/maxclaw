@@ -68,6 +68,6 @@ This plan tracks parity work against the Python `nanobot` milestones.
   - [ ] Multi-provider support verification
   - [ ] Docker support parity
 
-- [ ] 2026-02-03: vLLM local model parity
-  - [ ] vLLM support verification
-  - [ ] Natural-language scheduling improvements parity
+- [x] 2026-02-03: vLLM local model parity
+  - [x] vLLM support verification
+  - [x] Natural-language scheduling improvements parity

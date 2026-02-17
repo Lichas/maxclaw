@@ -76,6 +76,7 @@ func TestGetAPIBase(t *testing.T) {
 	}{
 		{"openrouter/gpt-4", "https://openrouter.ai/api/v1"},
 		{"vllm/llama-3", "http://localhost:8000/v1"},
+		{"meta-llama/Llama-3.1-8B-Instruct", "http://localhost:8000/v1"},
 		{"kimi-k2.5", "https://api.moonshot.ai/v1"},
 		{"minimax/MiniMax-M2", "https://api.minimaxi.com/v1"},
 		{"qwen-max", "https://dashscope.custom/v1"},

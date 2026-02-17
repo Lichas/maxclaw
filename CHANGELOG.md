@@ -4,6 +4,16 @@
 
 ### 新增功能
 
+#### Python 2026-02-03 里程碑对齐（vLLM + 自然语言调度）
+- **Cron 工具新增一次性时间调度参数 `at`**（`pkg/tools/cron.go`, `pkg/tools/cron_test.go`）
+  - `cron(action="add", at="ISO datetime")` 现在会创建 `once` 任务
+  - 支持 RFC3339 与常见本地时间格式解析，并在列表中展示 `at` 调度信息
+- **vLLM 原始模型 ID 路由补齐**（`internal/config/schema.go`, `internal/config/config_test.go`）
+  - 当模型名为 `meta-llama/...` 这类未显式带 provider 前缀的本地模型 ID 时，若已配置 `providers.vllm.apiBase`，将自动路由到 vLLM API Base
+- **验证**
+  - `go test ./pkg/tools ./internal/config`
+  - `make build`
+
 #### Agent 自迭代与源码定位增强
 - **支持自迭代命令约束**（`internal/agent/prompts/system_prompt.md`）
   - 明确允许在自我完善任务中通过 `exec` 调用本地 `claude` / `codex`

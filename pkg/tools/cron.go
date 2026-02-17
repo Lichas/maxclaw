@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/Lichas/nanobot-go/internal/cron"
 )
@@ -51,6 +53,10 @@ func NewCronTool(service CronService) *CronTool {
 					"cron_expr": map[string]interface{}{
 						"type":        "string",
 						"description": "Cron expression like '0 9 * * *' for daily at 9am",
+					},
+					"at": map[string]interface{}{
+						"type":        "string",
+						"description": "ISO datetime for one-time execution (e.g. '2026-02-12T10:30:00')",
 					},
 					"job_id": map[string]interface{}{
 						"type":        "string",
@@ -160,8 +166,21 @@ func (t *CronTool) addJob(ctx context.Context, params map[string]interface{}) (s
 			Type: cron.ScheduleTypeCron,
 			Expr: expr,
 		}
+	} else if v, ok := params["at"]; ok {
+		raw, ok := v.(string)
+		if !ok {
+			return "", fmt.Errorf("invalid at")
+		}
+		runAt, err := parseCronAt(raw)
+		if err != nil {
+			return "", fmt.Errorf("invalid at, expected ISO datetime")
+		}
+		schedule = cron.Schedule{
+			Type: cron.ScheduleTypeOnce,
+			AtMs: runAt.UnixMilli(),
+		}
 	} else {
-		return "", fmt.Errorf("either every_seconds or cron_expr is required")
+		return "", fmt.Errorf("either every_seconds, cron_expr, or at is required")
 	}
 
 	// 构建任务名称
@@ -210,10 +229,42 @@ func (t *CronTool) listJobs() (string, error) {
 			schedule = fmt.Sprintf("every %d seconds", job.Schedule.EveryMs/1000)
 		case cron.ScheduleTypeCron:
 			schedule = fmt.Sprintf("cron: %s", job.Schedule.Expr)
+		case cron.ScheduleTypeOnce:
+			schedule = fmt.Sprintf("at: %s", time.UnixMilli(job.Schedule.AtMs).Format(time.RFC3339))
 		}
 		result += fmt.Sprintf("%d. %s (id: %s, %s, %s)\n", i+1, job.Name, job.ID, schedule, status)
 	}
 	return result, nil
+}
+
+func parseCronAt(raw string) (time.Time, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return time.Time{}, fmt.Errorf("empty at")
+	}
+
+	zoneLayouts := []string{
+		time.RFC3339Nano,
+		time.RFC3339,
+	}
+	for _, layout := range zoneLayouts {
+		if t, err := time.Parse(layout, raw); err == nil {
+			return t, nil
+		}
+	}
+
+	localLayouts := []string{
+		"2006-01-02T15:04:05",
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04",
+	}
+	for _, layout := range localLayouts {
+		if t, err := time.ParseInLocation(layout, raw, time.Local); err == nil {
+			return t, nil
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("invalid at format")
 }
 
 // removeJob 删除定时任务
