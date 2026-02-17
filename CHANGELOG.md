@@ -18,6 +18,18 @@
 
 ### Bug 修复
 
+#### 修复 X.com 等 SPA 站点在 Chrome 抓取下的“空页面误判成功”
+- **增强 `webfetcher/fetch.mjs` 的 Chrome 抓取容错与内容判定**（`webfetcher/fetch.mjs`）
+  - `chrome.cdpEndpoint` 连接失败时自动回退到持久化 profile，而不是直接失败
+  - 页面提取改为多选择器聚合并等待 SPA hydrate，减少只拿到空壳 DOM 的概率
+  - 当 `title/text` 同时为空时返回明确错误，避免误报“访问成功”
+- **增强代理提示约束**（`internal/agent/prompts/system_prompt.md`）
+  - 明确禁止在 `web_fetch` 失败/空结果时宣称“已打开浏览器查看内容”
+- **验证**
+  - `make build`
+
+### Bug 修复
+
 #### Cron 任务触发后未投递到正确会话
 - **修复 Cron 投递链路，避免触发后丢失 chat_id**（`internal/cli/gateway.go`, `internal/cli/cron.go`, `internal/cli/cron_test.go`）
   - Gateway 模式下，可投递 Cron 任务改为直接进入主消息总线（携带 `job.Payload.To`），由现有出站分发器发送到真实频道会话

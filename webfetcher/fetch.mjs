@@ -129,11 +129,43 @@ function browserContextOptions(req) {
   };
 }
 
+function normalizeText(raw) {
+  if (typeof raw !== 'string') {
+    return '';
+  }
+  return raw.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 async function readPage(page, req) {
   await page.goto(req.url, { waitUntil: req.waitUntil, timeout: req.timeoutMs });
-  const title = await page.title();
-  const text = await page.evaluate(() => (document.body ? document.body.innerText : ''));
-  return { url: req.url, title, text };
+
+  // Let SPA content hydrate before reading visible text.
+  await page.waitForTimeout(1200).catch(() => {});
+
+  const { title, text } = await page.evaluate(() => {
+    const pageTitle = (document.title || '').trim();
+    const candidates = ['main', '[role="main"]', 'article', '#react-root', '#layers', 'body'];
+    const pieces = [];
+
+    for (const selector of candidates) {
+      const node = document.querySelector(selector);
+      if (!node) {
+        continue;
+      }
+      const value = (node.innerText || node.textContent || '').trim();
+      if (value) {
+        pieces.push(value);
+      }
+      if (pieces.length >= 3) {
+        break;
+      }
+    }
+
+    const merged = pieces.join('\n\n').trim();
+    return { title: pageTitle, text: merged };
+  });
+
+  return { url: req.url, title: normalizeText(title), text: normalizeText(text) };
 }
 
 async function fetchWithBrowserMode(req) {
@@ -195,7 +227,16 @@ async function fetchWithChromeProfile(req, chrome) {
 async function fetchWithChromeMode(req) {
   const chrome = req.chrome;
   if (chrome.cdpEndpoint) {
-    return await fetchWithChromeCDP(req, chrome);
+    try {
+      const result = await fetchWithChromeCDP(req, chrome);
+      return result;
+    } catch (err) {
+      const message = err && typeof err.message === 'string' ? err.message : String(err);
+      const fallback = await fetchWithChromeProfile(req, chrome);
+      const warning = `[warning] CDP attach failed, fallback to managed profile: ${message}`;
+      const mergedText = fallback.text ? `${warning}\n\n${fallback.text}` : warning;
+      return { ...fallback, text: mergedText };
+    }
   }
   return await fetchWithChromeProfile(req, chrome);
 }
@@ -226,8 +267,17 @@ async function main() {
       normalized.mode === 'chrome'
         ? await fetchWithChromeMode(normalized)
         : await fetchWithBrowserMode(normalized);
-    const title = result.title;
-    const text = result.text;
+    const title = normalizeText(result.title || '');
+    const text = normalizeText(result.text || '');
+    if (!title && !text) {
+      writeResult({
+        ok: false,
+        error:
+          'page rendered empty content (likely auth wall / anti-bot challenge / blank SPA shell). ' +
+          'Try authenticated Chrome CDP session or reuse a logged-in persistent profile.',
+      });
+      return;
+    }
     writeResult({ ok: true, url, title, text });
   } catch (err) {
     const message = err && typeof err.message === 'string' ? err.message : String(err);
