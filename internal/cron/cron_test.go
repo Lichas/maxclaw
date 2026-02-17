@@ -1,11 +1,14 @@
 package cron
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/Lichas/nanobot-go/internal/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -294,4 +297,52 @@ func TestLoadCorruptedFile(t *testing.T) {
 	service := NewService(storePath)
 	assert.NotNil(t, service)
 	assert.Len(t, service.ListJobs(), 0)
+}
+
+func TestExecuteJobLogsAttemptAndCompletion(t *testing.T) {
+	lg, err := logging.Init(t.TempDir())
+	require.NoError(t, err)
+	require.NotNil(t, lg)
+	require.NotNil(t, lg.Cron)
+
+	var buf bytes.Buffer
+	lg.Cron.SetOutput(&buf)
+
+	service := NewService("")
+	service.SetJobHandler(func(job *Job) (string, error) {
+		return "ok", nil
+	})
+
+	job := NewJob("log-test", Schedule{Type: ScheduleTypeEvery, EveryMs: 1000}, Payload{Message: "m"})
+	service.executeJob(job, "every")
+
+	logText := buf.String()
+	assert.Contains(t, logText, "cron attempt trigger=every")
+	assert.Contains(t, logText, "cron execute trigger=every")
+	assert.Contains(t, logText, "cron completed trigger=every")
+	assert.Contains(t, logText, job.ID)
+}
+
+func TestExecuteJobLogsSkipReasons(t *testing.T) {
+	lg, err := logging.Init(t.TempDir())
+	require.NoError(t, err)
+	require.NotNil(t, lg)
+	require.NotNil(t, lg.Cron)
+
+	var buf bytes.Buffer
+	lg.Cron.SetOutput(&buf)
+
+	service := NewService("")
+
+	disabledJob := NewJob("disabled", Schedule{Type: ScheduleTypeEvery, EveryMs: 1000}, Payload{})
+	disabledJob.Enabled = false
+	service.executeJob(disabledJob, "cron")
+
+	noHandlerJob := NewJob("no-handler", Schedule{Type: ScheduleTypeEvery, EveryMs: 1000}, Payload{})
+	service.executeJob(noHandlerJob, "cron")
+
+	logText := buf.String()
+	assert.Contains(t, logText, "cron attempt trigger=cron")
+	assert.True(t, strings.Contains(logText, "reason=disabled"))
+	assert.True(t, strings.Contains(logText, "reason=no_handler"))
 }

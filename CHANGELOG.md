@@ -12,11 +12,15 @@
   - 出站消息增加空 `channel/chat_id` 校验，避免无效发送
   - `SendMessage` 失败不再静默吞掉，统一记录到日志便于定位送达问题
   - 新增网关出站处理单测，覆盖成功发送、空 chat 丢弃、失败后继续处理
+- **增强 crond 执行日志覆盖**（`internal/cron/service.go`, `internal/cron/cron_test.go`）
+  - `every/cron/once` 触发调度回调后统一记录 `attempt`，并补充 `skip/execute/completed/failed` 全链路日志到 `cron.log`
+  - 对无效调度配置（如 `every<=0`、空 `cron expr`、`once` 过去时间）增加可观测日志，避免“看起来没执行”
+  - 新增单测验证执行尝试与跳过原因日志
 - **降低一次性提醒误建为周期任务的概率**（`pkg/tools/cron.go`, `pkg/tools/cron_test.go`, `internal/agent/prompts/system_prompt.md`）
   - `at` 增加 `HH:MM[:SS]` 解析（按本地下一个该时刻），并拒绝显式过去时间
   - 系统提示增加规则：一次性提醒必须使用 `at`，仅在用户明确要求循环时使用 `cron_expr`/`every_seconds`
 - **验证**
-  - `go test ./internal/cli ./pkg/tools`
+  - `go test ./internal/cli ./pkg/tools ./internal/cron`
   - `make build`
 - **补充排障文档**（`BUGFIX.md`）
   - 新增条目记录“Cron 已触发但 Telegram 未收到”的证据、根因和修复链路，明确 `message` 工具不是根因

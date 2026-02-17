@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Lichas/nanobot-go/internal/logging"
 	"github.com/robfig/cron/v3"
 )
 
@@ -175,6 +176,10 @@ func (s *Service) scheduleJob(job *Job) {
 // scheduleEveryJob 调度周期性任务
 func (s *Service) scheduleEveryJob(job *Job) {
 	duration := time.Duration(job.Schedule.EveryMs) * time.Millisecond
+	if duration <= 0 {
+		s.logCronf("cron schedule skipped type=every job_id=%s reason=invalid_interval interval_ms=%d", job.ID, job.Schedule.EveryMs)
+		return
+	}
 
 	s.wg.Add(1)
 	go func() {
@@ -189,7 +194,7 @@ func (s *Service) scheduleEveryJob(job *Job) {
 				if !s.running {
 					return
 				}
-				s.executeJob(job)
+				s.executeJob(job, "every")
 			case <-s.stopChan:
 				return
 			}
@@ -200,18 +205,22 @@ func (s *Service) scheduleEveryJob(job *Job) {
 // scheduleCronJob 调度 Cron 任务
 func (s *Service) scheduleCronJob(job *Job) {
 	if job.Schedule.Expr == "" {
+		s.logCronf("cron schedule skipped type=cron job_id=%s reason=empty_expr", job.ID)
 		return
 	}
 
-	s.cron.AddFunc(job.Schedule.Expr, func() {
-		s.executeJob(job)
-	})
+	if _, err := s.cron.AddFunc(job.Schedule.Expr, func() {
+		s.executeJob(job, "cron")
+	}); err != nil {
+		s.logCronf("cron schedule failed type=cron job_id=%s expr=%q err=%v", job.ID, job.Schedule.Expr, err)
+	}
 }
 
 // scheduleOnceJob 调度一次性任务
 func (s *Service) scheduleOnceJob(job *Job) {
 	at := time.UnixMilli(job.Schedule.AtMs)
 	if at.Before(time.Now()) {
+		s.logCronf("cron schedule skipped type=once job_id=%s reason=past_time at=%s", job.ID, at.Format(time.RFC3339))
 		return
 	}
 
@@ -222,7 +231,7 @@ func (s *Service) scheduleOnceJob(job *Job) {
 		select {
 		case <-time.After(time.Until(at)):
 			if s.running {
-				s.executeJob(job)
+				s.executeJob(job, "once")
 			}
 		case <-s.stopChan:
 			return
@@ -231,18 +240,37 @@ func (s *Service) scheduleOnceJob(job *Job) {
 }
 
 // executeJob 执行任务
-func (s *Service) executeJob(job *Job) {
-	if !job.Enabled || s.onJob == nil {
+func (s *Service) executeJob(job *Job, trigger string) {
+	if job == nil {
+		s.logCronf("cron attempt trigger=%s skipped reason=nil_job", trigger)
 		return
 	}
 
-	fmt.Printf("[Cron] Executing job: %s (%s)\n", job.Name, job.ID)
+	s.logCronf("cron attempt trigger=%s job=%s job_id=%s enabled=%t", trigger, job.Name, job.ID, job.Enabled)
+	if !job.Enabled {
+		s.logCronf("cron skip trigger=%s job_id=%s reason=disabled", trigger, job.ID)
+		return
+	}
+	if s.onJob == nil {
+		s.logCronf("cron skip trigger=%s job_id=%s reason=no_handler", trigger, job.ID)
+		return
+	}
+
+	s.logCronf("cron execute trigger=%s job=%s job_id=%s", trigger, job.Name, job.ID)
 	result, err := s.onJob(job)
 	if err != nil {
-		fmt.Printf("[Cron] Job failed: %s, error: %v\n", job.Name, err)
+		s.logCronf("cron failed trigger=%s job=%s job_id=%s err=%v", trigger, job.Name, job.ID, err)
 	} else {
-		fmt.Printf("[Cron] Job completed: %s, result: %s\n", job.Name, result)
+		s.logCronf("cron completed trigger=%s job=%s job_id=%s result=%q", trigger, job.Name, job.ID, logging.Truncate(result, 400))
 	}
+}
+
+func (s *Service) logCronf(format string, args ...interface{}) {
+	if lg := logging.Get(); lg != nil && lg.Cron != nil {
+		lg.Cron.Printf(format, args...)
+		return
+	}
+	fmt.Printf("[Cron] "+format+"\n", args...)
 }
 
 // save 保存任务到文件
