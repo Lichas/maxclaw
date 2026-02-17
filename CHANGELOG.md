@@ -18,6 +18,9 @@
 - **验证**
   - `go test ./internal/cli ./pkg/tools`
   - `make build`
+- **补充排障文档**（`BUGFIX.md`）
+  - 新增条目记录“Cron 已触发但 Telegram 未收到”的证据、根因和修复链路，明确 `message` 工具不是根因
+  - 验证：`make build`
 
 ### 新增功能
 

@@ -322,3 +322,33 @@ tail -f /Users/lua/.nanobot/logs/channels.log
 **验证**：
 - `go test ./internal/providers ./internal/agent` 通过。
 - `go test ./...` 全量通过。
+
+## 2026-02-17 - Cron 已触发但 Telegram 未收到（`chat_id` 丢失 + 出站错误静默）
+
+**问题**：用户在 Telegram 里设置 `18:00` 提醒后，没有收到消息，看起来像“定时任务没执行”。  
+**关键证据**（`/Users/lua/.nanobot/logs/session.log`）：
+- `2026/02/17 18:00:00.007320 inbound channel=telegram chat= sender=cron content="[telegram] [Cron Job: hello] hello"`
+- `2026/02/17 18:00:02.019950 outbound channel=telegram chat= content="..."`
+
+两条记录都显示 `chat=` 为空，说明任务确实执行了，但回发目标会话缺失，导致 Telegram 不可达。
+
+**根因**：
+1. `executeCronJob` 构造 cron 入站消息时把 `chatID` 写成空字符串（未使用 `job.Payload.To`）。
+2. Gateway 出站发送链路对 `SendMessage` 返回错误静默处理，缺少失败日志，导致送达失败难以定位。
+3. `message` 工具本身并非根因：`pkg/tools/message.go` 已要求 `channel/chat_id` 必填，不会在空目标下“假成功”。
+
+**修复措施**：
+- `internal/cli/cron.go`
+  - cron 入站消息改为使用 `job.Payload.To` 作为 `chatID`。
+  - 抽取 `buildCronUserMessage` / `enqueueCronJob`，保证投递参数一致。
+- `internal/cli/gateway.go`
+  - 可投递 cron 任务优先进入主消息总线（保持正常 channel/chat 路由）。
+  - 出站处理新增空 `channel/chat_id` 校验与日志。
+  - `SendMessage` 失败时记录错误，不再静默吞掉。
+- `internal/cli/cron_test.go`, `internal/cli/gateway_test.go`
+  - 增加投递与出站链路单测，覆盖成功发送、空 chat 丢弃、失败后继续处理。
+
+**验证**：
+- `go test ./internal/cli ./pkg/tools` 通过。
+- `go test ./internal/cli` 通过。
+- `make build` 通过。
