@@ -62,6 +62,21 @@
   - `go test ./internal/agent ./pkg/tools ./internal/config`
   - `make build`
 
+#### 调整 Chrome 登录态方案为受管 Profile 登录（对齐 OpenClaw 流程）
+- **移除 `web_fetch` 中的 AppleScript 接管路径，改为稳定的 CDP/受管 profile 双路径**（`webfetcher/fetch.mjs`）
+  - 不再尝试 AppleScript 注入与本地标签页接管
+  - `chrome.takeoverExisting` 保留兼容但标记为废弃，并给出迁移提示
+- **新增手动登录入口 `nanobot browser login`**（`internal/cli/browser.go`, `internal/cli/root.go`, `webfetcher/login.mjs`）
+  - 直接打开 `~/.nanobot/browser/<profile>/user-data` 对应的受管 Chrome profile
+  - 用户完成一次手动登录后，`web_fetch(mode=chrome)` 可持续复用该登录态
+- **文档与提示词同步**（`README.md`, `internal/agent/prompts/system_prompt.md`）
+  - 增加 X/Twitter 推荐登录流程：先 `nanobot browser login https://x.com` 再进行抓取
+- **验证**
+  - `node --check webfetcher/fetch.mjs`
+  - `node --check webfetcher/login.mjs`
+  - `go test ./internal/agent ./pkg/tools ./internal/config`
+  - `make build`
+
 ### Bug 修复
 
 #### Cron 任务触发后未投递到正确会话

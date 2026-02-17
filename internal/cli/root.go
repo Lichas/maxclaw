@@ -26,6 +26,7 @@ func Execute() error {
 func init() {
 	rootCmd.AddCommand(onboardCmd)
 	rootCmd.AddCommand(agentCmd)
+	rootCmd.AddCommand(browserCmd)
 	rootCmd.AddCommand(gatewayCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(whatsappCmd)
