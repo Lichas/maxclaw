@@ -15,10 +15,11 @@ import (
 // WhatsAppConfig WhatsApp 配置（桥接模式）
 // 通过 WebSocket 连接到 Node.js Bridge (Baileys)
 type WhatsAppConfig struct {
-	Enabled   bool     `json:"enabled"`
-	BridgeURL string   `json:"bridgeUrl"`
-	AllowFrom []string `json:"allowFrom"`
-	AllowSelf bool     `json:"allowSelf"`
+	Enabled     bool     `json:"enabled"`
+	BridgeURL   string   `json:"bridgeUrl"`
+	BridgeToken string   `json:"bridgeToken"`
+	AllowFrom   []string `json:"allowFrom"`
+	AllowSelf   bool     `json:"allowSelf"`
 }
 
 // WhatsAppChannel WhatsApp 频道
@@ -156,6 +157,18 @@ func (w *WhatsAppChannel) connectLoop(ctx context.Context) {
 			continue
 		}
 
+		if err := w.sendAuth(conn); err != nil {
+			_ = conn.Close()
+			w.setConnected(false, nil)
+			if lg := logging.Get(); lg != nil && lg.Channels != nil {
+				lg.Channels.Printf("whatsapp auth handshake failed: %v", err)
+			}
+			if !w.waitRetry(ctx, 5*time.Second) {
+				return
+			}
+			continue
+		}
+
 		w.setConnected(true, conn)
 		w.readLoop(ctx, conn)
 		w.setConnected(false, nil)
@@ -164,6 +177,24 @@ func (w *WhatsAppChannel) connectLoop(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func (w *WhatsAppChannel) sendAuth(conn *websocket.Conn) error {
+	token := strings.TrimSpace(w.config.BridgeToken)
+	if token == "" {
+		return nil
+	}
+	payload := map[string]string{
+		"type":  "auth",
+		"token": token,
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	defer conn.SetWriteDeadline(time.Time{})
+	return conn.WriteMessage(websocket.TextMessage, data)
 }
 
 func (w *WhatsAppChannel) readLoop(ctx context.Context, conn *websocket.Conn) {

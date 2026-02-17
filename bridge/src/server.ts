@@ -1,5 +1,6 @@
 /**
  * WebSocket server for Python-Node.js bridge communication.
+ * Security: binds to 127.0.0.1 only; optional BRIDGE_TOKEN auth.
  */
 
 import { WebSocketServer, WebSocket } from 'ws';
@@ -9,6 +10,11 @@ interface SendCommand {
   type: 'send';
   to: string;
   text: string;
+}
+
+interface AuthCommand {
+  type: 'auth';
+  token: string;
 }
 
 interface BridgeMessage {
@@ -23,12 +29,13 @@ export class BridgeServer {
   private lastStatus: string | null = null;
   private lastQR: string | null = null;
 
-  constructor(private port: number, private authDir: string) {}
+  constructor(private port: number, private authDir: string, private token?: string) {}
 
   async start(): Promise<void> {
-    // Create WebSocket server
-    this.wss = new WebSocketServer({ port: this.port });
-    console.log(`🌉 Bridge server listening on ws://localhost:${this.port}`);
+    // Bind to localhost only — never expose to external network
+    this.wss = new WebSocketServer({ host: '127.0.0.1', port: this.port });
+    console.log(`🌉 Bridge server listening on ws://127.0.0.1:${this.port}`);
+    if (this.token) console.log('🔒 Token authentication enabled');
 
     // Initialize WhatsApp client
     this.wa = new WhatsAppClient({
@@ -47,36 +54,27 @@ export class BridgeServer {
 
     // Handle WebSocket connections
     this.wss.on('connection', (ws) => {
-      console.log('🔗 Python client connected');
-      this.clients.add(ws);
-
-      if (this.lastStatus) {
-        ws.send(JSON.stringify({ type: 'status', status: this.lastStatus }));
+      if (this.token) {
+        // Require auth handshake as first message
+        const timeout = setTimeout(() => ws.close(4001, 'Auth timeout'), 5000);
+        ws.once('message', (data) => {
+          clearTimeout(timeout);
+          try {
+            const msg = JSON.parse(data.toString());
+            if (msg.type === 'auth' && msg.token === this.token) {
+              console.log('🔗 Go client authenticated');
+              this.setupClient(ws);
+            } else {
+              ws.close(4003, 'Invalid token');
+            }
+          } catch {
+            ws.close(4003, 'Invalid auth message');
+          }
+        });
+      } else {
+        console.log('🔗 Go client connected');
+        this.setupClient(ws);
       }
-      if (this.lastQR) {
-        ws.send(JSON.stringify({ type: 'qr', qr: this.lastQR }));
-      }
-
-      ws.on('message', async (data) => {
-        try {
-          const cmd = JSON.parse(data.toString()) as SendCommand;
-          await this.handleCommand(cmd);
-          ws.send(JSON.stringify({ type: 'sent', to: cmd.to }));
-        } catch (error) {
-          console.error('Error handling command:', error);
-          ws.send(JSON.stringify({ type: 'error', error: String(error) }));
-        }
-      });
-
-      ws.on('close', () => {
-        console.log('🔌 Python client disconnected');
-        this.clients.delete(ws);
-      });
-
-      ws.on('error', (error) => {
-        console.error('WebSocket error:', error);
-        this.clients.delete(ws);
-      });
     });
 
     // Connect to WhatsApp
@@ -87,6 +85,42 @@ export class BridgeServer {
     if (cmd.type === 'send' && this.wa) {
       await this.wa.sendMessage(cmd.to, cmd.text);
     }
+  }
+
+  private setupClient(ws: WebSocket): void {
+    this.clients.add(ws);
+
+    if (this.lastStatus) {
+      ws.send(JSON.stringify({ type: 'status', status: this.lastStatus }));
+    }
+    if (this.lastQR) {
+      ws.send(JSON.stringify({ type: 'qr', qr: this.lastQR }));
+    }
+
+    ws.on('message', async (data) => {
+      try {
+        const cmd = JSON.parse(data.toString()) as SendCommand | AuthCommand;
+        if (cmd.type === 'auth') {
+          // Ignore best-effort auth handshake when BRIDGE_TOKEN is not enabled.
+          return;
+        }
+        await this.handleCommand(cmd);
+        ws.send(JSON.stringify({ type: 'sent', to: cmd.to }));
+      } catch (error) {
+        console.error('Error handling command:', error);
+        ws.send(JSON.stringify({ type: 'error', error: String(error) }));
+      }
+    });
+
+    ws.on('close', () => {
+      console.log('🔌 Go client disconnected');
+      this.clients.delete(ws);
+    });
+
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      this.clients.delete(ws);
+    });
   }
 
   private broadcast(msg: BridgeMessage): void {

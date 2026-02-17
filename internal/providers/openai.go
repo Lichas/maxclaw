@@ -21,12 +21,14 @@ type OpenAIProvider struct {
 	apiKey       string
 	apiBase      string
 	defaultModel string
+	maxTokens    int
+	temperature  float64
 	httpClient   *http.Client
 	streamClient *http.Client
 }
 
 // NewOpenAIProvider 创建 OpenAI 提供商
-func NewOpenAIProvider(apiKey, apiBase, defaultModel string) (*OpenAIProvider, error) {
+func NewOpenAIProvider(apiKey, apiBase, defaultModel string, maxTokens int, temperature float64) (*OpenAIProvider, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("API key is required")
 	}
@@ -40,11 +42,16 @@ func NewOpenAIProvider(apiKey, apiBase, defaultModel string) (*OpenAIProvider, e
 	if defaultModel == "" {
 		defaultModel = "gpt-4"
 	}
+	if maxTokens <= 0 {
+		maxTokens = 1
+	}
 
 	return &OpenAIProvider{
 		apiKey:       apiKey,
 		apiBase:      apiBase,
 		defaultModel: defaultModel,
+		maxTokens:    maxTokens,
+		temperature:  temperature,
 		httpClient: &http.Client{
 			Timeout: 60 * time.Second,
 		},
@@ -58,7 +65,7 @@ func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, tools []m
 		model = p.defaultModel
 	}
 
-	reqBody := buildChatRequest(messages, tools, model, false)
+	reqBody := buildChatRequest(messages, tools, model, false, p.maxTokens, p.temperature)
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode request: %w", err)
@@ -117,7 +124,7 @@ func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, too
 		model = p.defaultModel
 	}
 
-	reqBody := buildChatRequest(messages, tools, model, true)
+	reqBody := buildChatRequest(messages, tools, model, true, p.maxTokens, p.temperature)
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		return fmt.Errorf("failed to encode request: %w", err)
@@ -271,11 +278,17 @@ func isCompleteJSON(s string) bool {
 }
 
 // buildChatRequest 构造请求体
-func buildChatRequest(messages []Message, tools []map[string]interface{}, model string, stream bool) chatRequest {
+func buildChatRequest(messages []Message, tools []map[string]interface{}, model string, stream bool, maxTokens int, temperature float64) chatRequest {
+	if maxTokens <= 0 {
+		maxTokens = 1
+	}
+
 	reqBody := chatRequest{
-		Model:    model,
-		Messages: convertToChatMessages(messages),
-		Stream:   stream,
+		Model:       model,
+		Messages:    convertToChatMessages(messages),
+		Stream:      stream,
+		MaxTokens:   maxTokens,
+		Temperature: temperature,
 	}
 
 	if len(tools) > 0 {
@@ -396,11 +409,13 @@ func formatAPIError(body []byte, status int) string {
 // ---- OpenAI-compatible request/response structs ----
 
 type chatRequest struct {
-	Model      string                   `json:"model"`
-	Messages   []chatMessage            `json:"messages"`
-	Tools      []map[string]interface{} `json:"tools,omitempty"`
-	ToolChoice interface{}              `json:"tool_choice,omitempty"`
-	Stream     bool                     `json:"stream,omitempty"`
+	Model       string                   `json:"model"`
+	Messages    []chatMessage            `json:"messages"`
+	Tools       []map[string]interface{} `json:"tools,omitempty"`
+	ToolChoice  interface{}              `json:"tool_choice,omitempty"`
+	Stream      bool                     `json:"stream,omitempty"`
+	MaxTokens   int                      `json:"max_tokens"`
+	Temperature float64                  `json:"temperature"`
 }
 
 type chatMessage struct {

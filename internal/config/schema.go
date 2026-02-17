@@ -3,7 +3,10 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
+
+	"github.com/Lichas/nanobot-go/internal/providers"
 )
 
 // ProviderConfig  LLM 提供商配置
@@ -37,10 +40,11 @@ type DiscordConfig struct {
 
 // WhatsAppConfig WhatsApp 配置
 type WhatsAppConfig struct {
-	Enabled   bool     `json:"enabled" mapstructure:"enabled"`
-	BridgeURL string   `json:"bridgeUrl,omitempty" mapstructure:"bridgeUrl"`
-	AllowFrom []string `json:"allowFrom" mapstructure:"allowFrom"`
-	AllowSelf bool     `json:"allowSelf,omitempty" mapstructure:"allowSelf"`
+	Enabled     bool     `json:"enabled" mapstructure:"enabled"`
+	BridgeURL   string   `json:"bridgeUrl,omitempty" mapstructure:"bridgeUrl"`
+	BridgeToken string   `json:"bridgeToken,omitempty" mapstructure:"bridgeToken"`
+	AllowFrom   []string `json:"allowFrom" mapstructure:"allowFrom"`
+	AllowSelf   bool     `json:"allowSelf,omitempty" mapstructure:"allowSelf"`
 }
 
 // WebSocketConfig WebSocket 频道配置
@@ -88,6 +92,14 @@ type WebToolsConfig struct {
 	Fetch  WebFetchConfig  `json:"fetch" mapstructure:"fetch"`
 }
 
+// MCPServerConfig MCP 服务器配置（兼容 Claude Desktop / Cursor）
+type MCPServerConfig struct {
+	Command string            `json:"command,omitempty" mapstructure:"command"`
+	Args    []string          `json:"args,omitempty" mapstructure:"args"`
+	Env     map[string]string `json:"env,omitempty" mapstructure:"env"`
+	URL     string            `json:"url,omitempty" mapstructure:"url"`
+}
+
 // ExecToolConfig Shell 执行配置
 type ExecToolConfig struct {
 	Timeout int `json:"timeout" mapstructure:"timeout"`
@@ -95,9 +107,10 @@ type ExecToolConfig struct {
 
 // ToolsConfig 工具配置
 type ToolsConfig struct {
-	Web                 WebToolsConfig `json:"web" mapstructure:"web"`
-	Exec                ExecToolConfig `json:"exec" mapstructure:"exec"`
-	RestrictToWorkspace bool           `json:"restrictToWorkspace" mapstructure:"restrictToWorkspace"`
+	Web                 WebToolsConfig             `json:"web" mapstructure:"web"`
+	Exec                ExecToolConfig             `json:"exec" mapstructure:"exec"`
+	RestrictToWorkspace bool                       `json:"restrictToWorkspace" mapstructure:"restrictToWorkspace"`
+	MCPServers          map[string]MCPServerConfig `json:"mcpServers,omitempty" mapstructure:"mcpServers"`
 }
 
 // GatewayConfig 网关配置
@@ -114,7 +127,9 @@ type ProvidersConfig struct {
 	DeepSeek   ProviderConfig `json:"deepseek" mapstructure:"deepseek"`
 	Groq       ProviderConfig `json:"groq" mapstructure:"groq"`
 	Gemini     ProviderConfig `json:"gemini" mapstructure:"gemini"`
+	DashScope  ProviderConfig `json:"dashscope" mapstructure:"dashscope"`
 	Moonshot   ProviderConfig `json:"moonshot" mapstructure:"moonshot"`
+	MiniMax    ProviderConfig `json:"minimax" mapstructure:"minimax"`
 	VLLM       ProviderConfig `json:"vllm" mapstructure:"vllm"`
 }
 
@@ -152,10 +167,11 @@ func DefaultConfig() *Config {
 				AllowFrom: []string{},
 			},
 			WhatsApp: WhatsAppConfig{
-				Enabled:   false,
-				BridgeURL: "ws://localhost:3001",
-				AllowFrom: []string{},
-				AllowSelf: false,
+				Enabled:     false,
+				BridgeURL:   "ws://localhost:3001",
+				BridgeToken: "",
+				AllowFrom:   []string{},
+				AllowSelf:   false,
 			},
 			WebSocket: WebSocketConfig{
 				Enabled:      false,
@@ -186,6 +202,7 @@ func DefaultConfig() *Config {
 				Timeout: 60,
 			},
 			RestrictToWorkspace: false,
+			MCPServers:          map[string]MCPServerConfig{},
 		},
 	}
 }
@@ -197,43 +214,20 @@ func (c *Config) GetAPIKey(model string) string {
 	}
 	model = strings.ToLower(model)
 
-	// 使用有序 slice 确保优先级
-	providers := []struct {
-		keyword  string
-		provider ProviderConfig
-	}{
-		{"openrouter", c.Providers.OpenRouter},
-		{"deepseek", c.Providers.DeepSeek},
-		{"anthropic", c.Providers.Anthropic},
-		{"claude", c.Providers.Anthropic},
-		{"openai", c.Providers.OpenAI},
-		{"gpt", c.Providers.OpenAI},
-		{"gemini", c.Providers.Gemini},
-		{"groq", c.Providers.Groq},
-		{"moonshot", c.Providers.Moonshot},
-		{"kimi", c.Providers.Moonshot},
-		{"vllm", c.Providers.VLLM},
-	}
+	providerMap := c.providerConfigMap()
 
-	for _, p := range providers {
-		if strings.Contains(model, p.keyword) && p.provider.APIKey != "" {
-			return p.provider.APIKey
+	for _, spec := range providers.ProviderSpecs {
+		if spec.MatchesModel(model) {
+			if cfg, ok := providerMap[spec.Name]; ok && cfg.APIKey != "" {
+				return cfg.APIKey
+			}
 		}
 	}
 
-	// Fallback: 返回第一个可用的 key
-	for _, provider := range []ProviderConfig{
-		c.Providers.OpenRouter,
-		c.Providers.DeepSeek,
-		c.Providers.Anthropic,
-		c.Providers.OpenAI,
-		c.Providers.Gemini,
-		c.Providers.Moonshot,
-		c.Providers.VLLM,
-		c.Providers.Groq,
-	} {
-		if provider.APIKey != "" {
-			return provider.APIKey
+	// Fallback: 按 ProviderSpecs 声明顺序返回第一个可用 key
+	for _, spec := range providers.ProviderSpecs {
+		if cfg, ok := providerMap[spec.Name]; ok && cfg.APIKey != "" {
+			return cfg.APIKey
 		}
 	}
 
@@ -247,27 +241,39 @@ func (c *Config) GetAPIBase(model string) string {
 	}
 	model = strings.ToLower(model)
 
-	if strings.Contains(model, "openrouter") {
-		if c.Providers.OpenRouter.APIBase != "" {
-			return c.Providers.OpenRouter.APIBase
+	providerMap := c.providerConfigMap()
+	for _, spec := range providers.ProviderSpecs {
+		if !spec.MatchesModel(model) {
+			continue
 		}
-		return "https://openrouter.ai/api/v1"
-	}
-	if strings.Contains(model, "vllm") {
-		return c.Providers.VLLM.APIBase
-	}
-	if strings.Contains(model, "moonshot") || strings.Contains(model, "kimi") {
-		if c.Providers.Moonshot.APIBase != "" {
-			return c.Providers.Moonshot.APIBase
+		if cfg, ok := providerMap[spec.Name]; ok && cfg.APIBase != "" {
+			return cfg.APIBase
 		}
-		return "https://api.moonshot.cn/v1"
-	}
-	if strings.Contains(model, "deepseek") {
-		if c.Providers.DeepSeek.APIBase != "" {
-			return c.Providers.DeepSeek.APIBase
+		if spec.DefaultAPIBase != "" {
+			return spec.DefaultAPIBase
 		}
-		return "https://api.deepseek.com/v1"
+		return ""
 	}
 
 	return ""
+}
+
+func (c *Config) providerConfigMap() map[string]ProviderConfig {
+	out := make(map[string]ProviderConfig)
+	val := reflect.ValueOf(c.Providers)
+	typ := reflect.TypeOf(c.Providers)
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		tag := field.Tag.Get("json")
+		name := strings.Split(tag, ",")[0]
+		if name == "" || name == "-" {
+			continue
+		}
+		cfg, ok := val.Field(i).Interface().(ProviderConfig)
+		if !ok {
+			continue
+		}
+		out[name] = cfg
+	}
+	return out
 }

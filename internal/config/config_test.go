@@ -25,6 +25,7 @@ func TestDefaultConfig(t *testing.T) {
 	assert.False(t, cfg.Tools.RestrictToWorkspace)
 	assert.Equal(t, 5, cfg.Tools.Web.Search.MaxResults)
 	assert.Equal(t, 60, cfg.Tools.Exec.Timeout)
+	assert.Empty(t, cfg.Tools.MCPServers)
 }
 
 func TestGetAPIKey(t *testing.T) {
@@ -32,6 +33,8 @@ func TestGetAPIKey(t *testing.T) {
 	cfg.Providers.OpenRouter.APIKey = "openrouter-key"
 	cfg.Providers.Anthropic.APIKey = "anthropic-key"
 	cfg.Providers.OpenAI.APIKey = "openai-key"
+	cfg.Providers.MiniMax.APIKey = "minimax-key"
+	cfg.Providers.DashScope.APIKey = "dashscope-key"
 
 	tests := []struct {
 		model    string
@@ -42,6 +45,8 @@ func TestGetAPIKey(t *testing.T) {
 		{"claude-3-opus", "anthropic-key"},
 		{"gpt-4", "openai-key"},
 		{"openai/gpt-3.5", "openai-key"},
+		{"minimax/MiniMax-M2", "minimax-key"},
+		{"qwen-max", "dashscope-key"},
 		{"unknown-model", "openrouter-key"}, // fallback to first available
 	}
 
@@ -61,6 +66,9 @@ func TestGetAPIKeyNoKeys(t *testing.T) {
 func TestGetAPIBase(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.Providers.VLLM.APIBase = "http://localhost:8000/v1"
+	cfg.Providers.MiniMax.APIBase = "https://api.minimaxi.com/v1"
+	cfg.Providers.Moonshot.APIBase = "https://api.moonshot.ai/v1"
+	cfg.Providers.DashScope.APIBase = "https://dashscope.custom/v1"
 
 	tests := []struct {
 		model    string
@@ -68,6 +76,10 @@ func TestGetAPIBase(t *testing.T) {
 	}{
 		{"openrouter/gpt-4", "https://openrouter.ai/api/v1"},
 		{"vllm/llama-3", "http://localhost:8000/v1"},
+		{"kimi-k2.5", "https://api.moonshot.ai/v1"},
+		{"minimax/MiniMax-M2", "https://api.minimaxi.com/v1"},
+		{"qwen-max", "https://dashscope.custom/v1"},
+		{"minimax/another-model", "https://api.minimaxi.com/v1"},
 		{"anthropic/claude", ""},
 	}
 
@@ -77,6 +89,18 @@ func TestGetAPIBase(t *testing.T) {
 			assert.Equal(t, tt.expected, got)
 		})
 	}
+}
+
+func TestGetAPIBaseMiniMaxDefault(t *testing.T) {
+	cfg := DefaultConfig()
+	got := cfg.GetAPIBase("minimax/MiniMax-M2")
+	assert.Equal(t, "https://api.minimax.io/v1", got)
+}
+
+func TestGetAPIBaseDashScopeDefault(t *testing.T) {
+	cfg := DefaultConfig()
+	got := cfg.GetAPIBase("qwen-max")
+	assert.Equal(t, "https://dashscope.aliyuncs.com/compatible-mode/v1", got)
 }
 
 func TestWorkspacePath(t *testing.T) {
@@ -100,6 +124,7 @@ func TestLoadSaveConfig(t *testing.T) {
 	// 修改配置并保存
 	cfg.Providers.OpenRouter.APIKey = "test-key"
 	cfg.Agents.Defaults.Model = "test-model"
+	cfg.Channels.WhatsApp.BridgeToken = "bridge-secret"
 	err = SaveConfig(cfg)
 	require.NoError(t, err)
 
@@ -108,6 +133,7 @@ func TestLoadSaveConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "test-key", loaded.Providers.OpenRouter.APIKey)
 	assert.Equal(t, "test-model", loaded.Agents.Defaults.Model)
+	assert.Equal(t, "bridge-secret", loaded.Channels.WhatsApp.BridgeToken)
 }
 
 func TestLoadConfigExpandsWorkspace(t *testing.T) {
@@ -140,6 +166,59 @@ func TestLoadConfigExpandsWorkspace(t *testing.T) {
 	}
 }
 
+func TestLoadConfigMCPServersCompatibility(t *testing.T) {
+	tmpDir := t.TempDir()
+	origHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", origHome)
+
+	configDir := GetConfigDir()
+	require.NoError(t, os.MkdirAll(configDir, 0755))
+
+	raw := `{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+    }
+  }
+}`
+	require.NoError(t, os.WriteFile(GetConfigPath(), []byte(raw), 0600))
+
+	loaded, err := LoadConfig()
+	require.NoError(t, err)
+	require.Contains(t, loaded.Tools.MCPServers, "filesystem")
+	assert.Equal(t, "npx", loaded.Tools.MCPServers["filesystem"].Command)
+	assert.Equal(t, []string{"-y", "@modelcontextprotocol/server-filesystem", "/tmp"}, loaded.Tools.MCPServers["filesystem"].Args)
+}
+
+func TestLoadConfigMCPServersToolsOverrideTopLevel(t *testing.T) {
+	tmpDir := t.TempDir()
+	origHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", origHome)
+
+	configDir := GetConfigDir()
+	require.NoError(t, os.MkdirAll(configDir, 0755))
+
+	raw := `{
+  "mcpServers": {
+    "filesystem": { "command": "top-level-cmd" }
+  },
+  "tools": {
+    "mcpServers": {
+      "filesystem": { "command": "tools-cmd" }
+    }
+  }
+}`
+	require.NoError(t, os.WriteFile(GetConfigPath(), []byte(raw), 0600))
+
+	loaded, err := LoadConfig()
+	require.NoError(t, err)
+	require.Contains(t, loaded.Tools.MCPServers, "filesystem")
+	assert.Equal(t, "tools-cmd", loaded.Tools.MCPServers["filesystem"].Command)
+}
+
 func TestEnsureWorkspace(t *testing.T) {
 	tmpDir := t.TempDir()
 	origHome := os.Getenv("HOME")
@@ -170,5 +249,6 @@ func TestCreateWorkspaceTemplates(t *testing.T) {
 	assert.FileExists(t, filepath.Join(workspace, "skills", "README.md"))
 	assert.FileExists(t, filepath.Join(workspace, "skills", "example", "SKILL.md"))
 	assert.FileExists(t, filepath.Join(workspace, "memory", "MEMORY.md"))
+	assert.FileExists(t, filepath.Join(workspace, "memory", "HISTORY.md"))
 	assert.FileExists(t, filepath.Join(workspace, "memory", "heartbeat.md"))
 }

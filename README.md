@@ -22,6 +22,11 @@
 4. 配置：编辑 `~/.nanobot/config.json`
 5. 启动：`./build/nanobot-go gateway`
 
+Agent CLI 常用参数：
+- `--session/-s` 指定会话 ID（默认 `cli:direct`）
+- `--markdown` / `--no-markdown` 控制输出渲染
+- `--logs` / `--no-logs` 控制是否显示日志目录提示
+
 ## Linux / macOS 一键安装
 可直接用自动分流安装器（会按系统选择 `install_linux.sh` 或 `install_mac.sh`）：
 
@@ -66,6 +71,55 @@ Linux 默认会安装并启动：
 }
 ```
 
+### MiniMax 配置示例
+`nanobot-go` 通过 OpenAI 兼容接口使用 MiniMax：
+
+```json
+{
+  "providers": {
+    "minimax": {
+      "apiKey": "your-minimax-key"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "minimax/MiniMax-M2"
+    }
+  }
+}
+```
+
+### Qwen（DashScope）配置示例
+```json
+{
+  "providers": {
+    "dashscope": {
+      "apiKey": "your-dashscope-key"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "qwen-max"
+    }
+  }
+}
+```
+
+默认 API Base：`https://dashscope.aliyuncs.com/compatible-mode/v1`（可在 `providers.dashscope.apiBase` 覆盖）。
+
+提示：如果你使用中国大陆站点密钥（`minimaxi.com`），可显式设置：
+
+```json
+{
+  "providers": {
+    "minimax": {
+      "apiKey": "your-minimax-key",
+      "apiBase": "https://api.minimaxi.com/v1"
+    }
+  }
+}
+```
+
 ### Workspace 设置
 默认工作区：`~/.nanobot/workspace`
 
@@ -105,6 +159,14 @@ Gateway 启动后会开启每日汇总器（每小时检查一次），自动把
 - 无会话不写入
 - 用于长期记忆沉淀与跨天回顾
 
+### 两层内存系统（重构版）
+- `memory/MEMORY.md`：长期事实与偏好，始终注入系统上下文。
+- `memory/HISTORY.md`：追加式历史摘要日志，不自动注入上下文，适合用 `grep` 检索。
+
+行为：
+- 当会话消息达到阈值时，会自动把旧消息摘要归档到 `HISTORY.md`。
+- 执行 `/new` 时，会先归档当前会话再清空会话上下文。
+
 ### Skills 支持
 技能目录位于 `<workspace>/skills`，支持两种结构：
 - `skills/<name>.md`
@@ -139,7 +201,7 @@ Web UI 与 API 同端口，默认 `18890`：
 WhatsApp 通过 `bridge/`（Baileys）接入，Go 侧通过 WebSocket 连接 Bridge。
 
 1. 构建 Bridge：`make bridge-install && make bridge-build`
-2. 启动 Bridge：`BRIDGE_PORT=3001 make bridge-run`
+2. 启动 Bridge：`BRIDGE_PORT=3001 BRIDGE_TOKEN=your-secret make bridge-run`
 3. 绑定（命令行扫码）：
 ```bash
 ./build/nanobot-go whatsapp bind --bridge ws://localhost:3001
@@ -189,6 +251,7 @@ WhatsApp 通过 `bridge/`（Baileys）接入，Go 侧通过 WebSocket 连接 Bri
     "whatsapp": {
       "enabled": true,
       "bridgeUrl": "ws://localhost:3001",
+      "bridgeToken": "shared-secret-optional",
       "allowFrom": [],
       "allowSelf": false
     },
@@ -202,6 +265,8 @@ WhatsApp 通过 `bridge/`（Baileys）接入，Go 侧通过 WebSocket 连接 Bri
   }
 }
 ```
+
+安全建议：生产环境为 Go 与 Bridge 配置相同的 `bridgeToken`，启用共享密钥认证。
 
 ## Web Fetch（浏览器模式）
 适合需要真实浏览器行为的站点：
@@ -221,6 +286,27 @@ WhatsApp 通过 `bridge/`（Baileys）接入，Go 侧通过 WebSocket 连接 Bri
 }
 ```
 安装 Playwright：`make webfetch-install`
+
+## MCP（Model Context Protocol）
+支持把外部 MCP 服务器工具接入为原生 Agent 工具，配置格式兼容 Claude Desktop / Cursor 的 `mcpServers` 条目（可直接复制每个 server 的配置块）。
+
+```json
+{
+  "tools": {
+    "mcpServers": {
+      "filesystem": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"]
+      },
+      "remote-http": {
+        "url": "https://mcp.example.com/sse"
+      }
+    }
+  }
+}
+```
+
+兼容写法：也支持将 `mcpServers` 放在配置文件顶层（Claude Desktop/Cursor 风格），启动时会自动合并到 `tools.mcpServers`。
 
 ## 一键启动
 前台启动（Bridge + Gateway）：
@@ -247,6 +333,7 @@ make down-daemon
 可用环境变量：
 - `BRIDGE_PORT`（默认 `3001`）
 - `GATEWAY_PORT`（默认 `18890`）
+- `BRIDGE_TOKEN`（可选，Bridge 认证密钥）
 - `BRIDGE_PROXY`（代理）
 
 ## 日志
@@ -405,7 +492,7 @@ If you see `Web UI not built`, run `make webui-build` first.
 WhatsApp is connected via a Node.js Bridge (Baileys) and a WebSocket link to Go.
 
 1. Build Bridge: `make bridge-install && make bridge-build`
-2. Run Bridge: `BRIDGE_PORT=3001 make bridge-run`
+2. Run Bridge: `BRIDGE_PORT=3001 BRIDGE_TOKEN=your-secret make bridge-run`
 3. Bind (CLI QR):
 ```bash
 ./build/nanobot-go whatsapp bind --bridge ws://localhost:3001
@@ -422,6 +509,7 @@ If you use a personal WhatsApp account and want phone messages to trigger replie
     "whatsapp": {
       "enabled": true,
       "bridgeUrl": "ws://localhost:3001",
+      "bridgeToken": "shared-secret-optional",
       "allowSelf": true
     }
   }
@@ -455,6 +543,7 @@ If you use a personal WhatsApp account and want phone messages to trigger replie
     "whatsapp": {
       "enabled": true,
       "bridgeUrl": "ws://localhost:3001",
+      "bridgeToken": "shared-secret-optional",
       "allowFrom": [],
       "allowSelf": false
     },
@@ -488,6 +577,28 @@ For sites that need real browser behavior:
 ```
 Install Playwright: `make webfetch-install`
 
+## MCP (Model Context Protocol)
+nanobot-go can connect external MCP servers and expose their tools as native agent tools.
+The server entry format is compatible with Claude Desktop / Cursor `mcpServers` blocks.
+
+```json
+{
+  "tools": {
+    "mcpServers": {
+      "filesystem": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"]
+      },
+      "remote-http": {
+        "url": "https://mcp.example.com/sse"
+      }
+    }
+  }
+}
+```
+
+Compatibility note: top-level `mcpServers` (Claude Desktop/Cursor style) is also accepted and merged into `tools.mcpServers` at load time.
+
 ## One-Command Start
 Foreground (Bridge + Gateway):
 ```bash
@@ -513,6 +624,7 @@ make down-daemon
 Env vars:
 - `BRIDGE_PORT` (default `3001`)
 - `GATEWAY_PORT` (default `18890`)
+- `BRIDGE_TOKEN` (optional, shared secret for bridge auth)
 - `BRIDGE_PROXY` (proxy)
 
 ## Logs

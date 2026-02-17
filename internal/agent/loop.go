@@ -6,15 +6,23 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/Lichas/nanobot-go/internal/bus"
 	"github.com/Lichas/nanobot-go/internal/config"
 	"github.com/Lichas/nanobot-go/internal/cron"
 	"github.com/Lichas/nanobot-go/internal/logging"
+	"github.com/Lichas/nanobot-go/internal/memory"
 	"github.com/Lichas/nanobot-go/internal/providers"
 	"github.com/Lichas/nanobot-go/internal/session"
 	"github.com/Lichas/nanobot-go/internal/skills"
 	"github.com/Lichas/nanobot-go/pkg/tools"
+)
+
+const (
+	sessionContextWindow         = 500
+	sessionConsolidateThreshold  = 120
+	sessionConsolidateKeepRecent = 40
 )
 
 // AgentLoop Agent 循环
@@ -29,10 +37,14 @@ type AgentLoop struct {
 	ExecConfig          config.ExecToolConfig
 	RestrictToWorkspace bool
 	CronService         *cron.Service
+	MCPServers          map[string]config.MCPServerConfig
 
 	context  *ContextBuilder
 	sessions *session.Manager
 	tools    *tools.Registry
+
+	mcpConnector   *tools.MCPConnector
+	mcpConnectOnce sync.Once
 }
 
 // NewAgentLoop 创建 Agent 循环
@@ -47,6 +59,7 @@ func NewAgentLoop(
 	execConfig config.ExecToolConfig,
 	restrictToWorkspace bool,
 	cronService *cron.Service,
+	mcpServers map[string]config.MCPServerConfig,
 ) *AgentLoop {
 	if maxIterations <= 0 {
 		maxIterations = 20
@@ -68,9 +81,14 @@ func NewAgentLoop(
 		ExecConfig:          execConfig,
 		RestrictToWorkspace: restrictToWorkspace,
 		CronService:         cronService,
+		MCPServers:          cloneMCPServerConfigs(mcpServers),
 		context:             NewContextBuilder(workspace),
 		sessions:            session.NewManager(workspace),
 		tools:               tools.NewRegistry(),
+	}
+
+	if len(loop.MCPServers) > 0 {
+		loop.mcpConnector = tools.NewMCPConnector(convertMCPServers(loop.MCPServers))
 	}
 
 	loop.registerDefaultTools()
@@ -113,6 +131,8 @@ func (a *AgentLoop) registerDefaultTools() {
 
 // Run 运行 Agent 循环
 func (a *AgentLoop) Run(ctx context.Context) error {
+	a.ensureMCPConnected(ctx)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -215,6 +235,8 @@ func (h *streamHandler) GetToolCalls() []providers.ToolCall {
 
 // ProcessMessage 处理单个消息（流式版本）
 func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage) (*bus.OutboundMessage, error) {
+	a.ensureMCPConnected(ctx)
+
 	if lg := logging.Get(); lg != nil && lg.Session != nil {
 		lg.Session.Printf("inbound channel=%s chat=%s sender=%s content=%q", msg.Channel, msg.ChatID, msg.SenderID, logging.Truncate(msg.Content, 400))
 	}
@@ -222,14 +244,35 @@ func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage)
 	// 获取或创建会话
 	sess := a.sessions.GetOrCreate(msg.SessionKey)
 
+	// 统一 slash 命令
+	cmd := strings.TrimSpace(strings.ToLower(msg.Content))
+	switch cmd {
+	case "/new":
+		if _, err := memory.ArchiveSessionAll(a.Workspace, sess); err != nil {
+			if lg := logging.Get(); lg != nil && lg.Session != nil {
+				lg.Session.Printf("archive session on /new failed: %v", err)
+			}
+		}
+		sess.Clear()
+		_ = a.sessions.Save(sess)
+		return bus.NewOutboundMessage(msg.Channel, msg.ChatID, "New session started."), nil
+	case "/help":
+		return bus.NewOutboundMessage(
+			msg.Channel,
+			msg.ChatID,
+			"nanobot commands:\n/new - Start a new conversation\n/help - Show available commands",
+		), nil
+	}
+
 	// 获取历史记录并转换为 providers.Message
-	history := a.convertSessionMessages(sess.GetHistory())
+	history := a.convertSessionMessages(sess.GetHistory(sessionContextWindow))
 
 	// 构建消息
 	messages := a.context.BuildMessages(history, msg.Content, msg.Media, msg.Channel, msg.ChatID)
 
 	// Agent 循环
 	var finalContent string
+	maxIterationReached := true
 	toolDefs := a.tools.GetDefinitions()
 
 	for i := 0; i < a.MaxIterations; i++ {
@@ -286,12 +329,17 @@ func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage)
 		} else {
 			// 没有工具调用，结束循环
 			finalContent = content
+			maxIterationReached = false
 			break
 		}
 	}
 
 	if finalContent == "" {
-		finalContent = "I've completed processing but have no response to give."
+		if maxIterationReached {
+			finalContent = fmt.Sprintf("Reached %d iterations without completion.", a.MaxIterations)
+		} else {
+			finalContent = "I've completed processing but have no response to give."
+		}
 	}
 
 	if lg := logging.Get(); lg != nil && lg.Session != nil {
@@ -301,6 +349,14 @@ func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage)
 	// 保存到会话
 	sess.AddMessage("user", msg.Content)
 	sess.AddMessage("assistant", finalContent)
+
+	if len(sess.Messages) > sessionConsolidateThreshold {
+		if _, err := memory.ConsolidateSession(a.Workspace, sess, sessionConsolidateKeepRecent); err != nil {
+			if lg := logging.Get(); lg != nil && lg.Session != nil {
+				lg.Session.Printf("memory consolidation failed: %v", err)
+			}
+		}
+	}
 	a.sessions.Save(sess)
 
 	return bus.NewOutboundMessage(msg.Channel, msg.ChatID, finalContent), nil
@@ -309,6 +365,9 @@ func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage)
 // ProcessDirect 直接处理消息（用于 CLI）
 func (a *AgentLoop) ProcessDirect(ctx context.Context, content, sessionKey, channel, chatID string) (string, error) {
 	msg := bus.NewInboundMessage(channel, "user", chatID, content)
+	if sessionKey != "" {
+		msg.SessionKey = sessionKey
+	}
 	resp, err := a.ProcessMessage(ctx, msg)
 	if err != nil {
 		return "", err
@@ -340,4 +399,76 @@ func (a *AgentLoop) LoadSkills() error {
 	skillsDir := filepath.Join(a.Workspace, "skills")
 	_, err := skills.Discover(skillsDir)
 	return err
+}
+
+// Close 释放 AgentLoop 资源（主要是 MCP 连接）。
+func (a *AgentLoop) Close() error {
+	if a.mcpConnector == nil {
+		return nil
+	}
+	return a.mcpConnector.Close()
+}
+
+func (a *AgentLoop) ensureMCPConnected(ctx context.Context) {
+	if a.mcpConnector == nil {
+		return
+	}
+	a.mcpConnectOnce.Do(func() {
+		if err := a.mcpConnector.Connect(ctx, a.tools); err != nil {
+			if lg := logging.Get(); lg != nil && lg.Tools != nil {
+				lg.Tools.Printf("mcp connect warning: %v", err)
+			}
+		} else if lg := logging.Get(); lg != nil && lg.Tools != nil {
+			registered := a.mcpConnector.RegisteredTools()
+			if len(registered) > 0 {
+				lg.Tools.Printf("mcp connected tools=%v", registered)
+			}
+		}
+	})
+}
+
+func cloneMCPServerConfigs(in map[string]config.MCPServerConfig) map[string]config.MCPServerConfig {
+	if len(in) == 0 {
+		return map[string]config.MCPServerConfig{}
+	}
+	out := make(map[string]config.MCPServerConfig, len(in))
+	for name, server := range in {
+		s := server
+		if s.Args == nil {
+			s.Args = []string{}
+		}
+		if s.Env == nil {
+			s.Env = map[string]string{}
+		}
+		out[name] = s
+	}
+	return out
+}
+
+func convertMCPServers(in map[string]config.MCPServerConfig) map[string]tools.MCPServerOptions {
+	if len(in) == 0 {
+		return map[string]tools.MCPServerOptions{}
+	}
+	out := make(map[string]tools.MCPServerOptions, len(in))
+	for name, server := range in {
+		out[name] = tools.MCPServerOptions{
+			Name:    name,
+			Command: server.Command,
+			Args:    append([]string(nil), server.Args...),
+			Env:     cloneStringMap(server.Env),
+			URL:     server.URL,
+		}
+	}
+	return out
+}
+
+func cloneStringMap(in map[string]string) map[string]string {
+	if len(in) == 0 {
+		return map[string]string{}
+	}
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }

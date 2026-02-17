@@ -3,10 +3,14 @@ package cli
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"syscall"
 
 	"github.com/Lichas/nanobot-go/internal/agent"
@@ -19,13 +23,61 @@ import (
 )
 
 var (
-	messageFlag   string
-	sessionIDFlag string
+	messageFlag    string
+	sessionIDFlag  string
+	markdownFlag   bool
+	logsFlag       bool
+	noMarkdownFlag bool
+	noLogsFlag     bool
 )
+
+func normalizeInteractiveInput(input string) string {
+	return strings.TrimRight(input, "\r\n")
+}
+
+func isExitCommand(input string) bool {
+	switch strings.ToLower(strings.TrimSpace(input)) {
+	case "exit", "quit":
+		return true
+	default:
+		return false
+	}
+}
+
+func resolveCLIChannel(renderMarkdown bool) string {
+	if renderMarkdown {
+		return "cli"
+	}
+	return "cli_plain"
+}
+
+var (
+	mdHeadingRe  = regexp.MustCompile(`(?m)^\s{0,3}#{1,6}\s*`)
+	mdLinkRe     = regexp.MustCompile(`\[(.*?)\]\((.*?)\)`)
+	mdEmphasisRe = regexp.MustCompile(`[*_~` + "`" + `]+`)
+)
+
+func stripMarkdown(input string) string {
+	out := mdHeadingRe.ReplaceAllString(input, "")
+	out = mdLinkRe.ReplaceAllString(out, "$1 ($2)")
+	out = mdEmphasisRe.ReplaceAllString(out, "")
+	return strings.TrimSpace(out)
+}
+
+func formatAgentResponse(content string, renderMarkdown bool) string {
+	if renderMarkdown {
+		return content
+	}
+	return stripMarkdown(content)
+}
 
 func init() {
 	agentCmd.Flags().StringVarP(&messageFlag, "message", "m", "", "Message to send to the agent")
-	agentCmd.Flags().StringVarP(&sessionIDFlag, "session", "s", "cli:default", "Session ID")
+	agentCmd.Flags().StringVarP(&sessionIDFlag, "session", "s", "cli:direct", "Session ID")
+	agentCmd.Flags().BoolVar(&markdownFlag, "markdown", true, "Render assistant output as Markdown")
+	agentCmd.Flags().BoolVar(&logsFlag, "logs", false, "Show runtime log file paths")
+	agentCmd.Flags().BoolVar(&noMarkdownFlag, "no-markdown", false, "Disable markdown rendering")
+	agentCmd.Flags().BoolVar(&noLogsFlag, "no-logs", false, "Hide runtime log file paths")
 }
 
 // agentCmd Agent 命令
@@ -33,6 +85,13 @@ var agentCmd = &cobra.Command{
 	Use:   "agent",
 	Short: "Interact with the agent directly",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if noMarkdownFlag {
+			markdownFlag = false
+		}
+		if noLogsFlag {
+			logsFlag = false
+		}
+
 		cfg, err := config.LoadConfig()
 		if err != nil {
 			return fmt.Errorf("failed to load config: %w", err)
@@ -40,6 +99,9 @@ var agentCmd = &cobra.Command{
 
 		if _, err := logging.Init(config.GetDataDir()); err != nil {
 			fmt.Printf("⚠ logging init error: %v\n", err)
+		}
+		if logsFlag {
+			fmt.Printf("Logs: %s\n", config.GetLogsDir())
 		}
 
 		// 检查 API key
@@ -50,7 +112,13 @@ var agentCmd = &cobra.Command{
 		}
 
 		// 创建 Provider
-		provider, err := providers.NewOpenAIProvider(apiKey, apiBase, cfg.Agents.Defaults.Model)
+		provider, err := providers.NewOpenAIProvider(
+			apiKey,
+			apiBase,
+			cfg.Agents.Defaults.Model,
+			cfg.Agents.Defaults.MaxTokens,
+			cfg.Agents.Defaults.Temperature,
+		)
 		if err != nil {
 			return fmt.Errorf("failed to create provider: %w", err)
 		}
@@ -73,22 +141,25 @@ var agentCmd = &cobra.Command{
 			cfg.Tools.Exec,
 			cfg.Tools.RestrictToWorkspace,
 			cronService,
+			cfg.Tools.MCPServers,
 		)
+		defer agentLoop.Close()
 
 		if messageFlag != "" {
 			// 单条消息模式
 			ctx := context.Background()
-			response, err := agentLoop.ProcessDirect(ctx, messageFlag, sessionIDFlag, "cli", "direct")
+			channel := resolveCLIChannel(markdownFlag)
+			response, err := agentLoop.ProcessDirect(ctx, messageFlag, sessionIDFlag, channel, "direct")
 			if err != nil {
 				return err
 			}
 			// 流式输出已实时显示，仅在有内容时打印
 			if response != "" {
-				fmt.Printf("\n%s %s\n", logo, response)
+				fmt.Printf("\n%s %s\n", logo, formatAgentResponse(response, markdownFlag))
 			}
 		} else {
 			// 交互模式
-			fmt.Printf("%s Interactive mode (Ctrl+C to exit)\n\n", logo)
+			fmt.Printf("%s Interactive mode (type 'exit' or Ctrl+C to exit)\n\n", logo)
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -102,6 +173,7 @@ var agentCmd = &cobra.Command{
 			}()
 
 			reader := bufio.NewReader(os.Stdin)
+			channel := resolveCLIChannel(markdownFlag)
 			for {
 				select {
 				case <-ctx.Done():
@@ -113,15 +185,23 @@ var agentCmd = &cobra.Command{
 				fmt.Print("You: ")
 				input, err := reader.ReadString('\n')
 				if err != nil {
+					if errors.Is(err, io.EOF) {
+						fmt.Println("\nGoodbye!")
+						return nil
+					}
 					return err
 				}
 
-				input = input[:len(input)-1] // 移除换行符
+				input = normalizeInteractiveInput(input)
 				if input == "" {
 					continue
 				}
+				if isExitCommand(input) {
+					fmt.Println("Goodbye!")
+					return nil
+				}
 
-				response, err := agentLoop.ProcessDirect(ctx, input, sessionIDFlag, "cli", "direct")
+				response, err := agentLoop.ProcessDirect(ctx, input, sessionIDFlag, channel, "direct")
 				if err != nil {
 					fmt.Printf("Error: %v\n", err)
 					continue
@@ -129,7 +209,7 @@ var agentCmd = &cobra.Command{
 
 				// 流式输出已实时显示，仅在有内容时打印
 				if response != "" {
-					fmt.Printf("\n%s %s\n\n", logo, response)
+					fmt.Printf("\n%s %s\n\n", logo, formatAgentResponse(response, markdownFlag))
 				} else {
 					fmt.Println()
 				}

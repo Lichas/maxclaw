@@ -10,6 +10,10 @@
 **ChatID**: {{CHAT_ID}}
 **Workspace**: {{WORKSPACE}}
 **Skills Directory**: {{SKILLS_DIR}}
+**Nanobot Source Marker File**: {{NANOBOT_SOURCE_MARKER_FILE}}
+**Nanobot Source Marker Path**: {{NANOBOT_SOURCE_MARKER_PATH}}
+**Nanobot Source Directory**: {{NANOBOT_SOURCE_DIR}}
+**Nanobot Source Marker Found**: {{NANOBOT_SOURCE_MARKER_FOUND}}
 
 ---
 

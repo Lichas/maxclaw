@@ -18,8 +18,9 @@ type Message struct {
 
 // Session 会话
 type Session struct {
-	Key      string    `json:"key"`
-	Messages []Message `json:"messages"`
+	Key              string    `json:"key"`
+	Messages         []Message `json:"messages"`
+	LastConsolidated int       `json:"lastConsolidated,omitempty"`
 }
 
 // Manager 会话管理器
@@ -75,21 +76,24 @@ func (s *Session) AddMessage(role, content string) {
 		Content:   content,
 		Timestamp: time.Now(),
 	})
-
-	// 限制历史记录长度（保留最近 50 条）
-	if len(s.Messages) > 50 {
-		s.Messages = s.Messages[len(s.Messages)-50:]
-	}
 }
 
 // GetHistory 获取历史记录
-func (s *Session) GetHistory() []Message {
-	return s.Messages
+func (s *Session) GetHistory(maxMessages ...int) []Message {
+	if len(maxMessages) == 0 || maxMessages[0] <= 0 {
+		return s.Messages
+	}
+	limit := maxMessages[0]
+	if len(s.Messages) <= limit {
+		return s.Messages
+	}
+	return s.Messages[len(s.Messages)-limit:]
 }
 
 // Clear 清空会话
 func (s *Session) Clear() {
 	s.Messages = make([]Message, 0)
+	s.LastConsolidated = 0
 }
 
 // getSessionFilePath 获取会话文件路径

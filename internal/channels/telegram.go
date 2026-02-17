@@ -17,9 +17,10 @@ import (
 
 // TelegramConfig Telegram 配置
 type TelegramConfig struct {
-	Token   string `json:"token"`
-	Enabled bool   `json:"enabled"`
-	Proxy   string `json:"proxy,omitempty"`
+	Token     string   `json:"token"`
+	Enabled   bool     `json:"enabled"`
+	AllowFrom []string `json:"allowFrom,omitempty"`
+	Proxy     string   `json:"proxy,omitempty"`
 }
 
 // TelegramChannel Telegram 频道
@@ -196,10 +197,17 @@ func (t *TelegramChannel) fetchUpdates() {
 		}
 
 		if update.Message.Text != "" && t.messageHandler != nil {
+			if !t.isAllowed(update.Message.From.ID, update.Message.From.Username) {
+				continue
+			}
+			sender := update.Message.From.Username
+			if strings.TrimSpace(sender) == "" {
+				sender = strconv.FormatInt(update.Message.From.ID, 10)
+			}
 			msg := &Message{
 				ID:      strconv.FormatInt(update.Message.MessageID, 10),
 				Text:    update.Message.Text,
-				Sender:  update.Message.From.Username,
+				Sender:  sender,
 				ChatID:  strconv.FormatInt(update.Message.Chat.ID, 10),
 				Channel: "telegram",
 				Raw:     update,
@@ -210,6 +218,29 @@ func (t *TelegramChannel) fetchUpdates() {
 			}
 		}
 	}
+}
+
+func (t *TelegramChannel) isAllowed(userID int64, username string) bool {
+	if len(t.config.AllowFrom) == 0 {
+		return true
+	}
+
+	idStr := strconv.FormatInt(userID, 10)
+	username = strings.TrimPrefix(strings.TrimSpace(username), "@")
+
+	for _, allowed := range t.config.AllowFrom {
+		allowed = strings.TrimSpace(allowed)
+		if allowed == "" {
+			continue
+		}
+		if allowed == idStr {
+			return true
+		}
+		if strings.TrimPrefix(allowed, "@") == username && username != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // SendMessage 发送消息

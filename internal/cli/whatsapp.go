@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Lichas/nanobot-go/internal/config"
@@ -56,6 +57,20 @@ var whatsappBindCmd = &cobra.Command{
 			return fmt.Errorf("failed to connect to bridge: %w", err)
 		}
 		defer conn.Close()
+
+		if token := strings.TrimSpace(cfg.Channels.WhatsApp.BridgeToken); token != "" {
+			authPayload := map[string]string{
+				"type":  "auth",
+				"token": token,
+			}
+			authData, err := json.Marshal(authPayload)
+			if err != nil {
+				return fmt.Errorf("failed to encode bridge auth payload: %w", err)
+			}
+			if err := conn.WriteMessage(websocket.TextMessage, authData); err != nil {
+				return fmt.Errorf("failed to send bridge auth: %w", err)
+			}
+		}
 
 		msgCh := make(chan bridgeEvent)
 		errCh := make(chan error, 1)

@@ -63,7 +63,8 @@ func TestGetHistory(t *testing.T) {
 
 func TestClear(t *testing.T) {
 	session := &Session{
-		Key: "test",
+		Key:              "test",
+		LastConsolidated: 3,
 		Messages: []Message{
 			{Role: "user", Content: "Hello"},
 		},
@@ -71,21 +72,22 @@ func TestClear(t *testing.T) {
 
 	session.Clear()
 	assert.Empty(t, session.Messages)
+	assert.Equal(t, 0, session.LastConsolidated)
 }
 
-func TestMessageLimit(t *testing.T) {
+func TestGetHistoryWithLimit(t *testing.T) {
 	session := &Session{
 		Key:      "test",
 		Messages: []Message{},
 	}
 
-	// 添加超过 50 条消息
-	for i := 0; i < 55; i++ {
+	for i := 0; i < 505; i++ {
 		session.AddMessage("user", "message")
 	}
 
-	// 应该只保留最近 50 条
-	assert.Len(t, session.Messages, 50)
+	assert.Len(t, session.Messages, 505)
+	assert.Len(t, session.GetHistory(500), 500)
+	assert.Len(t, session.GetHistory(999), 505)
 }
 
 func TestSaveAndLoad(t *testing.T) {
@@ -96,6 +98,7 @@ func TestSaveAndLoad(t *testing.T) {
 	session := manager.GetOrCreate("cli:session1")
 	session.AddMessage("user", "Hello")
 	session.AddMessage("assistant", "Hi!")
+	session.LastConsolidated = 1
 
 	err := manager.Save(session)
 	require.NoError(t, err)
@@ -108,6 +111,7 @@ func TestSaveAndLoad(t *testing.T) {
 	assert.Equal(t, "user", loaded.Messages[0].Role)
 	assert.Equal(t, "Hello", loaded.Messages[0].Content)
 	assert.Equal(t, "assistant", loaded.Messages[1].Role)
+	assert.Equal(t, 1, loaded.LastConsolidated)
 }
 
 func TestSanitizeFilename(t *testing.T) {

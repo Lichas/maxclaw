@@ -55,7 +55,13 @@ var gatewayCmd = &cobra.Command{
 		fmt.Printf("%s Starting nanobot gateway on port %d...\n\n", logo, gatewayPort)
 
 		// 创建 Provider
-		provider, err := providers.NewOpenAIProvider(apiKey, apiBase, cfg.Agents.Defaults.Model)
+		provider, err := providers.NewOpenAIProvider(
+			apiKey,
+			apiBase,
+			cfg.Agents.Defaults.Model,
+			cfg.Agents.Defaults.MaxTokens,
+			cfg.Agents.Defaults.Temperature,
+		)
 		if err != nil {
 			return fmt.Errorf("failed to create provider: %w", err)
 		}
@@ -81,7 +87,9 @@ var gatewayCmd = &cobra.Command{
 			cfg.Tools.Exec,
 			cfg.Tools.RestrictToWorkspace,
 			cronService,
+			cfg.Tools.MCPServers,
 		)
+		defer agentLoop.Close()
 
 		// 创建频道注册表
 		channelRegistry := channels.NewRegistry()
@@ -89,9 +97,10 @@ var gatewayCmd = &cobra.Command{
 		// 注册 Telegram
 		if cfg.Channels.Telegram.Enabled {
 			tgChannel := channels.NewTelegramChannel(&channels.TelegramConfig{
-				Token:   cfg.Channels.Telegram.Token,
-				Enabled: cfg.Channels.Telegram.Enabled,
-				Proxy:   cfg.Channels.Telegram.Proxy,
+				Token:     cfg.Channels.Telegram.Token,
+				Enabled:   cfg.Channels.Telegram.Enabled,
+				AllowFrom: cfg.Channels.Telegram.AllowFrom,
+				Proxy:     cfg.Channels.Telegram.Proxy,
 			})
 			tgChannel.SetMessageHandler(func(msg *channels.Message) {
 				// 转发到消息总线
@@ -118,10 +127,11 @@ var gatewayCmd = &cobra.Command{
 		// 注册 WhatsApp (Bridge)
 		if cfg.Channels.WhatsApp.Enabled {
 			waChannel := channels.NewWhatsAppChannel(&channels.WhatsAppConfig{
-				Enabled:   cfg.Channels.WhatsApp.Enabled,
-				BridgeURL: cfg.Channels.WhatsApp.BridgeURL,
-				AllowFrom: cfg.Channels.WhatsApp.AllowFrom,
-				AllowSelf: cfg.Channels.WhatsApp.AllowSelf,
+				Enabled:     cfg.Channels.WhatsApp.Enabled,
+				BridgeURL:   cfg.Channels.WhatsApp.BridgeURL,
+				BridgeToken: cfg.Channels.WhatsApp.BridgeToken,
+				AllowFrom:   cfg.Channels.WhatsApp.AllowFrom,
+				AllowSelf:   cfg.Channels.WhatsApp.AllowSelf,
 			})
 			waChannel.SetMessageHandler(func(msg *channels.Message) {
 				inboundMsg := bus.NewInboundMessage("whatsapp", msg.Sender, msg.ChatID, msg.Text)

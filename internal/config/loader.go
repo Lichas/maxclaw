@@ -56,6 +56,22 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
 
+	// 兼容 Claude Desktop / Cursor 风格的顶层 mcpServers 配置
+	// 若 tools.mcpServers 已显式设置，则其优先级更高
+	var topLevel struct {
+		MCPServers map[string]MCPServerConfig `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(data, &topLevel); err == nil && len(topLevel.MCPServers) > 0 {
+		if config.Tools.MCPServers == nil {
+			config.Tools.MCPServers = map[string]MCPServerConfig{}
+		}
+		for name, server := range topLevel.MCPServers {
+			if _, exists := config.Tools.MCPServers[name]; !exists {
+				config.Tools.MCPServers[name] = server
+			}
+		}
+	}
+
 	// Expand workspace path (supports ~ and $HOME)
 	config.Agents.Defaults.Workspace = expandPath(config.Agents.Defaults.Workspace)
 
@@ -238,6 +254,18 @@ This file stores important information that should persist across sessions.
 `
 		if err := os.WriteFile(memoryPath, []byte(memoryContent), 0644); err != nil {
 			return fmt.Errorf("failed to create MEMORY.md: %w", err)
+		}
+	}
+
+	// 创建 HISTORY.md（两层内存系统：grep 可检索历史日志）
+	historyPath := filepath.Join(memoryDir, "HISTORY.md")
+	if _, err := os.Stat(historyPath); os.IsNotExist(err) {
+		historyContent := `# Conversation History
+
+Append-only summaries for grep-based recall.
+`
+		if err := os.WriteFile(historyPath, []byte(historyContent), 0644); err != nil {
+			return fmt.Errorf("failed to create HISTORY.md: %w", err)
 		}
 	}
 

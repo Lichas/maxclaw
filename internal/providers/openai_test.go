@@ -49,3 +49,38 @@ func TestConvertToChatMessagesAlwaysIncludesContentField(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildChatRequestIncludesGenerationParamsAndClampsMaxTokens(t *testing.T) {
+	req := buildChatRequest(
+		[]Message{{Role: "user", Content: "hello"}},
+		nil,
+		"gpt-4o-mini",
+		false,
+		0,
+		0.2,
+	)
+
+	if req.MaxTokens != 1 {
+		t.Fatalf("expected max_tokens to be clamped to 1, got %d", req.MaxTokens)
+	}
+	if req.Temperature != 0.2 {
+		t.Fatalf("expected temperature=0.2, got %v", req.Temperature)
+	}
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+
+	var decoded map[string]interface{}
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+
+	if got, ok := decoded["max_tokens"]; !ok || got.(float64) != 1 {
+		t.Fatalf("expected max_tokens in payload, got %v", decoded["max_tokens"])
+	}
+	if got, ok := decoded["temperature"]; !ok || got.(float64) != 0.2 {
+		t.Fatalf("expected temperature in payload, got %v", decoded["temperature"])
+	}
+}
