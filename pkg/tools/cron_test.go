@@ -85,9 +85,24 @@ func TestCronToolAdd(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Contains(t, result, "Created job")
+		assert.Contains(t, result, "at:")
 		require.NotNil(t, mockService.lastAdded)
 		assert.Equal(t, cron.ScheduleTypeOnce, mockService.lastAdded.Schedule.Type)
 		assert.NotZero(t, mockService.lastAdded.Schedule.AtMs)
+	})
+
+	t.Run("add with at time-only", func(t *testing.T) {
+		at := time.Now().Add(2 * time.Minute).Format("15:04:05")
+		result, err := tool.Execute(ctx, map[string]interface{}{
+			"action":  "add",
+			"message": "Time only reminder",
+			"at":      at,
+		})
+		require.NoError(t, err)
+		assert.Contains(t, result, "Created job")
+		require.NotNil(t, mockService.lastAdded)
+		assert.Equal(t, cron.ScheduleTypeOnce, mockService.lastAdded.Schedule.Type)
+		assert.Greater(t, mockService.lastAdded.Schedule.AtMs, time.Now().UnixMilli())
 	})
 
 	t.Run("invalid at", func(t *testing.T) {
@@ -98,6 +113,17 @@ func TestCronToolAdd(t *testing.T) {
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid at")
+	})
+
+	t.Run("at in the past", func(t *testing.T) {
+		pastAt := time.Now().Add(-2 * time.Hour).Format("2006-01-02 15:04:05")
+		_, err := tool.Execute(ctx, map[string]interface{}{
+			"action":  "add",
+			"message": "Past at",
+			"at":      pastAt,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "at must be in the future")
 	})
 
 	t.Run("missing message", func(t *testing.T) {

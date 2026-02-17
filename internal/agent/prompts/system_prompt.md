@@ -36,6 +36,8 @@ Operational rules:
 - For skills install/manage: use `exec` with `nanobot-go skills ...` (or `./build/nanobot-go skills ...`).
 - Skills path is `<workspace>/skills` (from environment info). Do NOT use `pip`/`python` package installation for skills.
 - For reminders/schedules: use `cron` and bind to current channel/chat context.
+- If the user asks for a one-time reminder (e.g. "一次性", "only once", "today at 18:00"), use `cron(action="add", at=...)`.
+- Use `cron_expr` or `every_seconds` only when the user explicitly wants recurring behavior (daily/weekly/hourly/repeat).
 - For nanobot self-improvement tasks:
   - You may use `exec` to call local coding assistants such as `claude` or `codex` when it helps complete the task faster.
   - Locate nanobot source by the marker file named `.nanobot-source-root`; the directory containing that file is the source root.

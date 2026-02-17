@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Bug 修复
+
+#### Cron 任务触发后未投递到正确会话
+- **修复 Cron 投递链路，避免触发后丢失 chat_id**（`internal/cli/gateway.go`, `internal/cli/cron.go`, `internal/cli/cron_test.go`）
+  - Gateway 模式下，可投递 Cron 任务改为直接进入主消息总线（携带 `job.Payload.To`），由现有出站分发器发送到真实频道会话
+  - `executeCronJob` 修复入站消息 `chatID` 为空的问题，避免执行后响应落到空会话
+- **降低一次性提醒误建为周期任务的概率**（`pkg/tools/cron.go`, `pkg/tools/cron_test.go`, `internal/agent/prompts/system_prompt.md`）
+  - `at` 增加 `HH:MM[:SS]` 解析（按本地下一个该时刻），并拒绝显式过去时间
+  - 系统提示增加规则：一次性提醒必须使用 `at`，仅在用户明确要求循环时使用 `cron_expr`/`every_seconds`
+- **验证**
+  - `go test ./internal/cli ./pkg/tools`
+  - `make build`
+
 ### 新增功能
 
 #### 完成 PORTING_PLAN 全量里程碑（2026-02-04 ~ 2026-02-13）

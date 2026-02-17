@@ -343,21 +343,15 @@ func executeCronJob(cfg *config.Config, apiKey, apiBase string, cronService *cro
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	// 构建 channel 前缀
-	channelPrefix := ""
-	if job.Payload.Channel != "" {
-		channelPrefix = fmt.Sprintf("[%s] ", job.Payload.Channel)
-	}
-
 	// 添加用户消息
-	userMsg := fmt.Sprintf("%s[Cron Job: %s] %s", channelPrefix, job.Name, job.Payload.Message)
+	userMsg := buildCronUserMessage(job)
 
 	resultChan := make(chan string, 1)
 	errorChan := make(chan error, 1)
 
 	go func() {
 		// 使用 agent 处理消息
-		msg := bus.NewInboundMessage(job.Payload.Channel, "cron", "", userMsg)
+		msg := bus.NewInboundMessage(job.Payload.Channel, "cron", job.Payload.To, userMsg)
 		resp, err := agentLoop.ProcessMessage(ctx, msg)
 		if err != nil {
 			errorChan <- err
@@ -378,4 +372,36 @@ func executeCronJob(cfg *config.Config, apiKey, apiBase string, cronService *cro
 	case <-ctx.Done():
 		return "", ctx.Err()
 	}
+}
+
+func buildCronUserMessage(job *cron.Job) string {
+	if job == nil {
+		return "[Cron Job] empty job"
+	}
+	channelPrefix := ""
+	if job.Payload.Channel != "" {
+		channelPrefix = fmt.Sprintf("[%s] ", job.Payload.Channel)
+	}
+	return fmt.Sprintf("%s[Cron Job: %s] %s", channelPrefix, job.Name, job.Payload.Message)
+}
+
+func enqueueCronJob(messageBus *bus.MessageBus, job *cron.Job) (string, error) {
+	if messageBus == nil {
+		return "", fmt.Errorf("message bus not available")
+	}
+	if job == nil {
+		return "", fmt.Errorf("job is nil")
+	}
+	if job.Payload.Channel == "" {
+		return "", fmt.Errorf("cron job channel is empty")
+	}
+	if job.Payload.To == "" {
+		return "", fmt.Errorf("cron job target is empty")
+	}
+
+	msg := bus.NewInboundMessage(job.Payload.Channel, "cron", job.Payload.To, buildCronUserMessage(job))
+	if err := messageBus.PublishInbound(msg); err != nil {
+		return "", fmt.Errorf("failed to enqueue cron job: %w", err)
+	}
+	return fmt.Sprintf("enqueued cron job %s", job.ID), nil
 }

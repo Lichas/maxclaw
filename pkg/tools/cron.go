@@ -32,7 +32,7 @@ func NewCronTool(service CronService) *CronTool {
 	return &CronTool{
 		BaseTool: BaseTool{
 			name:        "cron",
-			description: "Schedule reminders and recurring tasks. Actions: add, list, remove. Use for setting up reminders, periodic checks, or scheduled notifications.",
+			description: "Schedule reminders and recurring tasks. Actions: add, list, remove. For one-time reminders, use at; only use cron_expr/every_seconds when the user explicitly wants recurring execution.",
 			parameters: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
@@ -56,7 +56,7 @@ func NewCronTool(service CronService) *CronTool {
 					},
 					"at": map[string]interface{}{
 						"type":        "string",
-						"description": "ISO datetime for one-time execution (e.g. '2026-02-12T10:30:00')",
+						"description": "One-time execution time. Supports RFC3339, 'YYYY-MM-DD HH:MM[:SS]', or local time-only 'HH:MM[:SS]' (next occurrence).",
 					},
 					"job_id": map[string]interface{}{
 						"type":        "string",
@@ -129,6 +129,7 @@ func (t *CronTool) addJob(ctx context.Context, params map[string]interface{}) (s
 
 	// 解析调度配置
 	var schedule cron.Schedule
+	var scheduleSummary string
 
 	if v, ok := params["every_seconds"]; ok {
 		// 周期性任务
@@ -156,6 +157,7 @@ func (t *CronTool) addJob(ctx context.Context, params map[string]interface{}) (s
 			Type:    cron.ScheduleTypeEvery,
 			EveryMs: int64(everySec) * 1000,
 		}
+		scheduleSummary = fmt.Sprintf("every %d seconds", everySec)
 	} else if v, ok := params["cron_expr"]; ok {
 		// Cron 表达式任务
 		expr, ok := v.(string)
@@ -166,6 +168,7 @@ func (t *CronTool) addJob(ctx context.Context, params map[string]interface{}) (s
 			Type: cron.ScheduleTypeCron,
 			Expr: expr,
 		}
+		scheduleSummary = fmt.Sprintf("cron: %s", expr)
 	} else if v, ok := params["at"]; ok {
 		raw, ok := v.(string)
 		if !ok {
@@ -173,12 +176,16 @@ func (t *CronTool) addJob(ctx context.Context, params map[string]interface{}) (s
 		}
 		runAt, err := parseCronAt(raw)
 		if err != nil {
-			return "", fmt.Errorf("invalid at, expected ISO datetime")
+			return "", fmt.Errorf("invalid at format")
+		}
+		if !runAt.After(time.Now()) {
+			return "", fmt.Errorf("at must be in the future")
 		}
 		schedule = cron.Schedule{
 			Type: cron.ScheduleTypeOnce,
 			AtMs: runAt.UnixMilli(),
 		}
+		scheduleSummary = fmt.Sprintf("at: %s", runAt.Format(time.RFC3339))
 	} else {
 		return "", fmt.Errorf("either every_seconds, cron_expr, or at is required")
 	}
@@ -203,7 +210,7 @@ func (t *CronTool) addJob(ctx context.Context, params map[string]interface{}) (s
 		return "", fmt.Errorf("failed to add job: %w", err)
 	}
 
-	return fmt.Sprintf("Created job '%s' (id: %s)", job.Name, job.ID), nil
+	return fmt.Sprintf("Created job '%s' (id: %s, %s)", job.Name, job.ID, scheduleSummary), nil
 }
 
 // listJobs 列出所有定时任务
@@ -257,11 +264,29 @@ func parseCronAt(raw string) (time.Time, error) {
 		"2006-01-02T15:04:05",
 		"2006-01-02 15:04:05",
 		"2006-01-02T15:04",
+		"2006-01-02 15:04",
 	}
 	for _, layout := range localLayouts {
 		if t, err := time.ParseInLocation(layout, raw, time.Local); err == nil {
 			return t, nil
 		}
+	}
+
+	timeOnlyLayouts := []string{
+		"15:04:05",
+		"15:04",
+	}
+	now := time.Now()
+	for _, layout := range timeOnlyLayouts {
+		t, err := time.ParseInLocation(layout, raw, time.Local)
+		if err != nil {
+			continue
+		}
+		runAt := time.Date(now.Year(), now.Month(), now.Day(), t.Hour(), t.Minute(), t.Second(), 0, time.Local)
+		if !runAt.After(now) {
+			runAt = runAt.Add(24 * time.Hour)
+		}
+		return runAt, nil
 	}
 
 	return time.Time{}, fmt.Errorf("invalid at format")
