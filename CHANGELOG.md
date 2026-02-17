@@ -19,6 +19,11 @@
   - 要求所有代理在完成会修改仓库的需求后，自动更新 `CHANGELOG.md` 的 `Unreleased` 条目
   - 新增要求：需求成功完成且有仓库变更时，先执行 `make build`，再执行 `git commit`
   - 新增并发开发规范：多 session 并发任务使用 `git worktree` 隔离，验证通过后再合并到 `main`
+- **增强源码 marker 回退发现**（`internal/agent/context.go`, `internal/agent/context_test.go`）
+  - 在 `NANOBOT_SOURCE_DIR` 与 workspace 向上查找失败后，支持通过 `NANOBOT_SOURCE_SEARCH_ROOTS` 指定搜索根目录
+  - 当 workspace 为默认 `~/.nanobot/workspace` 时，自动扫描 `$HOME/git` 与 `$HOME/src` 查找 `.nanobot-source-root`
+  - 增加单次解析缓存，避免重复扫描
+  - 验证：`go test ./internal/agent`，`make build`
 
 ### Bug 修复
 
