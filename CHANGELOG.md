@@ -18,6 +18,7 @@
 - **新增代理执行规范**（`AGENTS.md`, `CLAUDE.md`）
   - 要求所有代理在完成会修改仓库的需求后，自动更新 `CHANGELOG.md` 的 `Unreleased` 条目
   - 新增要求：需求成功完成且有仓库变更时，先执行 `make build`，再执行 `git commit`
+  - 新增并发开发规范：多 session 并发任务使用 `git worktree` 隔离，验证通过后再合并到 `main`
 
 ### Bug 修复
 
