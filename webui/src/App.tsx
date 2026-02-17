@@ -277,6 +277,23 @@ export default function App() {
     }
   };
 
+  const refreshStatus = async () => {
+    setLoading(true);
+    try {
+      const [statusRes, sessionsRes] = await Promise.all([
+        fetchJSON<Status>('/api/status'),
+        fetchJSON<{ sessions: SessionSummary[] }>('/api/sessions'),
+      ]);
+      setStatus(statusRes);
+      setSessions(sessionsRes.sessions || []);
+      setNotice(lang === 'zh' ? '状态已刷新。' : 'Status refreshed.');
+    } catch (err) {
+      setNotice((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const sendMessage = async () => {
     if (!message.trim()) return;
     setLoading(true);
@@ -409,14 +426,22 @@ export default function App() {
     }
   };
 
+  const channelsText = status?.channels?.length
+    ? status.channels.join(', ')
+    : lang === 'zh'
+      ? '无'
+      : 'none';
+
   return (
     <div className="app">
-      <header className="hero">
-        <div className="hero-badge">{copy.heroBadge}</div>
-        <h1>{copy.heroTitle}</h1>
-        <p>{copy.heroSubtitle}</p>
-        <div className="hero-actions">
-          <button className="primary" onClick={refreshSessions} disabled={loading}>
+      <header className="topbar">
+        <div className="topbar-title">
+          <div className="hero-badge">{copy.heroBadge}</div>
+          <h1>{copy.heroTitle}</h1>
+          <p>{copy.heroSubtitle}</p>
+        </div>
+        <div className="topbar-actions">
+          <button className="primary" onClick={refreshStatus} disabled={loading}>
             <ReloadIcon /> {copy.refresh}
           </button>
           <button
@@ -425,13 +450,35 @@ export default function App() {
           >
             {lang === 'en' ? '中文' : 'EN'}
           </button>
-          {notice && (
-            <span className="notice">
-              <CheckCircledIcon /> {notice}
-            </span>
-          )}
         </div>
       </header>
+
+      <section className="status-strip">
+        <div className="status-pill">
+          <span className="label">{copy.workspace}</span>
+          <strong>{status?.workspace || '—'}</strong>
+        </div>
+        <div className="status-pill">
+          <span className="label">{copy.model}</span>
+          <strong>{status?.model || '—'}</strong>
+        </div>
+        <div className="status-pill">
+          <span className="label">{copy.channels}</span>
+          <strong>{channelsText}</strong>
+        </div>
+        <div className="status-pill">
+          <span className="label">{copy.cron}</span>
+          <strong>
+            {status?.cron?.enabledJobs ?? 0}/{status?.cron?.totalJobs ?? 0}
+          </strong>
+        </div>
+      </section>
+
+      {notice && (
+        <div className="notice banner">
+          <CheckCircledIcon /> {notice}
+        </div>
+      )}
 
       <Tabs.Root className="tabs" defaultValue="status">
         <Tabs.List className="tab-list">
@@ -457,13 +504,7 @@ export default function App() {
             </div>
             <div className="card">
               <h3>{copy.channels}</h3>
-              <p>
-                {status?.channels?.length
-                  ? status.channels.join(', ')
-                  : lang === 'zh'
-                    ? '无'
-                    : 'none'}
-              </p>
+              <p>{channelsText}</p>
               <span className="label">{copy.enabled}</span>
             </div>
             <div className="card">
@@ -573,48 +614,50 @@ export default function App() {
         </Tabs.Content>
 
         <Tabs.Content value="settings" className="tab-content">
-          <div className="settings">
-            <div className="card">
-              <h3>{copy.workspace}</h3>
-              <p>{copy.workspaceHint}</p>
-              <div className="inline">
-                <input
-                  value={workspaceInput}
-                  onChange={(e) => setWorkspaceInput(e.target.value)}
-                  placeholder="/absolute/path/to/workspace"
-                />
-                <button className="primary" onClick={saveWorkspace} disabled={loading}>
-                  {copy.save}
-                </button>
+          <div className="settings-layout">
+            <div className="settings-side">
+              <div className="card">
+                <h3>{copy.workspace}</h3>
+                <p>{copy.workspaceHint}</p>
+                <div className="inline">
+                  <input
+                    value={workspaceInput}
+                    onChange={(e) => setWorkspaceInput(e.target.value)}
+                    placeholder="/absolute/path/to/workspace"
+                  />
+                  <button className="primary" onClick={saveWorkspace} disabled={loading}>
+                    {copy.save}
+                  </button>
+                </div>
+              </div>
+
+              <div className="card">
+                <h3>{copy.telegramTitle}</h3>
+                <p>{copy.telegramHint}</p>
+                <div className="inline">
+                  <input
+                    value={telegramToken}
+                    onChange={(e) => setTelegramToken(e.target.value)}
+                    placeholder={copy.telegramPlaceholder}
+                  />
+                  <button className="primary" onClick={saveTelegram} disabled={loading}>
+                    {copy.save}
+                  </button>
+                </div>
+              </div>
+
+              <div className="card">
+                <h3>{copy.gatewayTitle}</h3>
+                <p>{copy.gatewayHint}</p>
+                <div className="actions actions-left">
+                  <button className="secondary" onClick={restartGateway} disabled={loading}>
+                    {copy.restartGateway}
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="card">
-              <h3>{copy.telegramTitle}</h3>
-              <p>{copy.telegramHint}</p>
-              <div className="inline">
-                <input
-                  value={telegramToken}
-                  onChange={(e) => setTelegramToken(e.target.value)}
-                  placeholder={copy.telegramPlaceholder}
-                />
-                <button className="primary" onClick={saveTelegram} disabled={loading}>
-                  {copy.save}
-                </button>
-              </div>
-            </div>
-
-            <div className="card">
-              <h3>{copy.gatewayTitle}</h3>
-              <p>{copy.gatewayHint}</p>
-              <div className="actions actions-left">
-                <button className="secondary" onClick={restartGateway} disabled={loading}>
-                  {copy.restartGateway}
-                </button>
-              </div>
-            </div>
-
-            <div className="card">
+            <div className="card config-card">
               <h3>{copy.configTitle}</h3>
               <p>{copy.configHint}</p>
               <div
@@ -628,15 +671,17 @@ export default function App() {
                     {configFullscreen ? copy.exitFullscreen : copy.fullscreen}
                   </button>
                 </div>
-                <Editor
-                  value={configText}
-                  onValueChange={setConfigText}
-                  highlight={(code) => Prism.highlight(code, Prism.languages.json, 'json')}
-                  padding={12}
-                  textareaClassName="config-editor-textarea"
-                  preClassName="config-editor-preview"
-                  className="config-editor"
-                />
+                <div className="config-editor-scroll">
+                  <Editor
+                    value={configText}
+                    onValueChange={setConfigText}
+                    highlight={(code) => Prism.highlight(code, Prism.languages.json, 'json')}
+                    padding={12}
+                    textareaClassName="config-editor-textarea"
+                    preClassName="config-editor-preview"
+                    className="config-editor"
+                  />
+                </div>
               </div>
               <div className="actions">
                 <button className="primary" onClick={saveConfig} disabled={loading}>

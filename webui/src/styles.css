@@ -71,14 +71,17 @@
 }
 
 :root {
-  --bg: #f6f1ea;
+  --bg: #efebe5;
+  --bg-2: #e5dfd6;
   --panel: #ffffff;
-  --ink: #1c1a16;
-  --muted: #6f6a63;
-  --accent: #ff6b3d;
-  --accent-dark: #e75121;
-  --shadow: rgba(28, 26, 22, 0.08);
-  --line: rgba(28, 26, 22, 0.08);
+  --panel-muted: #f7f4ef;
+  --ink: #1f1d19;
+  --muted: #66635d;
+  --accent: #ff6a3d;
+  --accent-dark: #dd542b;
+  --line: rgba(31, 29, 25, 0.12);
+  --line-strong: rgba(31, 29, 25, 0.24);
+  --shadow: rgba(31, 29, 25, 0.07);
 }
 
 * {
@@ -89,49 +92,57 @@ body {
   margin: 0;
   font-family: 'Instrument Sans', system-ui, sans-serif;
   color: var(--ink);
-  background: radial-gradient(circle at top, #fff7ee 0%, #f3ede5 45%, #f0e9e2 100%);
+  background: radial-gradient(circle at top right, #f9f7f2 0%, var(--bg) 44%, var(--bg-2) 100%);
 }
 
 .app {
-  max-width: 1200px;
+  max-width: 1360px;
   margin: 0 auto;
-  padding: 48px 32px 96px;
+  padding: 24px 24px 48px;
 }
 
-.hero {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 248, 240, 0.4));
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.74));
   border: 1px solid var(--line);
-  border-radius: 28px;
-  padding: 36px 40px;
-  box-shadow: 0 30px 60px var(--shadow);
+  border-radius: 20px;
+  padding: 18px 20px;
+  box-shadow: 0 18px 35px var(--shadow);
+}
+
+.topbar-title {
+  min-width: 0;
+}
+
+.topbar-title h1 {
+  margin: 2px 0 4px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 34px;
+  line-height: 1.08;
+}
+
+.topbar-title p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .hero-badge {
   display: inline-block;
   font-family: 'IBM Plex Mono', monospace;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.16em;
   font-size: 12px;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 12px;
-}
-
-.hero h1 {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 44px;
-  margin: 0 0 12px;
-}
-
-.hero p {
-  margin: 0 0 20px;
-  color: var(--muted);
-  max-width: 540px;
-}
-
-.hero-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
 }
 
 .primary {
@@ -154,8 +165,8 @@ body {
 }
 
 .secondary {
-  background: transparent;
-  border: 1px solid var(--ink);
+  background: #fff;
+  border: 1px solid var(--line-strong);
   color: var(--ink);
   padding: 10px 18px;
   border-radius: 999px;
@@ -184,21 +195,55 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: var(--muted);
+  color: #1e5f39;
+}
+
+.notice.banner {
+  margin-top: 12px;
+  background: #eef8f1;
+  border: 1px solid #b8e0c4;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.status-strip {
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+}
+
+.status-pill {
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--line);
+}
+
+.status-pill strong {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tabs {
-  margin-top: 32px;
+  margin-top: 14px;
 }
 
 .tab-list {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
   gap: 8px;
-  background: var(--panel);
+  background: rgba(255, 255, 255, 0.55);
   padding: 6px;
-  border-radius: 999px;
+  border-radius: 14px;
   border: 1px solid var(--line);
   box-shadow: 0 8px 16px var(--shadow);
+  width: min(560px, 100%);
 }
 
 .tab-list button {
@@ -209,6 +254,7 @@ body {
   border-radius: 999px;
   cursor: pointer;
   color: var(--muted);
+  white-space: nowrap;
 }
 
 .tab-list button[data-state='active'] {
@@ -217,21 +263,21 @@ body {
 }
 
 .tab-content {
-  margin-top: 24px;
+  margin-top: 14px;
 }
 
 .grid {
   display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .card {
-  background: var(--panel);
-  border-radius: 18px;
-  padding: 20px;
+  background: linear-gradient(180deg, #fff, #fcfaf7);
+  border-radius: 14px;
+  padding: 16px;
   border: 1px solid var(--line);
-  box-shadow: 0 12px 30px var(--shadow);
+  box-shadow: 0 8px 18px var(--shadow);
 }
 
 .whatsapp-card {
@@ -241,9 +287,9 @@ body {
 }
 
 .whatsapp-card .qr {
-  width: 180px;
-  height: 180px;
-  border-radius: 12px;
+  width: 170px;
+  height: 170px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: #fff;
   padding: 8px;
@@ -252,6 +298,7 @@ body {
 .card h3 {
   margin: 0 0 8px;
   font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
 }
 
 .card p {
@@ -268,11 +315,11 @@ body {
 }
 
 .chat-panel {
-  background: var(--panel);
-  border-radius: 22px;
+  background: var(--panel-muted);
+  border-radius: 16px;
   border: 1px solid var(--line);
-  box-shadow: 0 16px 32px var(--shadow);
-  padding: 20px;
+  box-shadow: 0 14px 26px var(--shadow);
+  padding: 16px;
 }
 
 .chat-header {
@@ -290,10 +337,10 @@ body {
 }
 
 .chat-history {
-  max-height: 360px;
+  max-height: 420px;
   overflow-y: auto;
   padding: 12px;
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fbfaf8;
   border: 1px solid var(--line);
 }
@@ -340,7 +387,7 @@ body {
 .session-list {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .session-card {
@@ -367,28 +414,39 @@ body {
   color: var(--muted);
 }
 
-.settings {
+.settings-layout {
   display: grid;
-  gap: 16px;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
 }
 
-.settings .inline {
+.settings-side {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-side .inline {
   display: flex;
   gap: 12px;
 }
 
-.settings input {
+.settings-side input {
   flex: 1;
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid var(--line);
 }
 
+.config-card {
+  min-height: 100%;
+}
+
 .config-editor-shell {
   width: 100%;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid var(--line);
-  background: #fbfaf8;
+  background: #f6f6f4;
   overflow: hidden;
 }
 
@@ -399,36 +457,60 @@ body {
 }
 
 .config-editor-shell:fullscreen {
-  padding: 12px;
+  padding: 10px;
   border-radius: 0;
-  background: #fbfaf8;
+  background: #f1f1ef;
 }
 
 .config-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 10px 0;
+  padding: 8px 8px 6px;
+}
+
+.config-editor-scroll {
+  height: clamp(340px, 54vh, 680px);
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  background: #fbfaf9;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+}
+
+.config-editor-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.config-editor-scroll::-webkit-scrollbar-thumb {
+  background: #c4beb4;
+  border-radius: 999px;
+}
+
+.config-editor-scroll::-webkit-scrollbar-track {
+  background: #efebe5;
 }
 
 .config-editor {
-  min-height: 260px;
-  max-height: 520px;
-  overflow: auto;
+  min-height: 100%;
+  width: max-content;
+  min-width: 100%;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 14px;
   line-height: 1.5;
+  caret-color: #1f1d19;
 }
 
-.config-editor-shell.is-fullscreen .config-editor,
-.config-editor-shell:fullscreen .config-editor {
-  min-height: calc(100vh - 120px);
-  max-height: calc(100vh - 120px);
+.config-editor-shell.is-fullscreen .config-editor-scroll,
+.config-editor-shell:fullscreen .config-editor-scroll {
+  height: calc(100vh - 120px);
 }
 
 .config-editor-preview,
 .config-editor-textarea {
   font-family: 'IBM Plex Mono', monospace;
+  min-height: 100% !important;
   white-space: pre !important;
   outline: none;
 }
@@ -476,18 +558,36 @@ body {
 
 @media (max-width: 720px) {
   .app {
-    padding: 32px 20px 64px;
+    padding: 16px 14px 32px;
   }
 
-  .hero {
-    padding: 28px;
+  .topbar {
+    border-radius: 16px;
+    padding: 14px;
+    align-items: flex-start;
   }
 
-  .hero h1 {
-    font-size: 32px;
+  .topbar-title h1 {
+    font-size: 27px;
   }
 
-  .settings .inline {
+  .topbar-title p {
+    font-size: 14px;
+  }
+
+  .status-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .tab-list {
+    grid-template-columns: repeat(2, minmax(110px, 1fr));
+  }
+
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-side .inline {
     flex-direction: column;
   }
 }
