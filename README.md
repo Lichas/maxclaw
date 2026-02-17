@@ -124,6 +124,8 @@ Gateway 启动后会开启每日汇总器（每小时检查一次），自动把
 ./build/nanobot-go skills add https://github.com/vercel-labs/agent-skills --path skills --skill react-best-practices
 ```
 
+在聊天里让 Agent 安装 skills 时，请明确说“调用 `exec` 执行 `nanobot-go skills add ...`”；skills 安装位置固定为 `<workspace>/skills`，不是 Python 包安装。
+
 ## Web UI
 Web UI 与 API 同端口，默认 `18890`：
 
@@ -387,6 +389,8 @@ Management commands:
 ./build/nanobot-go skills validate
 ./build/nanobot-go skills add https://github.com/vercel-labs/agent-skills --path skills --skill react-best-practices
 ```
+
+When asking the agent in chat to install skills, explicitly request `exec` with `nanobot-go skills add ...`. Skills are installed into `<workspace>/skills` (not Python package installs).
 
 ## Web UI
 Web UI and API share the same port (default `18890`).

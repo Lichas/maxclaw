@@ -8,6 +8,8 @@
 
 **Channel**: {{CHANNEL}}
 **ChatID**: {{CHAT_ID}}
+**Workspace**: {{WORKSPACE}}
+**Skills Directory**: {{SKILLS_DIR}}
 
 ---
 

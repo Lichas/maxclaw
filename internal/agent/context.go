@@ -165,6 +165,8 @@ func (b *ContextBuilder) buildEnvironmentSection(channel, chatID string) string 
 	result = strings.ReplaceAll(result, "{{TIME}}", fmt.Sprintf("%02d:%02d", hour, min))
 	result = strings.ReplaceAll(result, "{{CHANNEL}}", channel)
 	result = strings.ReplaceAll(result, "{{CHAT_ID}}", chatID)
+	result = strings.ReplaceAll(result, "{{WORKSPACE}}", b.workspace)
+	result = strings.ReplaceAll(result, "{{SKILLS_DIR}}", filepath.Join(b.workspace, "skills"))
 
 	return result
 }

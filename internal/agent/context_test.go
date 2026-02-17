@@ -37,3 +37,16 @@ func TestContextBuilderHeartbeatPrefersMemoryFile(t *testing.T) {
 	assert.Contains(t, systemPrompt, "memory heartbeat")
 	assert.NotContains(t, systemPrompt, "root heartbeat")
 }
+
+func TestContextBuilderIncludesWorkspaceAndSkillsDir(t *testing.T) {
+	workspace := t.TempDir()
+	builder := NewContextBuilder(workspace)
+
+	messages := builder.BuildMessages(nil, "hello", nil, "telegram", "123")
+	require.NotEmpty(t, messages)
+
+	systemPrompt := messages[0].Content
+	assert.Contains(t, systemPrompt, "Workspace")
+	assert.Contains(t, systemPrompt, workspace)
+	assert.Contains(t, systemPrompt, filepath.Join(workspace, "skills"))
+}
