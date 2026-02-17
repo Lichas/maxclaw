@@ -52,6 +52,16 @@
 - **验证**
   - `make build`
 
+#### 修复 takeoverExisting 模式静默回退导致无法复用本地登录态
+- **收紧 Host Chrome 接管失败语义**（`webfetcher/fetch.mjs`）
+  - `chrome.takeoverExisting=true` 且 CDP/AppleScript 接管失败时，直接返回错误，不再悄悄回退到 managed profile
+  - 增加 AppleScript 常见失败原因映射（未开启 `Allow JavaScript from Apple Events`、macOS Automation 权限未授权）
+  - 仅在非 takeover 模式保留原有“失败后回退 managed profile”路径
+- **验证**
+  - `node --check webfetcher/fetch.mjs`
+  - `go test ./internal/agent ./pkg/tools ./internal/config`
+  - `make build`
+
 ### Bug 修复
 
 #### Cron 任务触发后未投递到正确会话

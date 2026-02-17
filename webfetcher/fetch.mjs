@@ -165,6 +165,128 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function escapeAppleScriptString(input) {
+  return String(input || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function runCommandCapture(command, args, timeoutMs = 10000) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      child.kill('SIGKILL');
+      reject(new Error(`command timeout: ${command}`));
+    }, timeoutMs);
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString('utf8');
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString('utf8');
+    });
+
+    child.on('error', (err) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      reject(err);
+    });
+
+    child.on('exit', (code) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      if (code === 0) {
+        resolve({ stdout, stderr });
+        return;
+      }
+      reject(new Error((stderr || '').trim() || `command exit code ${code}: ${command}`));
+    });
+  });
+}
+
+async function fetchWithHostChromeAppleScript(req, chrome) {
+  if (process.platform !== 'darwin') {
+    throw new Error('host takeover via AppleScript is only supported on macOS');
+  }
+
+  const appName = resolveChromeAppName(chrome.channel);
+  const url = escapeAppleScriptString(req.url);
+  const sep = '__NANOBOT_SEP__';
+
+  const jsTitle = "document.title || ''";
+  const jsText = "document.body ? document.body.innerText : ''";
+
+  const scriptLines = [
+    `tell application "${escapeAppleScriptString(appName)}"`,
+    'activate',
+    'if (count of windows) = 0 then',
+    'make new window',
+    'end if',
+    `set URL of active tab of front window to "${url}"`,
+    'end tell',
+    'delay 1.8',
+    `tell application "${escapeAppleScriptString(appName)}"`,
+    `set pageTitle to execute active tab of front window javascript "${escapeAppleScriptString(jsTitle)}"`,
+    `set pageText to execute active tab of front window javascript "${escapeAppleScriptString(jsText)}"`,
+    `return pageTitle & linefeed & "${sep}" & linefeed & pageText`,
+    'end tell',
+  ];
+
+  const args = [];
+  for (const line of scriptLines) {
+    args.push('-e', line);
+  }
+
+  const result = await runCommandCapture('osascript', args, Math.max(req.timeoutMs, 12000));
+  const output = (result.stdout || '').replace(/\r/g, '\n');
+  const marker = `\n${sep}\n`;
+  const idx = output.indexOf(marker);
+  if (idx === -1) {
+    throw new Error('host Chrome takeover returned unexpected payload');
+  }
+
+  const title = normalizeText(output.slice(0, idx));
+  const text = normalizeText(output.slice(idx + marker.length));
+  return { url: req.url, title, text };
+}
+
+function errorMessage(err) {
+  return err && typeof err.message === 'string' ? err.message : String(err);
+}
+
+function mapHostTakeoverError(err) {
+  const raw = errorMessage(err);
+  const lower = raw.toLowerCase();
+
+  if (lower.includes('executing javascript through applescript is turned off')) {
+    return (
+      'host takeover failed: Chrome blocks AppleScript JavaScript execution. ' +
+      'Enable "View > Developer > Allow JavaScript from Apple Events" in Chrome, then retry'
+    );
+  }
+
+  if (lower.includes('not authorized to send apple events')) {
+    return (
+      'host takeover failed: macOS denied Automation permission. ' +
+      'Allow your agent app under System Settings > Privacy & Security > Automation, then retry'
+    );
+  }
+
+  return `host takeover failed: ${raw}`;
+}
+
 async function readDevToolsVersion(cdpEndpoint, timeoutMs = 1500) {
   const base = endpointHttpBase(cdpEndpoint);
   if (!base) {
@@ -208,44 +330,6 @@ function launchDetached(command, args) {
       settled = true;
       resolve();
     }, 120);
-  });
-}
-
-function runCommand(command, args, timeoutMs = 5000) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: 'ignore' });
-    let settled = false;
-
-    const timer = setTimeout(() => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      child.kill('SIGKILL');
-      reject(new Error(`command timeout: ${command}`));
-    }, timeoutMs);
-
-    child.on('error', (err) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(timer);
-      reject(err);
-    });
-
-    child.on('exit', (code) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      clearTimeout(timer);
-      if (code === 0) {
-        resolve();
-        return;
-      }
-      reject(new Error(`command exit code ${code}: ${command}`));
-    });
   });
 }
 
@@ -309,12 +393,8 @@ async function ensureHostChromeCDP(chrome) {
 
   if (process.platform === 'darwin') {
     const appName = resolveChromeAppName(chrome.channel);
-    if (chrome.takeoverExisting) {
-      await runCommand('osascript', ['-e', `tell application "${appName}" to quit`], 5000).catch(() => {});
-      await sleep(900);
-    }
-    const modeFlag = chrome.takeoverExisting ? '-a' : '-na';
-    await launchDetached('open', [modeFlag, appName, '--args', ...startupArgs]);
+    // Use `-na` to force a new app instance with our launch args (including CDP port).
+    await launchDetached('open', ['-na', appName, '--args', ...startupArgs]);
   } else if (process.platform === 'linux') {
     let launched = false;
     const candidates = resolveLinuxChromeExecutables(chrome.channel);
@@ -482,38 +562,62 @@ async function fetchWithChromeProfile(req, chrome) {
 
 async function fetchWithChromeMode(req) {
   const chrome = req.chrome;
+  const warnings = [];
+
   if (chrome.cdpEndpoint) {
     try {
-      const result = await fetchWithChromeCDP(req, chrome);
-      return result;
+      return await fetchWithChromeCDP(req, chrome);
     } catch (cdpErr) {
-      const cdpMessage = cdpErr && typeof cdpErr.message === 'string' ? cdpErr.message : String(cdpErr);
-      const warnings = [`CDP attach failed: ${cdpMessage}`];
-
-      if (chrome.autoStartCDP) {
-        try {
-          const autoStart = await ensureHostChromeCDP(chrome);
-          if (autoStart.started) {
-            warnings.push('auto-started host Chrome for CDP takeover');
-          } else {
-            warnings.push('host Chrome CDP endpoint already ready');
-          }
-          const connected = await fetchWithChromeCDP(req, chrome);
-          const merged = connected.text ? `[warning] ${warnings.join('; ')}\n\n${connected.text}` : `[warning] ${warnings.join('; ')}`;
-          return { ...connected, text: merged };
-        } catch (autoErr) {
-          const autoMessage = autoErr && typeof autoErr.message === 'string' ? autoErr.message : String(autoErr);
-          warnings.push(`auto-start host Chrome failed: ${autoMessage}`);
-        }
-      }
-
-      const fallback = await fetchWithChromeProfile(req, chrome);
-      const mergedWarning = `[warning] ${warnings.join('; ')}; fallback to managed profile`;
-      const mergedText = fallback.text ? `${mergedWarning}\n\n${fallback.text}` : mergedWarning;
-      return { ...fallback, text: mergedText };
+      warnings.push(`CDP attach failed: ${errorMessage(cdpErr)}`);
     }
   }
-  return await fetchWithChromeProfile(req, chrome);
+
+  if (chrome.takeoverExisting) {
+    if (process.platform === 'darwin') {
+      try {
+        const takeover = await fetchWithHostChromeAppleScript(req, chrome);
+        const mergedWarning = warnings.length
+          ? `[warning] ${warnings.join('; ')}; used host Chrome AppleScript takeover`
+          : '[warning] used host Chrome AppleScript takeover';
+        const mergedText = takeover.text ? `${mergedWarning}\n\n${takeover.text}` : mergedWarning;
+        return { ...takeover, text: mergedText };
+      } catch (takeoverErr) {
+        warnings.push(mapHostTakeoverError(takeoverErr));
+      }
+    } else {
+      warnings.push(`host takeover requires macOS AppleScript, unsupported on ${process.platform}`);
+    }
+
+    const detail = warnings.length ? ` ${warnings.join('; ')}` : '';
+    throw new Error(
+      'takeoverExisting=true requires direct access to your current Chrome session, but takeover did not succeed.' +
+        detail
+    );
+  }
+
+  if (chrome.cdpEndpoint && chrome.autoStartCDP) {
+    try {
+      const autoStart = await ensureHostChromeCDP(chrome);
+      if (autoStart.started) {
+        warnings.push('auto-started host Chrome for CDP takeover');
+      } else {
+        warnings.push('host Chrome CDP endpoint already ready');
+      }
+      const connected = await fetchWithChromeCDP(req, chrome);
+      const merged = connected.text ? `[warning] ${warnings.join('; ')}\n\n${connected.text}` : `[warning] ${warnings.join('; ')}`;
+      return { ...connected, text: merged };
+    } catch (autoErr) {
+      warnings.push(`auto-start host Chrome failed: ${errorMessage(autoErr)}`);
+    }
+  }
+
+  const fallback = await fetchWithChromeProfile(req, chrome);
+  if (!warnings.length) {
+    return fallback;
+  }
+  const mergedWarning = `[warning] ${warnings.join('; ')}; fallback to managed profile`;
+  const mergedText = fallback.text ? `${mergedWarning}\n\n${fallback.text}` : mergedWarning;
+  return { ...fallback, text: mergedText };
 }
 
 async function main() {
@@ -555,8 +659,8 @@ async function main() {
     }
     writeResult({ ok: true, url, title, text });
   } catch (err) {
-    const message = err && typeof err.message === 'string' ? err.message : String(err);
-    if (normalized.mode === 'chrome' && normalized.chrome.cdpEndpoint) {
+    const message = errorMessage(err);
+    if (normalized.mode === 'chrome' && normalized.chrome.cdpEndpoint && !normalized.chrome.takeoverExisting) {
       writeResult({
         ok: false,
         error:
