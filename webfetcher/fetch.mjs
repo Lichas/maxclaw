@@ -305,8 +305,6 @@ async function ensureHostChromeCDP(chrome) {
   const startupArgs = [
     `--remote-debugging-port=${port}`,
     `--user-data-dir=${hostUserDataDir}`,
-    ...DEFAULT_CHROME_ARGS,
-    'about:blank',
   ];
 
   if (process.platform === 'darwin') {

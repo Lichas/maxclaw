@@ -34,6 +34,14 @@
 
 ### Bug 修复
 
+#### 修复 Host Chrome 自动接管启动时的警告空白页
+- **调整 Host Chrome CDP 自动拉起参数，避免注入自动化告警标志**（`webfetcher/fetch.mjs`）
+  - Host 接管启动不再带 `--disable-blink-features=AutomationControlled`
+  - Host 接管启动不再强制打开 `about:blank`
+  - 仅保留 CDP 接管所需参数，降低对你日常 Chrome 会话的干扰
+- **验证**
+  - `make build`
+
 #### 修复 X.com 等 SPA 站点在 Chrome 抓取下的“空页面误判成功”
 - **增强 `webfetcher/fetch.mjs` 的 Chrome 抓取容错与内容判定**（`webfetcher/fetch.mjs`）
   - `chrome.cdpEndpoint` 连接失败时自动回退到持久化 profile，而不是直接失败
