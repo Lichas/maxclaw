@@ -4,6 +4,18 @@
 
 ### 新增功能
 
+#### Web UI 配置编辑与服务控制增强
+- **配置 JSON 编辑器升级为语法高亮并支持全屏**（`webui/src/App.tsx`, `webui/src/styles.css`, `webui/package.json`, `webui/package-lock.json`）
+  - Settings 页的配置编辑从普通文本框升级为 JSON 高亮编辑器
+  - 新增全屏/退出全屏按钮，便于长配置编辑
+- **Web UI 新增 Gateway 重启能力**（`internal/webui/server.go`, `webui/src/App.tsx`）
+  - 新增 `POST /api/gateway/restart`，由 UI 触发后台重启脚本
+  - Settings 页新增 “Restart Gateway” 操作按钮
+- **验证**
+  - `cd webui && npm run build`
+  - `go test ./...`
+  - `make build`
+
 #### Python 2026-02-03 里程碑对齐（vLLM + 自然语言调度）
 - **Cron 工具新增一次性时间调度参数 `at`**（`pkg/tools/cron.go`, `pkg/tools/cron_test.go`）
   - `cron(action="add", at="ISO datetime")` 现在会创建 `once` 任务

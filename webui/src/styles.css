@@ -173,6 +173,12 @@ body {
   transform: translateY(-1px);
 }
 
+.secondary.small {
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
 .notice {
   display: inline-flex;
   align-items: center;
@@ -378,19 +384,88 @@ body {
   border: 1px solid var(--line);
 }
 
-.config-editor {
+.config-editor-shell {
   width: 100%;
-  min-height: 220px;
   border-radius: 12px;
   border: 1px solid var(--line);
+  background: #fbfaf8;
+  overflow: hidden;
+}
+
+.config-editor-shell.is-fullscreen {
   padding: 12px;
+  border-radius: 0;
+  background: #fbfaf8;
+}
+
+.config-editor-shell:fullscreen {
+  padding: 12px;
+  border-radius: 0;
+  background: #fbfaf8;
+}
+
+.config-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 10px 0;
+}
+
+.config-editor {
+  min-height: 260px;
+  max-height: 520px;
+  overflow: auto;
   font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.config-editor-shell.is-fullscreen .config-editor,
+.config-editor-shell:fullscreen .config-editor {
+  min-height: calc(100vh - 120px);
+  max-height: calc(100vh - 120px);
+}
+
+.config-editor-preview,
+.config-editor-textarea {
+  font-family: 'IBM Plex Mono', monospace;
+  white-space: pre !important;
+  outline: none;
+}
+
+.config-editor-preview {
+  color: #273444;
+}
+
+.config-editor .token.property {
+  color: #b6372f;
+}
+
+.config-editor .token.string {
+  color: #0e7a46;
+}
+
+.config-editor .token.number {
+  color: #1d58c0;
+}
+
+.config-editor .token.boolean,
+.config-editor .token.null {
+  color: #8a2db1;
+}
+
+.config-editor .token.punctuation {
+  color: #7b7f89;
 }
 
 .actions {
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
+}
+
+.actions-left {
+  justify-content: flex-start;
 }
 
 .empty {

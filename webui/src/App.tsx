@@ -1,7 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
-import { CheckCircledIcon, ReloadIcon } from '@radix-ui/react-icons';
+import {
+  CheckCircledIcon,
+  EnterFullScreenIcon,
+  ExitFullScreenIcon,
+  ReloadIcon,
+} from '@radix-ui/react-icons';
 import QRCode from 'qrcode';
+import Editor from 'react-simple-code-editor';
+import * as Prism from 'prismjs';
+import 'prismjs/components/prism-json';
 
 type Status = {
   workspace: string;
@@ -93,9 +101,16 @@ const translations = {
     messages: 'messages',
     workspaceHint: 'Changes require gateway restart.',
     save: 'Save',
+    gatewayTitle: 'Gateway',
+    gatewayHint: 'Restart gateway service from the UI after config changes.',
+    restartGateway: 'Restart Gateway',
     configTitle: 'Config JSON',
     configHint: 'Edit full config. Restart gateway to apply changes.',
     saveConfig: 'Save Config',
+    fullscreen: 'Fullscreen',
+    exitFullscreen: 'Exit Fullscreen',
+    restartSent: 'Gateway restart triggered. Service should be back in a few seconds.',
+    fullscreenUnavailable: 'Fullscreen is unavailable in this browser.',
     telegramTitle: 'Telegram',
     telegramHint: 'Paste BotFather token. Restart gateway to apply changes.',
     telegramPlaceholder: '123456:AAE...',
@@ -130,9 +145,16 @@ const translations = {
     messages: '条消息',
     workspaceHint: '修改后需重启 gateway 生效。',
     save: '保存',
+    gatewayTitle: '网关',
+    gatewayHint: '配置修改后可直接在 UI 重启 gateway 服务。',
+    restartGateway: '重启 Gateway',
     configTitle: '配置 JSON',
     configHint: '编辑完整配置。重启 gateway 后生效。',
     saveConfig: '保存配置',
+    fullscreen: '全屏',
+    exitFullscreen: '退出全屏',
+    restartSent: '已触发 Gateway 重启，服务会在几秒内恢复。',
+    fullscreenUnavailable: '当前浏览器暂不支持全屏。',
     telegramTitle: 'Telegram',
     telegramHint: '粘贴 BotFather Token。重启 gateway 后生效。',
     telegramPlaceholder: '123456:AAE...',
@@ -161,6 +183,8 @@ export default function App() {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [telegramQrDataUrl, setTelegramQrDataUrl] = useState<string>('');
   const [telegramToken, setTelegramToken] = useState('');
+  const [configFullscreen, setConfigFullscreen] = useState(false);
+  const configEditorRef = useRef<HTMLDivElement | null>(null);
 
   const sessionOptions = useMemo(() => {
     if (sessions.length === 0) {
@@ -194,6 +218,15 @@ export default function App() {
       window.localStorage.setItem('nanobot_lang', lang);
     }
   }, [lang]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const onFullscreenChange = () => {
+      setConfigFullscreen(document.fullscreenElement === configEditorRef.current);
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
 
   useEffect(() => {
     loadAll().catch((err) => setNotice((err as Error).message));
@@ -344,6 +377,35 @@ export default function App() {
       setNotice((err as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const restartGateway = async () => {
+    setLoading(true);
+    try {
+      await fetchJSON<{ ok: boolean }>('/api/gateway/restart', {
+        method: 'POST',
+        body: '{}',
+      });
+      setNotice(copy.restartSent);
+    } catch (err) {
+      setNotice((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleConfigFullscreen = async () => {
+    const target = configEditorRef.current;
+    if (!target || typeof document === 'undefined') return;
+    try {
+      if (document.fullscreenElement === target) {
+        await document.exitFullscreen();
+        return;
+      }
+      await target.requestFullscreen();
+    } catch {
+      setNotice(copy.fullscreenUnavailable);
     }
   };
 
@@ -543,13 +605,39 @@ export default function App() {
             </div>
 
             <div className="card">
+              <h3>{copy.gatewayTitle}</h3>
+              <p>{copy.gatewayHint}</p>
+              <div className="actions actions-left">
+                <button className="secondary" onClick={restartGateway} disabled={loading}>
+                  {copy.restartGateway}
+                </button>
+              </div>
+            </div>
+
+            <div className="card">
               <h3>{copy.configTitle}</h3>
               <p>{copy.configHint}</p>
-              <textarea
-                className="config-editor"
-                value={configText}
-                onChange={(e) => setConfigText(e.target.value)}
-              />
+              <div
+                ref={configEditorRef}
+                className={`config-editor-shell ${configFullscreen ? 'is-fullscreen' : ''}`}
+              >
+                <div className="config-toolbar">
+                  <span className="label">JSON</span>
+                  <button className="secondary small" onClick={toggleConfigFullscreen}>
+                    {configFullscreen ? <ExitFullScreenIcon /> : <EnterFullScreenIcon />}
+                    {configFullscreen ? copy.exitFullscreen : copy.fullscreen}
+                  </button>
+                </div>
+                <Editor
+                  value={configText}
+                  onValueChange={setConfigText}
+                  highlight={(code) => Prism.highlight(code, Prism.languages.json, 'json')}
+                  padding={12}
+                  textareaClassName="config-editor-textarea"
+                  preClassName="config-editor-preview"
+                  className="config-editor"
+                />
+              </div>
               <div className="actions">
                 <button className="primary" onClick={saveConfig} disabled={loading}>
                   {copy.saveConfig}

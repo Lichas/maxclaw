@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -47,6 +48,7 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	mux.HandleFunc("/api/sessions/", s.handleSessionByKey)
 	mux.HandleFunc("/api/message", s.handleMessage)
 	mux.HandleFunc("/api/config", s.handleConfig)
+	mux.HandleFunc("/api/gateway/restart", s.handleGatewayRestart)
 
 	mux.Handle("/", spaHandler(s.uiDir))
 
@@ -227,6 +229,37 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) handleGatewayRestart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	rootDir, script, err := findRestartScript()
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	cmd := exec.Command("bash", script)
+	cmd.Dir = rootDir
+	if err := cmd.Start(); err != nil {
+		writeError(w, fmt.Errorf("failed to restart gateway: %w", err))
+		return
+	}
+
+	if lg := logging.Get(); lg != nil && lg.Web != nil {
+		lg.Web.Printf("gateway restart triggered script=%s pid=%d", script, cmd.Process.Pid)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":      true,
+		"message": "gateway restart triggered",
+	})
+}
+
 func listSessions(workspace string) ([]sessionSummary, error) {
 	dir := filepath.Join(workspace, ".sessions")
 	entries, err := os.ReadDir(dir)
@@ -346,4 +379,34 @@ func findUIDir() string {
 	}
 
 	return ""
+}
+
+func findRestartScript() (string, string, error) {
+	var roots []string
+	if envRoot := os.Getenv("NANOBOT_ROOT"); envRoot != "" {
+		roots = append(roots, envRoot)
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		roots = append(roots, cwd)
+	}
+	if exe, err := os.Executable(); err == nil {
+		exeDir := filepath.Dir(exe)
+		roots = append(roots, exeDir, filepath.Join(exeDir, ".."))
+	}
+
+	seen := make(map[string]struct{}, len(roots))
+	for _, root := range roots {
+		cleanRoot := filepath.Clean(root)
+		if _, ok := seen[cleanRoot]; ok {
+			continue
+		}
+		seen[cleanRoot] = struct{}{}
+
+		script := filepath.Join(cleanRoot, "scripts", "restart_daemon.sh")
+		if stat, err := os.Stat(script); err == nil && !stat.IsDir() {
+			return cleanRoot, script, nil
+		}
+	}
+
+	return "", "", fmt.Errorf("restart script not found")
 }
