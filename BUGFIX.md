@@ -308,3 +308,17 @@ tail -f /Users/lua/.nanobot/logs/channels.log
 **验证**：
 - 新增 `internal/agent/loop_test.go`，验证 Agent 工具调用创建 cron 任务时 payload 正确写入 `channel=telegram`、`to=chat-42`。
 - `go test ./pkg/tools ./internal/agent` 全部通过。
+
+## 2026-02-17 - DeepSeek 400：`messages[n]: missing field content`
+
+**问题**：在多轮工具调用后，LLM 流式请求失败：`Failed to deserialize ... messages[n]: missing field content`。  
+**根因**：
+- OpenAI 兼容请求结构里 `chatMessage.Content` 使用了 `json:",omitempty"`。
+- 当 assistant/tool 消息 `content=""`（常见于纯 tool_call 回合）时，序列化会直接省略 `content` 字段。
+- DeepSeek 对 `messages[*].content` 字段是强校验，缺失会直接 400。  
+**修复措施**：
+- 将 `internal/providers/openai.go` 的 `chatMessage.Content` 改为 `json:"content"`，确保空字符串也会被发送。
+- 新增测试 `internal/providers/openai_test.go`，覆盖“空 content 但必须保留字段”的序列化场景。  
+**验证**：
+- `go test ./internal/providers ./internal/agent` 通过。
+- `go test ./...` 全量通过。

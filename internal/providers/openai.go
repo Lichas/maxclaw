@@ -294,9 +294,9 @@ func convertToChatMessages(messages []Message) []chatMessage {
 			Role: msg.Role,
 		}
 
-		if msg.Content != "" || msg.Role != "assistant" {
-			cm.Content = msg.Content
-		}
+		// 对于所有角色，都设置content字段（即使是空字符串）
+		// 有些API实现要求content字段必须存在
+		cm.Content = msg.Content
 
 		if msg.Role == "tool" {
 			cm.ToolCallID = msg.ToolCallID
@@ -405,7 +405,7 @@ type chatRequest struct {
 
 type chatMessage struct {
 	Role       string         `json:"role"`
-	Content    string         `json:"content,omitempty"`
+	Content    string         `json:"content"`
 	ToolCallID string         `json:"tool_call_id,omitempty"`
 	ToolCalls  []chatToolCall `json:"tool_calls,omitempty"`
 }
