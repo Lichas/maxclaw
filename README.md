@@ -311,23 +311,34 @@ make docker-run
 
 安全建议：生产环境为 Go 与 Bridge 配置相同的 `bridgeToken`，启用共享密钥认证。
 
-## Web Fetch（浏览器模式）
-适合需要真实浏览器行为的站点：
+## Web Fetch（浏览器/Chrome 模式）
+适合需要真实浏览器行为或复用登录态的站点：
 ```json
 {
   "tools": {
     "web": {
       "fetch": {
-        "mode": "browser",
+        "mode": "chrome",
         "scriptPath": "/absolute/path/to/nanobot-go/webfetcher/fetch.mjs",
         "nodePath": "node",
         "timeout": 30,
-        "waitUntil": "domcontentloaded"
+        "waitUntil": "domcontentloaded",
+        "chrome": {
+          "cdpEndpoint": "http://127.0.0.1:9222",
+          "profileName": "chrome",
+          "userDataDir": "~/.nanobot/browser/chrome/user-data",
+          "channel": "chrome",
+          "headless": true
+        }
       }
     }
   }
 }
 ```
+说明：
+- `mode=browser`：临时无状态 Chromium（不复用登录态）。
+- `mode=chrome`：优先使用 `chrome.cdpEndpoint` 接管现有 Chrome；若不配置 `cdpEndpoint`，则使用持久化 profile 目录。
+- 若要复用你正在使用的 Chrome 登录态，请先以远程调试端口启动 Chrome（示例：`--remote-debugging-port=9222`）。
 安装 Playwright：`make webfetch-install`
 
 ## MCP（Model Context Protocol）
@@ -601,23 +612,34 @@ If you use a personal WhatsApp account and want phone messages to trigger replie
 }
 ```
 
-## Web Fetch (Browser Mode)
-For sites that need real browser behavior:
+## Web Fetch (Browser/Chrome Mode)
+For sites that need real browser behavior or authenticated Chrome sessions:
 ```json
 {
   "tools": {
     "web": {
       "fetch": {
-        "mode": "browser",
+        "mode": "chrome",
         "scriptPath": "/absolute/path/to/nanobot-go/webfetcher/fetch.mjs",
         "nodePath": "node",
         "timeout": 30,
-        "waitUntil": "domcontentloaded"
+        "waitUntil": "domcontentloaded",
+        "chrome": {
+          "cdpEndpoint": "http://127.0.0.1:9222",
+          "profileName": "chrome",
+          "userDataDir": "~/.nanobot/browser/chrome/user-data",
+          "channel": "chrome",
+          "headless": true
+        }
       }
     }
   }
 }
 ```
+Notes:
+- `mode=browser`: stateless Chromium fetch.
+- `mode=chrome`: use `chrome.cdpEndpoint` to attach an existing Chrome session, or a persistent managed profile when `cdpEndpoint` is empty.
+- To reuse your live Chrome login state, start Chrome with remote debugging enabled (for example, `--remote-debugging-port=9222`).
 Install Playwright: `make webfetch-install`
 
 ## MCP (Model Context Protocol)

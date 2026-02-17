@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+### 新增功能
+
+#### Web Fetch 新增 Chrome 会话打通模式
+- **新增 `web_fetch` 的 `mode=chrome`，支持复用本机 Chrome 登录态与持久化 profile**（`pkg/tools/web.go`, `webfetcher/fetch.mjs`, `internal/config/schema.go`, `internal/agent/web_fetch.go`）
+  - 支持通过 `chrome.cdpEndpoint` 连接现有 Chrome（CDP）
+  - 支持通过 `chrome.userDataDir/profileName` 使用持久化用户数据目录
+  - 默认补齐 `~/.nanobot/browser/<profile>/user-data` 并增加常用 Chrome 自动化启动参数
+- **补充配置/文档/提示词与测试**（`README.md`, `internal/agent/prompts/system_prompt.md`, `internal/agent/web_fetch_test.go`, `pkg/tools/web_test.go`, `internal/config/config_test.go`）
+  - README 增加 Chrome 模式配置示例和使用说明
+  - 系统提示词明确 `web_fetch` 可用于浏览器/Chrome 抓取，避免误判“无浏览器能力”
+- **验证**
+  - `go test ./internal/agent ./pkg/tools ./internal/config`
+  - `make build`
+
 ### Bug 修复
 
 #### Cron 任务触发后未投递到正确会话

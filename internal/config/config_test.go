@@ -24,6 +24,10 @@ func TestDefaultConfig(t *testing.T) {
 
 	assert.False(t, cfg.Tools.RestrictToWorkspace)
 	assert.Equal(t, 5, cfg.Tools.Web.Search.MaxResults)
+	assert.Equal(t, "http", cfg.Tools.Web.Fetch.Mode)
+	assert.Equal(t, "chrome", cfg.Tools.Web.Fetch.Chrome.ProfileName)
+	assert.Equal(t, "chrome", cfg.Tools.Web.Fetch.Chrome.Channel)
+	assert.True(t, cfg.Tools.Web.Fetch.Chrome.Headless)
 	assert.Equal(t, 60, cfg.Tools.Exec.Timeout)
 	assert.Empty(t, cfg.Tools.MCPServers)
 

@@ -17,6 +17,13 @@ func BuildWebFetchOptions(cfg *config.Config) tools.WebFetchOptions {
 		TimeoutSec: cfg.Tools.Web.Fetch.Timeout,
 		UserAgent:  cfg.Tools.Web.Fetch.UserAgent,
 		WaitUntil:  cfg.Tools.Web.Fetch.WaitUntil,
+		Chrome: tools.WebFetchChromeOptions{
+			CDPEndpoint: cfg.Tools.Web.Fetch.Chrome.CDPEndpoint,
+			ProfileName: cfg.Tools.Web.Fetch.Chrome.ProfileName,
+			UserDataDir: cfg.Tools.Web.Fetch.Chrome.UserDataDir,
+			Channel:     cfg.Tools.Web.Fetch.Chrome.Channel,
+			Headless:    cfg.Tools.Web.Fetch.Chrome.Headless,
+		},
 	}
 
 	if opts.ScriptPath == "" {

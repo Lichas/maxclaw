@@ -132,12 +132,22 @@ type WebSearchConfig struct {
 
 // WebFetchConfig 网页抓取配置
 type WebFetchConfig struct {
-	Mode       string `json:"mode" mapstructure:"mode"`
-	NodePath   string `json:"nodePath,omitempty" mapstructure:"nodePath"`
-	ScriptPath string `json:"scriptPath,omitempty" mapstructure:"scriptPath"`
-	Timeout    int    `json:"timeout,omitempty" mapstructure:"timeout"`
-	UserAgent  string `json:"userAgent,omitempty" mapstructure:"userAgent"`
-	WaitUntil  string `json:"waitUntil,omitempty" mapstructure:"waitUntil"`
+	Mode       string               `json:"mode" mapstructure:"mode"`
+	NodePath   string               `json:"nodePath,omitempty" mapstructure:"nodePath"`
+	ScriptPath string               `json:"scriptPath,omitempty" mapstructure:"scriptPath"`
+	Timeout    int                  `json:"timeout,omitempty" mapstructure:"timeout"`
+	UserAgent  string               `json:"userAgent,omitempty" mapstructure:"userAgent"`
+	WaitUntil  string               `json:"waitUntil,omitempty" mapstructure:"waitUntil"`
+	Chrome     WebFetchChromeConfig `json:"chrome,omitempty" mapstructure:"chrome"`
+}
+
+// WebFetchChromeConfig Chrome 抓取配置
+type WebFetchChromeConfig struct {
+	CDPEndpoint string `json:"cdpEndpoint,omitempty" mapstructure:"cdpEndpoint"`
+	ProfileName string `json:"profileName,omitempty" mapstructure:"profileName"`
+	UserDataDir string `json:"userDataDir,omitempty" mapstructure:"userDataDir"`
+	Channel     string `json:"channel,omitempty" mapstructure:"channel"`
+	Headless    bool   `json:"headless,omitempty" mapstructure:"headless"`
 }
 
 // WebToolsConfig Web 工具配置
@@ -279,6 +289,11 @@ func DefaultConfig() *Config {
 					Timeout:   30,
 					UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 					WaitUntil: "domcontentloaded",
+					Chrome: WebFetchChromeConfig{
+						ProfileName: "chrome",
+						Channel:     "chrome",
+						Headless:    true,
+					},
 				},
 			},
 			Exec: ExecToolConfig{

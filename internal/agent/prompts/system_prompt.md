@@ -25,7 +25,7 @@ Available tools:
 - write_file: write file content
 - exec: execute shell commands
 - web_search: search up-to-date internet info
-- web_fetch: fetch webpage content
+- web_fetch: fetch webpage content (supports browser/chrome modes when configured; chrome mode can reuse local login state)
 - spawn: run background subtask
 - message: send channel message
 - cron: schedule reminders/jobs
@@ -33,6 +33,7 @@ Available tools:
 Operational rules:
 - For repository tasks: inspect first (`list_dir`/`read_file`), then edit, then validate (`exec` tests/build).
 - For real-time info/news: use `web_search` before answering.
+- If user asks to open/check website content directly, prefer `web_fetch` instead of claiming browser tools are unavailable.
 - For skills install/manage: use `exec` with `nanobot-go skills ...` (or `./build/nanobot-go skills ...`).
 - Skills path is `<workspace>/skills` (from environment info). Do NOT use `pip`/`python` package installation for skills.
 - For reminders/schedules: use `cron` and bind to current channel/chat context.

@@ -141,11 +141,23 @@ type WebFetchOptions struct {
 	TimeoutSec int
 	UserAgent  string
 	WaitUntil  string
+	Chrome     WebFetchChromeOptions
+}
+
+// WebFetchChromeOptions Chrome 抓取选项
+type WebFetchChromeOptions struct {
+	CDPEndpoint string
+	ProfileName string
+	UserDataDir string
+	Channel     string
+	Headless    bool
 }
 
 const (
 	defaultWebFetchUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 	defaultWebFetchWaitUntil = "domcontentloaded"
+	defaultChromeProfileName = "chrome"
+	defaultChromeChannel     = "chrome"
 )
 
 // NewWebFetchTool 创建网页抓取工具
@@ -196,11 +208,12 @@ func (t *WebFetchTool) Execute(ctx context.Context, params map[string]interface{
 		mode = "http"
 	}
 
-	if mode == "browser" {
-		return t.executeBrowserFetch(ctx, fetchURL, maxLength)
+	switch mode {
+	case "browser", "chrome":
+		return t.executeBrowserFetch(ctx, fetchURL, maxLength, mode)
+	default:
+		return t.executeHTTPFetch(ctx, fetchURL, maxLength)
 	}
-
-	return t.executeHTTPFetch(ctx, fetchURL, maxLength)
 }
 
 func (t *WebFetchTool) executeHTTPFetch(ctx context.Context, fetchURL string, maxLength int) (string, error) {
@@ -253,10 +266,10 @@ func (t *WebFetchTool) executeHTTPFetch(ctx context.Context, fetchURL string, ma
 	return truncateText(text, maxLength), nil
 }
 
-func (t *WebFetchTool) executeBrowserFetch(ctx context.Context, fetchURL string, maxLength int) (string, error) {
+func (t *WebFetchTool) executeBrowserFetch(ctx context.Context, fetchURL string, maxLength int, mode string) (string, error) {
 	scriptPath := strings.TrimSpace(t.options.ScriptPath)
 	if scriptPath == "" {
-		return "", fmt.Errorf("web_fetch browser mode requires tools.web.fetch.scriptPath")
+		return "", fmt.Errorf("web_fetch browser/chrome mode requires tools.web.fetch.scriptPath")
 	}
 	scriptPath = resolveScriptPath(scriptPath)
 	if stat, err := os.Stat(scriptPath); err != nil || stat.IsDir() {
@@ -273,6 +286,16 @@ func (t *WebFetchTool) executeBrowserFetch(ctx context.Context, fetchURL string,
 		TimeoutMs: t.options.TimeoutSec * 1000,
 		UserAgent: t.options.UserAgent,
 		WaitUntil: t.options.WaitUntil,
+		Mode:      mode,
+	}
+	if mode == "chrome" {
+		req.Chrome = &browserChromeRequest{
+			CDPEndpoint: t.options.Chrome.CDPEndpoint,
+			ProfileName: t.options.Chrome.ProfileName,
+			UserDataDir: t.options.Chrome.UserDataDir,
+			Channel:     t.options.Chrome.Channel,
+			Headless:    t.options.Chrome.Headless,
+		}
 	}
 	payload, err := json.Marshal(req)
 	if err != nil {
@@ -313,10 +336,20 @@ func (t *WebFetchTool) executeBrowserFetch(ctx context.Context, fetchURL string,
 }
 
 type browserFetchRequest struct {
-	URL       string `json:"url"`
-	TimeoutMs int    `json:"timeoutMs"`
-	UserAgent string `json:"userAgent,omitempty"`
-	WaitUntil string `json:"waitUntil,omitempty"`
+	URL       string                `json:"url"`
+	TimeoutMs int                   `json:"timeoutMs"`
+	UserAgent string                `json:"userAgent,omitempty"`
+	WaitUntil string                `json:"waitUntil,omitempty"`
+	Mode      string                `json:"mode,omitempty"`
+	Chrome    *browserChromeRequest `json:"chrome,omitempty"`
+}
+
+type browserChromeRequest struct {
+	CDPEndpoint string `json:"cdpEndpoint,omitempty"`
+	ProfileName string `json:"profileName,omitempty"`
+	UserDataDir string `json:"userDataDir,omitempty"`
+	Channel     string `json:"channel,omitempty"`
+	Headless    bool   `json:"headless"`
 }
 
 type browserFetchResult struct {
@@ -340,7 +373,29 @@ func normalizeWebFetchOptions(options WebFetchOptions) WebFetchOptions {
 	if strings.TrimSpace(options.WaitUntil) == "" {
 		options.WaitUntil = defaultWebFetchWaitUntil
 	}
+	if strings.TrimSpace(options.Chrome.ProfileName) == "" {
+		options.Chrome.ProfileName = defaultChromeProfileName
+	}
+	if strings.TrimSpace(options.Chrome.Channel) == "" {
+		options.Chrome.Channel = defaultChromeChannel
+	}
+	if strings.EqualFold(strings.TrimSpace(options.Mode), "chrome") &&
+		strings.TrimSpace(options.Chrome.CDPEndpoint) == "" &&
+		strings.TrimSpace(options.Chrome.UserDataDir) == "" {
+		options.Chrome.UserDataDir = defaultChromeUserDataDir(options.Chrome.ProfileName)
+	}
 	return options
+}
+
+func defaultChromeUserDataDir(profileName string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	if strings.TrimSpace(profileName) == "" {
+		profileName = defaultChromeProfileName
+	}
+	return filepath.Join(home, ".nanobot", "browser", profileName, "user-data")
 }
 
 func resolveScriptPath(path string) string {
