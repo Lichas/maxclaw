@@ -184,6 +184,7 @@ Gateway 启动后会开启每日汇总器（每小时检查一次），自动把
 ./build/nanobot-go skills show <name>
 ./build/nanobot-go skills validate
 ./build/nanobot-go skills add https://github.com/vercel-labs/agent-skills --path skills --skill react-best-practices
+./build/nanobot-go browser login https://x.com
 ```
 
 在聊天里让 Agent 安装 skills 时，请明确说“调用 `exec` 执行 `nanobot-go skills add ...`”；skills 安装位置固定为 `<workspace>/skills`，不是 Python 包安装。
@@ -347,6 +348,24 @@ make docker-run
   - 登录完成后返回对话，继续使用 `web_fetch`（`mode=chrome`）即可复用该 profile 登录态。
 - `chrome.takeoverExisting` 已废弃，不再用于 AppleScript 接管本地标签页。
 安装 Playwright：`make webfetch-install`
+
+## Browser 工具（交互式页面控制）
+`browser` 工具用于多步骤页面交互，支持：
+- `navigate`：打开页面
+- `snapshot`：抓取页面文本与可交互元素引用（`[ref]`）
+- `act`：点击、输入、按键、等待
+- `tabs`：列出/切换/关闭/新建标签页
+- `screenshot`：保存截图
+
+推荐流程（X/Twitter）：
+1. 先执行 `./build/nanobot-go browser login https://x.com` 并手动登录受管 profile。
+2. 在聊天中让 agent 使用 `browser` 工具：
+   - `action="navigate", url="https://x.com/home"`
+   - `action="snapshot"`
+   - `action="act", act="click", ref=3`
+3. 需要证据时使用 `action="screenshot"` 保存截图路径。
+
+完整操作手册：`BROWSER_OPS.md`
 
 ## MCP（Model Context Protocol）
 支持把外部 MCP 服务器工具接入为原生 Agent 工具，配置格式兼容 Claude Desktop / Cursor 的 `mcpServers` 条目（可直接复制每个 server 的配置块）。
@@ -536,6 +555,7 @@ Management commands:
 ./build/nanobot-go skills show <name>
 ./build/nanobot-go skills validate
 ./build/nanobot-go skills add https://github.com/vercel-labs/agent-skills --path skills --skill react-best-practices
+./build/nanobot-go browser login https://x.com
 ```
 
 When asking the agent in chat to install skills, explicitly request `exec` with `nanobot-go skills add ...`. Skills are installed into `<workspace>/skills` (not Python package installs).
@@ -656,6 +676,24 @@ Notes:
 - `chrome.takeoverExisting` is deprecated and no longer used for AppleScript tab takeover.
 Install Playwright: `make webfetch-install`
 
+## Browser Tool (Interactive Control)
+The `browser` tool supports multi-step page control:
+- `navigate`: open URL
+- `snapshot`: collect page text plus interactable refs (`[ref]`)
+- `act`: click/type/press/wait
+- `tabs`: list/switch/close/new tab
+- `screenshot`: save screenshot to file
+
+Recommended flow for X/Twitter:
+1. Run `./build/nanobot-go browser login https://x.com` and finish manual login in managed profile.
+2. In chat, ask agent to use `browser` tool:
+   - `action="navigate", url="https://x.com/home"`
+   - `action="snapshot"`
+   - `action="act", act="click", ref=3`
+3. Use `action="screenshot"` when you need evidence artifacts.
+
+Full runbook: `BROWSER_OPS.md`
+
 ## MCP (Model Context Protocol)
 nanobot-go can connect external MCP servers and expose their tools as native agent tools.
 The server entry format is compatible with Claude Desktop / Cursor `mcpServers` blocks.
@@ -722,5 +760,6 @@ See `ARCHITECTURE.md` for details.
 
 ## Operations & Troubleshooting
 Unified runbook: `MAINTENANCE.md`
+Browser-specific runbook: `BROWSER_OPS.md`
 
 </details>

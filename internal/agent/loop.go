@@ -109,6 +109,7 @@ func (a *AgentLoop) registerDefaultTools() {
 	// Web 工具
 	a.tools.Register(tools.NewWebSearchTool(a.BraveAPIKey, 5))
 	a.tools.Register(tools.NewWebFetchTool(a.WebFetchOptions))
+	a.tools.Register(tools.NewBrowserTool(tools.BrowserOptionsFromWebFetch(a.WebFetchOptions)))
 
 	// 消息工具
 	a.tools.Register(tools.NewMessageTool(func(channel, chatID, content string) error {

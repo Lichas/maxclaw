@@ -77,6 +77,21 @@
   - `go test ./internal/agent ./pkg/tools ./internal/config`
   - `make build`
 
+#### 新增 browser 工具与完整操作手册（多步骤页面自动化）
+- **新增交互式 `browser` 工具**（`pkg/tools/browser.go`, `webfetcher/browser.mjs`, `internal/agent/loop.go`）
+  - 支持 `navigate/snapshot/screenshot/act/tabs` 五类操作
+  - 复用现有 Chrome 配置（CDP 优先，失败回退受管 profile）
+  - 按 `channel+chat_id` 维护会话状态（活动 tab、snapshot refs）
+- **新增浏览器操作手册并更新主文档**（`BROWSER_OPS.md`, `README.md`, `internal/agent/prompts/system_prompt.md`）
+  - 增加从登录初始化到交互执行、截图留痕、故障排查的完整流程
+  - 系统提示词新增 `browser` 工具使用约束
+- **补充测试**（`pkg/tools/browser_test.go`）
+  - 覆盖 browser 选项归一化、脚本路径推导、会话 ID 规范化
+- **验证**
+  - `node --check webfetcher/browser.mjs`
+  - `go test ./internal/agent ./pkg/tools ./internal/config ./internal/cli`
+  - `make build`
+
 ### Bug 修复
 
 #### Cron 任务触发后未投递到正确会话
