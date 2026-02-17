@@ -15,7 +15,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Do not ask the user to verify**. You are responsible for running tests, validating behavior, and reporting results.
 - **Always verify changes**: run relevant tests or smoke checks, and report what passed/failed.
+- **After successfully completing a request with repository changes**, run `make build` and then create a `git commit` for that request.
 - **If you fix a bug**, append a concise entry to `BUGFIX.md` (what broke, root cause, fix, verification).
+- **If a request changes repository files**, append a concise entry to `CHANGELOG.md` under `## [Unreleased]` (what changed, key files, verification command).
 - **When adding features**, update the docs (README / architecture) and validate the path end-to-end.
 - **Assume ownership of outcomes**: if something could be flaky, add logging/guards and document the caveats.
 - **For runtime incidents**, follow `MAINTENANCE.md` first (process/port/proxy/log order) before ad-hoc debugging.

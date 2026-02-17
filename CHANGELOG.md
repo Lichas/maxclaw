@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+### 新增功能
+
+#### Agent 自迭代与源码定位增强
+- **支持自迭代命令约束**（`internal/agent/prompts/system_prompt.md`）
+  - 明确允许在自我完善任务中通过 `exec` 调用本地 `claude` / `codex`
+  - 增加安全约束：默认不使用 `--dangerously-skip-permissions`
+- **新增源码根目录标记机制**（`.nanobot-source-root`, `internal/agent/context.go`, `internal/agent/prompts/environment.md`）
+  - 引入 `.nanobot-source-root` 作为源码根标记
+  - 环境上下文新增 Source Marker / Source Directory 字段
+  - 解析优先级：`NANOBOT_SOURCE_DIR` 环境变量 > 向上查找 marker > workspace 回退
+- **补充测试覆盖**（`internal/agent/context_test.go`）
+  - 覆盖 marker 缺失、父目录 marker、环境变量覆盖、自迭代指令注入
+  - 验证：`go test ./internal/agent` 与 `go test ./...` 均通过
+- **新增代理执行规范**（`AGENTS.md`, `CLAUDE.md`）
+  - 要求所有代理在完成会修改仓库的需求后，自动更新 `CHANGELOG.md` 的 `Unreleased` 条目
+  - 新增要求：需求成功完成且有仓库变更时，先执行 `make build`，再执行 `git commit`
+
 ### Bug 修复
 
 #### 工具调用系统修复
