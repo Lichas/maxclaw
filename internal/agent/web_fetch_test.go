@@ -16,11 +16,15 @@ func TestBuildWebFetchOptionsIncludesChromeConfig(t *testing.T) {
 	cfg.Tools.Web.Fetch.UserAgent = "custom-agent"
 	cfg.Tools.Web.Fetch.WaitUntil = "networkidle"
 	cfg.Tools.Web.Fetch.Chrome = config.WebFetchChromeConfig{
-		CDPEndpoint: "http://127.0.0.1:9222",
-		ProfileName: "host",
-		UserDataDir: "/tmp/chrome-profile",
-		Channel:     "chrome-beta",
-		Headless:    false,
+		CDPEndpoint:      "http://127.0.0.1:9222",
+		ProfileName:      "host",
+		UserDataDir:      "/tmp/chrome-profile",
+		Channel:          "chrome-beta",
+		Headless:         false,
+		AutoStartCDP:     true,
+		TakeoverExisting: true,
+		HostUserDataDir:  "/Users/lua/Library/Application Support/Google/Chrome",
+		LaunchTimeoutMs:  25000,
 	}
 
 	got := BuildWebFetchOptions(cfg)
@@ -35,6 +39,10 @@ func TestBuildWebFetchOptionsIncludesChromeConfig(t *testing.T) {
 	assert.Equal(t, "/tmp/chrome-profile", got.Chrome.UserDataDir)
 	assert.Equal(t, "chrome-beta", got.Chrome.Channel)
 	assert.False(t, got.Chrome.Headless)
+	assert.True(t, got.Chrome.AutoStartCDP)
+	assert.True(t, got.Chrome.TakeoverExisting)
+	assert.Equal(t, "/Users/lua/Library/Application Support/Google/Chrome", got.Chrome.HostUserDataDir)
+	assert.Equal(t, 25000, got.Chrome.LaunchTimeoutMs)
 }
 
 func TestBuildWebFetchOptionsUsesConfigDefaults(t *testing.T) {
@@ -44,4 +52,6 @@ func TestBuildWebFetchOptionsUsesConfigDefaults(t *testing.T) {
 	assert.Equal(t, "chrome", got.Chrome.ProfileName)
 	assert.Equal(t, "chrome", got.Chrome.Channel)
 	assert.True(t, got.Chrome.Headless)
+	assert.True(t, got.Chrome.AutoStartCDP)
+	assert.Equal(t, 15000, got.Chrome.LaunchTimeoutMs)
 }

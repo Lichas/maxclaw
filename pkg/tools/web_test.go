@@ -16,6 +16,7 @@ func TestNormalizeWebFetchOptionsChromeDefaults(t *testing.T) {
 
 	assert.Equal(t, "chrome", opts.Chrome.ProfileName)
 	assert.Equal(t, "chrome", opts.Chrome.Channel)
+	assert.Equal(t, 15000, opts.Chrome.LaunchTimeoutMs)
 	assert.Equal(
 		t,
 		filepath.Join("/tmp/nanobot-home", ".nanobot", "browser", "chrome", "user-data"),
@@ -33,4 +34,5 @@ func TestNormalizeWebFetchOptionsChromeCdpEndpointDoesNotForceUserDataDir(t *tes
 
 	assert.Equal(t, "http://127.0.0.1:9222", opts.Chrome.CDPEndpoint)
 	assert.Empty(t, opts.Chrome.UserDataDir)
+	assert.Equal(t, 15000, opts.Chrome.LaunchTimeoutMs)
 }

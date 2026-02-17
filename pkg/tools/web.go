@@ -146,18 +146,23 @@ type WebFetchOptions struct {
 
 // WebFetchChromeOptions Chrome 抓取选项
 type WebFetchChromeOptions struct {
-	CDPEndpoint string
-	ProfileName string
-	UserDataDir string
-	Channel     string
-	Headless    bool
+	CDPEndpoint      string
+	ProfileName      string
+	UserDataDir      string
+	Channel          string
+	Headless         bool
+	AutoStartCDP     bool
+	TakeoverExisting bool
+	HostUserDataDir  string
+	LaunchTimeoutMs  int
 }
 
 const (
-	defaultWebFetchUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-	defaultWebFetchWaitUntil = "domcontentloaded"
-	defaultChromeProfileName = "chrome"
-	defaultChromeChannel     = "chrome"
+	defaultWebFetchUserAgent     = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+	defaultWebFetchWaitUntil     = "domcontentloaded"
+	defaultChromeProfileName     = "chrome"
+	defaultChromeChannel         = "chrome"
+	defaultChromeLaunchTimeoutMs = 15000
 )
 
 // NewWebFetchTool 创建网页抓取工具
@@ -290,11 +295,15 @@ func (t *WebFetchTool) executeBrowserFetch(ctx context.Context, fetchURL string,
 	}
 	if mode == "chrome" {
 		req.Chrome = &browserChromeRequest{
-			CDPEndpoint: t.options.Chrome.CDPEndpoint,
-			ProfileName: t.options.Chrome.ProfileName,
-			UserDataDir: t.options.Chrome.UserDataDir,
-			Channel:     t.options.Chrome.Channel,
-			Headless:    t.options.Chrome.Headless,
+			CDPEndpoint:      t.options.Chrome.CDPEndpoint,
+			ProfileName:      t.options.Chrome.ProfileName,
+			UserDataDir:      t.options.Chrome.UserDataDir,
+			Channel:          t.options.Chrome.Channel,
+			Headless:         t.options.Chrome.Headless,
+			AutoStartCDP:     t.options.Chrome.AutoStartCDP,
+			TakeoverExisting: t.options.Chrome.TakeoverExisting,
+			HostUserDataDir:  t.options.Chrome.HostUserDataDir,
+			LaunchTimeoutMs:  t.options.Chrome.LaunchTimeoutMs,
 		}
 	}
 	payload, err := json.Marshal(req)
@@ -345,11 +354,15 @@ type browserFetchRequest struct {
 }
 
 type browserChromeRequest struct {
-	CDPEndpoint string `json:"cdpEndpoint,omitempty"`
-	ProfileName string `json:"profileName,omitempty"`
-	UserDataDir string `json:"userDataDir,omitempty"`
-	Channel     string `json:"channel,omitempty"`
-	Headless    bool   `json:"headless"`
+	CDPEndpoint      string `json:"cdpEndpoint,omitempty"`
+	ProfileName      string `json:"profileName,omitempty"`
+	UserDataDir      string `json:"userDataDir,omitempty"`
+	Channel          string `json:"channel,omitempty"`
+	Headless         bool   `json:"headless"`
+	AutoStartCDP     bool   `json:"autoStartCDP"`
+	TakeoverExisting bool   `json:"takeoverExisting"`
+	HostUserDataDir  string `json:"hostUserDataDir,omitempty"`
+	LaunchTimeoutMs  int    `json:"launchTimeoutMs,omitempty"`
 }
 
 type browserFetchResult struct {
@@ -378,6 +391,9 @@ func normalizeWebFetchOptions(options WebFetchOptions) WebFetchOptions {
 	}
 	if strings.TrimSpace(options.Chrome.Channel) == "" {
 		options.Chrome.Channel = defaultChromeChannel
+	}
+	if options.Chrome.LaunchTimeoutMs <= 0 {
+		options.Chrome.LaunchTimeoutMs = defaultChromeLaunchTimeoutMs
 	}
 	if strings.EqualFold(strings.TrimSpace(options.Mode), "chrome") &&
 		strings.TrimSpace(options.Chrome.CDPEndpoint) == "" &&

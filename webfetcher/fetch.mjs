@@ -2,11 +2,13 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
 
 const DEFAULT_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const DEFAULT_WAIT_UNTIL = 'domcontentloaded';
+const DEFAULT_CDP_LAUNCH_TIMEOUT_MS = 15000;
 const DEFAULT_CHROME_ARGS = [
   '--disable-sync',
   '--disable-background-networking',
@@ -91,15 +93,271 @@ function resolveChromeUserDataDir(userDataDir, profileName) {
   return path.join(os.homedir(), '.nanobot', 'browser', profileName, 'user-data');
 }
 
+function resolveHostChromeUserDataDir(userDataDir, channel) {
+  const expanded = expandUserPath(userDataDir);
+  if (expanded) {
+    return path.resolve(expanded);
+  }
+
+  if (process.platform === 'darwin') {
+    if (String(channel || '').toLowerCase().startsWith('msedge')) {
+      return path.join(os.homedir(), 'Library', 'Application Support', 'Microsoft Edge');
+    }
+    return path.join(os.homedir(), 'Library', 'Application Support', 'Google', 'Chrome');
+  }
+
+  if (process.platform === 'linux') {
+    if (String(channel || '').toLowerCase().startsWith('msedge')) {
+      return path.join(os.homedir(), '.config', 'microsoft-edge');
+    }
+    return path.join(os.homedir(), '.config', 'google-chrome');
+  }
+
+  return '';
+}
+
+function resolveChromeAppName(channel) {
+  switch (String(channel || '').trim().toLowerCase()) {
+    case 'chrome-beta':
+      return 'Google Chrome Beta';
+    case 'chrome-dev':
+      return 'Google Chrome Dev';
+    case 'chrome-canary':
+      return 'Google Chrome Canary';
+    case 'msedge':
+      return 'Microsoft Edge';
+    case 'msedge-beta':
+      return 'Microsoft Edge Beta';
+    case 'msedge-dev':
+      return 'Microsoft Edge Dev';
+    case 'msedge-canary':
+      return 'Microsoft Edge Canary';
+    default:
+      return 'Google Chrome';
+  }
+}
+
+function endpointHttpBase(cdpEndpoint) {
+  if (typeof cdpEndpoint !== 'string' || !cdpEndpoint.trim()) {
+    return '';
+  }
+
+  const raw = cdpEndpoint.trim();
+  const withScheme = /^[a-z]+:\/\//i.test(raw) ? raw : `http://${raw}`;
+  const parsed = new URL(withScheme);
+  if (parsed.protocol === 'ws:') {
+    parsed.protocol = 'http:';
+  } else if (parsed.protocol === 'wss:') {
+    parsed.protocol = 'https:';
+  }
+  parsed.pathname = '';
+  parsed.search = '';
+  parsed.hash = '';
+  return parsed.toString().replace(/\/$/, '');
+}
+
+function isLoopbackHost(hostname) {
+  const host = String(hostname || '').toLowerCase();
+  return host === '127.0.0.1' || host === 'localhost' || host === '::1';
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function readDevToolsVersion(cdpEndpoint, timeoutMs = 1500) {
+  const base = endpointHttpBase(cdpEndpoint);
+  if (!base) {
+    throw new Error('invalid cdp endpoint');
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${base}/json/version`, { signal: controller.signal });
+    if (!response.ok) {
+      throw new Error(`CDP version endpoint HTTP ${response.status}`);
+    }
+    const payload = await response.json();
+    const wsUrl = typeof payload.webSocketDebuggerUrl === 'string' ? payload.webSocketDebuggerUrl.trim() : '';
+    if (!wsUrl) {
+      throw new Error('missing webSocketDebuggerUrl in CDP version response');
+    }
+    return payload;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function launchDetached(command, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { detached: true, stdio: 'ignore' });
+    let settled = false;
+    child.on('error', (err) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      reject(err);
+    });
+    child.unref();
+    setTimeout(() => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      resolve();
+    }, 120);
+  });
+}
+
+function runCommand(command, args, timeoutMs = 5000) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: 'ignore' });
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      child.kill('SIGKILL');
+      reject(new Error(`command timeout: ${command}`));
+    }, timeoutMs);
+
+    child.on('error', (err) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      reject(err);
+    });
+
+    child.on('exit', (code) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      reject(new Error(`command exit code ${code}: ${command}`));
+    });
+  });
+}
+
+function resolveLinuxChromeExecutables(channel) {
+  if (String(channel || '').toLowerCase().startsWith('msedge')) {
+    return ['microsoft-edge', 'microsoft-edge-stable', 'microsoft-edge-beta', 'microsoft-edge-dev'];
+  }
+  return ['google-chrome', 'google-chrome-stable', 'chromium-browser', 'chromium'];
+}
+
+async function waitForCDPReady(cdpEndpoint, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  let lastError = '';
+
+  while (Date.now() < deadline) {
+    try {
+      await readDevToolsVersion(cdpEndpoint, 1200);
+      return;
+    } catch (err) {
+      lastError = err && typeof err.message === 'string' ? err.message : String(err);
+      await sleep(350);
+    }
+  }
+
+  throw new Error(`CDP endpoint not ready after ${timeoutMs}ms (${lastError})`);
+}
+
+async function ensureHostChromeCDP(chrome) {
+  const base = endpointHttpBase(chrome.cdpEndpoint);
+  if (!base) {
+    throw new Error('invalid cdpEndpoint; cannot auto-start host Chrome');
+  }
+
+  const endpointURL = new URL(base);
+  if (!isLoopbackHost(endpointURL.hostname)) {
+    throw new Error('auto-start host Chrome requires loopback cdpEndpoint');
+  }
+
+  const port = endpointURL.port || '9222';
+  const launchTimeoutMs = Number.isFinite(chrome.launchTimeoutMs) && chrome.launchTimeoutMs > 0
+    ? chrome.launchTimeoutMs
+    : DEFAULT_CDP_LAUNCH_TIMEOUT_MS;
+
+  try {
+    await readDevToolsVersion(base, 1200);
+    return { started: false };
+  } catch {
+    // not ready yet; continue auto-start
+  }
+
+  const hostUserDataDir = resolveHostChromeUserDataDir(chrome.hostUserDataDir, chrome.channel);
+  if (!hostUserDataDir) {
+    throw new Error('cannot resolve host Chrome user data directory for this platform');
+  }
+  await fs.mkdir(hostUserDataDir, { recursive: true });
+
+  const startupArgs = [
+    `--remote-debugging-port=${port}`,
+    `--user-data-dir=${hostUserDataDir}`,
+    ...DEFAULT_CHROME_ARGS,
+    'about:blank',
+  ];
+
+  if (process.platform === 'darwin') {
+    const appName = resolveChromeAppName(chrome.channel);
+    if (chrome.takeoverExisting) {
+      await runCommand('osascript', ['-e', `tell application "${appName}" to quit`], 5000).catch(() => {});
+      await sleep(900);
+    }
+    const modeFlag = chrome.takeoverExisting ? '-a' : '-na';
+    await launchDetached('open', [modeFlag, appName, '--args', ...startupArgs]);
+  } else if (process.platform === 'linux') {
+    let launched = false;
+    const candidates = resolveLinuxChromeExecutables(chrome.channel);
+    for (const command of candidates) {
+      try {
+        await launchDetached(command, startupArgs);
+        launched = true;
+        break;
+      } catch {
+        // try next executable
+      }
+    }
+    if (!launched) {
+      throw new Error('failed to launch Chrome/Chromium executable on linux');
+    }
+  } else {
+    throw new Error(`auto-start host Chrome not supported on platform: ${process.platform}`);
+  }
+
+  await waitForCDPReady(base, launchTimeoutMs);
+  return { started: true };
+}
+
 function normalizeChromeConfig(raw) {
   const input = raw && typeof raw === 'object' ? raw : {};
   const profileName = sanitizeProfileName(input.profileName);
+  const hasAutoStartCDP = Object.prototype.hasOwnProperty.call(input, 'autoStartCDP');
+  const launchTimeoutMs =
+    Number.isFinite(input.launchTimeoutMs) && Number(input.launchTimeoutMs) > 0
+      ? Number(input.launchTimeoutMs)
+      : DEFAULT_CDP_LAUNCH_TIMEOUT_MS;
   return {
     cdpEndpoint: typeof input.cdpEndpoint === 'string' ? input.cdpEndpoint.trim() : '',
     profileName,
     userDataDir: typeof input.userDataDir === 'string' ? input.userDataDir.trim() : '',
     channel: typeof input.channel === 'string' && input.channel.trim() ? input.channel.trim() : 'chrome',
     headless: typeof input.headless === 'boolean' ? input.headless : true,
+    autoStartCDP: hasAutoStartCDP ? Boolean(input.autoStartCDP) : true,
+    takeoverExisting: typeof input.takeoverExisting === 'boolean' ? input.takeoverExisting : false,
+    hostUserDataDir: typeof input.hostUserDataDir === 'string' ? input.hostUserDataDir.trim() : '',
+    launchTimeoutMs,
   };
 }
 
@@ -230,11 +488,30 @@ async function fetchWithChromeMode(req) {
     try {
       const result = await fetchWithChromeCDP(req, chrome);
       return result;
-    } catch (err) {
-      const message = err && typeof err.message === 'string' ? err.message : String(err);
+    } catch (cdpErr) {
+      const cdpMessage = cdpErr && typeof cdpErr.message === 'string' ? cdpErr.message : String(cdpErr);
+      const warnings = [`CDP attach failed: ${cdpMessage}`];
+
+      if (chrome.autoStartCDP) {
+        try {
+          const autoStart = await ensureHostChromeCDP(chrome);
+          if (autoStart.started) {
+            warnings.push('auto-started host Chrome for CDP takeover');
+          } else {
+            warnings.push('host Chrome CDP endpoint already ready');
+          }
+          const connected = await fetchWithChromeCDP(req, chrome);
+          const merged = connected.text ? `[warning] ${warnings.join('; ')}\n\n${connected.text}` : `[warning] ${warnings.join('; ')}`;
+          return { ...connected, text: merged };
+        } catch (autoErr) {
+          const autoMessage = autoErr && typeof autoErr.message === 'string' ? autoErr.message : String(autoErr);
+          warnings.push(`auto-start host Chrome failed: ${autoMessage}`);
+        }
+      }
+
       const fallback = await fetchWithChromeProfile(req, chrome);
-      const warning = `[warning] CDP attach failed, fallback to managed profile: ${message}`;
-      const mergedText = fallback.text ? `${warning}\n\n${fallback.text}` : warning;
+      const mergedWarning = `[warning] ${warnings.join('; ')}; fallback to managed profile`;
+      const mergedText = fallback.text ? `${mergedWarning}\n\n${fallback.text}` : mergedWarning;
       return { ...fallback, text: mergedText };
     }
   }

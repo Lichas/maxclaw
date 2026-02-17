@@ -28,6 +28,8 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Equal(t, "chrome", cfg.Tools.Web.Fetch.Chrome.ProfileName)
 	assert.Equal(t, "chrome", cfg.Tools.Web.Fetch.Chrome.Channel)
 	assert.True(t, cfg.Tools.Web.Fetch.Chrome.Headless)
+	assert.True(t, cfg.Tools.Web.Fetch.Chrome.AutoStartCDP)
+	assert.Equal(t, 15000, cfg.Tools.Web.Fetch.Chrome.LaunchTimeoutMs)
 	assert.Equal(t, 60, cfg.Tools.Exec.Timeout)
 	assert.Empty(t, cfg.Tools.MCPServers)
 

@@ -143,11 +143,15 @@ type WebFetchConfig struct {
 
 // WebFetchChromeConfig Chrome 抓取配置
 type WebFetchChromeConfig struct {
-	CDPEndpoint string `json:"cdpEndpoint,omitempty" mapstructure:"cdpEndpoint"`
-	ProfileName string `json:"profileName,omitempty" mapstructure:"profileName"`
-	UserDataDir string `json:"userDataDir,omitempty" mapstructure:"userDataDir"`
-	Channel     string `json:"channel,omitempty" mapstructure:"channel"`
-	Headless    bool   `json:"headless,omitempty" mapstructure:"headless"`
+	CDPEndpoint      string `json:"cdpEndpoint,omitempty" mapstructure:"cdpEndpoint"`
+	ProfileName      string `json:"profileName,omitempty" mapstructure:"profileName"`
+	UserDataDir      string `json:"userDataDir,omitempty" mapstructure:"userDataDir"`
+	Channel          string `json:"channel,omitempty" mapstructure:"channel"`
+	Headless         bool   `json:"headless,omitempty" mapstructure:"headless"`
+	AutoStartCDP     bool   `json:"autoStartCDP,omitempty" mapstructure:"autoStartCDP"`
+	TakeoverExisting bool   `json:"takeoverExisting,omitempty" mapstructure:"takeoverExisting"`
+	HostUserDataDir  string `json:"hostUserDataDir,omitempty" mapstructure:"hostUserDataDir"`
+	LaunchTimeoutMs  int    `json:"launchTimeoutMs,omitempty" mapstructure:"launchTimeoutMs"`
 }
 
 // WebToolsConfig Web 工具配置
@@ -290,9 +294,11 @@ func DefaultConfig() *Config {
 					UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 					WaitUntil: "domcontentloaded",
 					Chrome: WebFetchChromeConfig{
-						ProfileName: "chrome",
-						Channel:     "chrome",
-						Headless:    true,
+						ProfileName:     "chrome",
+						Channel:         "chrome",
+						Headless:        true,
+						AutoStartCDP:    true,
+						LaunchTimeoutMs: 15000,
 					},
 				},
 			},

@@ -16,6 +16,22 @@
   - `go test ./internal/agent ./pkg/tools ./internal/config`
   - `make build`
 
+#### Web Fetch 新增 Host Chrome 全自动接管链路
+- **新增 Chrome CDP 自动接管参数**（`internal/config/schema.go`, `internal/agent/web_fetch.go`, `pkg/tools/web.go`）
+  - `chrome.autoStartCDP`：CDP 不可用时自动尝试拉起 Host Chrome
+  - `chrome.takeoverExisting`：允许接管前优雅退出当前 Chrome（macOS）
+  - `chrome.hostUserDataDir`：指定 Host Chrome 用户数据目录
+  - `chrome.launchTimeoutMs`：控制 Host Chrome 启动并就绪等待时长
+- **增强 `webfetcher/fetch.mjs` 自动接管执行流**（`webfetcher/fetch.mjs`）
+  - `CDP attach 失败 -> 自动拉起 Host Chrome -> 重连 CDP -> 失败再回退 managed profile`
+  - 优先复用系统 Chrome 用户数据目录，实现“已有登录态直连”
+- **文档与提示词同步**（`README.md`, `internal/agent/prompts/system_prompt.md`）
+  - 增加全自动接管配置示例与行为说明
+  - 明确要求登录/JS站点优先走 chrome mode
+- **验证**
+  - `go test ./internal/agent ./pkg/tools ./internal/config`
+  - `make build`
+
 ### Bug 修复
 
 #### 修复 X.com 等 SPA 站点在 Chrome 抓取下的“空页面误判成功”

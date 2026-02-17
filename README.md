@@ -328,7 +328,11 @@ make docker-run
           "profileName": "chrome",
           "userDataDir": "~/.nanobot/browser/chrome/user-data",
           "channel": "chrome",
-          "headless": true
+          "headless": true,
+          "autoStartCDP": true,
+          "takeoverExisting": true,
+          "hostUserDataDir": "~/Library/Application Support/Google/Chrome",
+          "launchTimeoutMs": 15000
         }
       }
     }
@@ -338,6 +342,8 @@ make docker-run
 说明：
 - `mode=browser`：临时无状态 Chromium（不复用登录态）。
 - `mode=chrome`：优先使用 `chrome.cdpEndpoint` 接管现有 Chrome；若不配置 `cdpEndpoint`，则使用持久化 profile 目录。
+- `chrome.autoStartCDP=true`：`cdpEndpoint` 不可用时自动拉起 Host Chrome 并重连。
+- `chrome.takeoverExisting=true`：在 macOS 上先优雅退出当前 Chrome，再使用同一用户数据目录重启，可直接复用已有登录态。
 - 若要复用你正在使用的 Chrome 登录态，请先以远程调试端口启动 Chrome（示例：`--remote-debugging-port=9222`）。
 安装 Playwright：`make webfetch-install`
 
@@ -629,7 +635,11 @@ For sites that need real browser behavior or authenticated Chrome sessions:
           "profileName": "chrome",
           "userDataDir": "~/.nanobot/browser/chrome/user-data",
           "channel": "chrome",
-          "headless": true
+          "headless": true,
+          "autoStartCDP": true,
+          "takeoverExisting": true,
+          "hostUserDataDir": "~/Library/Application Support/Google/Chrome",
+          "launchTimeoutMs": 15000
         }
       }
     }
@@ -639,6 +649,8 @@ For sites that need real browser behavior or authenticated Chrome sessions:
 Notes:
 - `mode=browser`: stateless Chromium fetch.
 - `mode=chrome`: use `chrome.cdpEndpoint` to attach an existing Chrome session, or a persistent managed profile when `cdpEndpoint` is empty.
+- `chrome.autoStartCDP=true`: auto-launch host Chrome and retry CDP when endpoint is unavailable.
+- `chrome.takeoverExisting=true`: on macOS, gracefully quit current Chrome and relaunch with the same user-data dir to reuse existing login state.
 - To reuse your live Chrome login state, start Chrome with remote debugging enabled (for example, `--remote-debugging-port=9222`).
 Install Playwright: `make webfetch-install`
 

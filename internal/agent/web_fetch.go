@@ -18,11 +18,15 @@ func BuildWebFetchOptions(cfg *config.Config) tools.WebFetchOptions {
 		UserAgent:  cfg.Tools.Web.Fetch.UserAgent,
 		WaitUntil:  cfg.Tools.Web.Fetch.WaitUntil,
 		Chrome: tools.WebFetchChromeOptions{
-			CDPEndpoint: cfg.Tools.Web.Fetch.Chrome.CDPEndpoint,
-			ProfileName: cfg.Tools.Web.Fetch.Chrome.ProfileName,
-			UserDataDir: cfg.Tools.Web.Fetch.Chrome.UserDataDir,
-			Channel:     cfg.Tools.Web.Fetch.Chrome.Channel,
-			Headless:    cfg.Tools.Web.Fetch.Chrome.Headless,
+			CDPEndpoint:      cfg.Tools.Web.Fetch.Chrome.CDPEndpoint,
+			ProfileName:      cfg.Tools.Web.Fetch.Chrome.ProfileName,
+			UserDataDir:      cfg.Tools.Web.Fetch.Chrome.UserDataDir,
+			Channel:          cfg.Tools.Web.Fetch.Chrome.Channel,
+			Headless:         cfg.Tools.Web.Fetch.Chrome.Headless,
+			AutoStartCDP:     cfg.Tools.Web.Fetch.Chrome.AutoStartCDP,
+			TakeoverExisting: cfg.Tools.Web.Fetch.Chrome.TakeoverExisting,
+			HostUserDataDir:  cfg.Tools.Web.Fetch.Chrome.HostUserDataDir,
+			LaunchTimeoutMs:  cfg.Tools.Web.Fetch.Chrome.LaunchTimeoutMs,
 		},
 	}
 
