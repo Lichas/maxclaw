@@ -156,6 +156,84 @@ var gatewayCmd = &cobra.Command{
 			channelRegistry.Register(wsChannel)
 		}
 
+		// 注册 Slack（Socket Mode）
+		if cfg.Channels.Slack.Enabled {
+			slackChannel := channels.NewSlackChannel(&channels.SlackConfig{
+				Enabled:   cfg.Channels.Slack.Enabled,
+				BotToken:  cfg.Channels.Slack.BotToken,
+				AppToken:  cfg.Channels.Slack.AppToken,
+				AllowFrom: cfg.Channels.Slack.AllowFrom,
+			})
+			slackChannel.SetMessageHandler(func(msg *channels.Message) {
+				inboundMsg := bus.NewInboundMessage("slack", msg.Sender, msg.ChatID, msg.Text)
+				messageBus.PublishInbound(inboundMsg)
+			})
+			channelRegistry.Register(slackChannel)
+		}
+
+		// 注册 Email（IMAP/SMTP）
+		if cfg.Channels.Email.Enabled {
+			emailChannel := channels.NewEmailChannel(&channels.EmailConfig{
+				Enabled:             cfg.Channels.Email.Enabled,
+				ConsentGranted:      cfg.Channels.Email.ConsentGranted,
+				IMAPHost:            cfg.Channels.Email.IMAPHost,
+				IMAPPort:            cfg.Channels.Email.IMAPPort,
+				IMAPUsername:        cfg.Channels.Email.IMAPUsername,
+				IMAPPassword:        cfg.Channels.Email.IMAPPassword,
+				IMAPMailbox:         cfg.Channels.Email.IMAPMailbox,
+				IMAPUseSSL:          cfg.Channels.Email.IMAPUseSSL,
+				SMTPHost:            cfg.Channels.Email.SMTPHost,
+				SMTPPort:            cfg.Channels.Email.SMTPPort,
+				SMTPUsername:        cfg.Channels.Email.SMTPUsername,
+				SMTPPassword:        cfg.Channels.Email.SMTPPassword,
+				SMTPUseTLS:          cfg.Channels.Email.SMTPUseTLS,
+				SMTPUseSSL:          cfg.Channels.Email.SMTPUseSSL,
+				FromAddress:         cfg.Channels.Email.FromAddress,
+				AutoReplyEnabled:    cfg.Channels.Email.AutoReplyEnabled,
+				PollIntervalSeconds: cfg.Channels.Email.PollIntervalSeconds,
+				MarkSeen:            cfg.Channels.Email.MarkSeen,
+				AllowFrom:           cfg.Channels.Email.AllowFrom,
+			})
+			emailChannel.SetMessageHandler(func(msg *channels.Message) {
+				inboundMsg := bus.NewInboundMessage("email", msg.Sender, msg.ChatID, msg.Text)
+				messageBus.PublishInbound(inboundMsg)
+			})
+			channelRegistry.Register(emailChannel)
+		}
+
+		// 注册 QQ（OneBot 私聊）
+		if cfg.Channels.QQ.Enabled {
+			qqChannel := channels.NewQQChannel(&channels.QQConfig{
+				Enabled:     cfg.Channels.QQ.Enabled,
+				WSURL:       cfg.Channels.QQ.WSURL,
+				AccessToken: cfg.Channels.QQ.AccessToken,
+				AllowFrom:   cfg.Channels.QQ.AllowFrom,
+			})
+			qqChannel.SetMessageHandler(func(msg *channels.Message) {
+				inboundMsg := bus.NewInboundMessage("qq", msg.Sender, msg.ChatID, msg.Text)
+				messageBus.PublishInbound(inboundMsg)
+			})
+			channelRegistry.Register(qqChannel)
+		}
+
+		// 注册 Feishu（Webhook + OpenAPI）
+		if cfg.Channels.Feishu.Enabled {
+			feishuChannel := channels.NewFeishuChannel(&channels.FeishuConfig{
+				Enabled:           cfg.Channels.Feishu.Enabled,
+				AppID:             cfg.Channels.Feishu.AppID,
+				AppSecret:         cfg.Channels.Feishu.AppSecret,
+				VerificationToken: cfg.Channels.Feishu.VerificationToken,
+				ListenAddr:        cfg.Channels.Feishu.ListenAddr,
+				WebhookPath:       cfg.Channels.Feishu.WebhookPath,
+				AllowFrom:         cfg.Channels.Feishu.AllowFrom,
+			})
+			feishuChannel.SetMessageHandler(func(msg *channels.Message) {
+				inboundMsg := bus.NewInboundMessage("feishu", msg.Sender, msg.ChatID, msg.Text)
+				messageBus.PublishInbound(inboundMsg)
+			})
+			channelRegistry.Register(feishuChannel)
+		}
+
 		// 检查启用的频道
 		enabledChannels := []string{}
 		for _, ch := range channelRegistry.GetEnabled() {

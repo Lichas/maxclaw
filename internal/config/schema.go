@@ -21,6 +21,10 @@ type ChannelsConfig struct {
 	Discord   DiscordConfig   `json:"discord" mapstructure:"discord"`
 	WhatsApp  WhatsAppConfig  `json:"whatsapp" mapstructure:"whatsapp"`
 	WebSocket WebSocketConfig `json:"websocket" mapstructure:"websocket"`
+	Slack     SlackConfig     `json:"slack" mapstructure:"slack"`
+	Email     EmailConfig     `json:"email" mapstructure:"email"`
+	QQ        QQConfig        `json:"qq" mapstructure:"qq"`
+	Feishu    FeishuConfig    `json:"feishu" mapstructure:"feishu"`
 }
 
 // TelegramConfig Telegram 配置
@@ -54,6 +58,56 @@ type WebSocketConfig struct {
 	Port         int      `json:"port,omitempty" mapstructure:"port"`
 	Path         string   `json:"path,omitempty" mapstructure:"path"`
 	AllowOrigins []string `json:"allowOrigins,omitempty" mapstructure:"allowOrigins"`
+}
+
+// SlackConfig Slack Socket Mode 配置
+type SlackConfig struct {
+	Enabled   bool     `json:"enabled" mapstructure:"enabled"`
+	BotToken  string   `json:"botToken,omitempty" mapstructure:"botToken"`
+	AppToken  string   `json:"appToken,omitempty" mapstructure:"appToken"`
+	AllowFrom []string `json:"allowFrom" mapstructure:"allowFrom"`
+}
+
+// EmailConfig Email(IMAP/SMTP) 配置
+type EmailConfig struct {
+	Enabled             bool     `json:"enabled" mapstructure:"enabled"`
+	ConsentGranted      bool     `json:"consentGranted" mapstructure:"consentGranted"`
+	IMAPHost            string   `json:"imapHost,omitempty" mapstructure:"imapHost"`
+	IMAPPort            int      `json:"imapPort,omitempty" mapstructure:"imapPort"`
+	IMAPUsername        string   `json:"imapUsername,omitempty" mapstructure:"imapUsername"`
+	IMAPPassword        string   `json:"imapPassword,omitempty" mapstructure:"imapPassword"`
+	IMAPMailbox         string   `json:"imapMailbox,omitempty" mapstructure:"imapMailbox"`
+	IMAPUseSSL          bool     `json:"imapUseSSL,omitempty" mapstructure:"imapUseSSL"`
+	SMTPHost            string   `json:"smtpHost,omitempty" mapstructure:"smtpHost"`
+	SMTPPort            int      `json:"smtpPort,omitempty" mapstructure:"smtpPort"`
+	SMTPUsername        string   `json:"smtpUsername,omitempty" mapstructure:"smtpUsername"`
+	SMTPPassword        string   `json:"smtpPassword,omitempty" mapstructure:"smtpPassword"`
+	SMTPUseTLS          bool     `json:"smtpUseTLS,omitempty" mapstructure:"smtpUseTLS"`
+	SMTPUseSSL          bool     `json:"smtpUseSSL,omitempty" mapstructure:"smtpUseSSL"`
+	FromAddress         string   `json:"fromAddress,omitempty" mapstructure:"fromAddress"`
+	AutoReplyEnabled    bool     `json:"autoReplyEnabled,omitempty" mapstructure:"autoReplyEnabled"`
+	PollIntervalSeconds int      `json:"pollIntervalSeconds,omitempty" mapstructure:"pollIntervalSeconds"`
+	MarkSeen            bool     `json:"markSeen,omitempty" mapstructure:"markSeen"`
+	AllowFrom           []string `json:"allowFrom" mapstructure:"allowFrom"`
+}
+
+// QQConfig QQ 私聊配置（OneBot WebSocket）
+type QQConfig struct {
+	Enabled     bool     `json:"enabled" mapstructure:"enabled"`
+	WSURL       string   `json:"wsUrl,omitempty" mapstructure:"wsUrl"`
+	AccessToken string   `json:"accessToken,omitempty" mapstructure:"accessToken"`
+	AllowFrom   []string `json:"allowFrom" mapstructure:"allowFrom"`
+}
+
+// FeishuConfig Feishu/Lark 配置
+type FeishuConfig struct {
+	Enabled           bool     `json:"enabled" mapstructure:"enabled"`
+	AppID             string   `json:"appId,omitempty" mapstructure:"appId"`
+	AppSecret         string   `json:"appSecret,omitempty" mapstructure:"appSecret"`
+	VerificationToken string   `json:"verificationToken,omitempty" mapstructure:"verificationToken"`
+	ListenAddr        string   `json:"listenAddr,omitempty" mapstructure:"listenAddr"`
+	WebhookPath       string   `json:"webhookPath,omitempty" mapstructure:"webhookPath"`
+	AllowFrom         []string `json:"allowFrom" mapstructure:"allowFrom"`
 }
 
 // AgentDefaults 默认代理配置
@@ -179,6 +233,35 @@ func DefaultConfig() *Config {
 				Port:         18791,
 				Path:         "/ws",
 				AllowOrigins: []string{},
+			},
+			Slack: SlackConfig{
+				Enabled:   false,
+				AllowFrom: []string{},
+			},
+			Email: EmailConfig{
+				Enabled:             false,
+				ConsentGranted:      false,
+				IMAPPort:            993,
+				IMAPMailbox:         "INBOX",
+				IMAPUseSSL:          true,
+				SMTPPort:            587,
+				SMTPUseTLS:          true,
+				SMTPUseSSL:          false,
+				AutoReplyEnabled:    true,
+				PollIntervalSeconds: 30,
+				MarkSeen:            true,
+				AllowFrom:           []string{},
+			},
+			QQ: QQConfig{
+				Enabled:   false,
+				WSURL:     "ws://localhost:3002",
+				AllowFrom: []string{},
+			},
+			Feishu: FeishuConfig{
+				Enabled:     false,
+				ListenAddr:  "0.0.0.0:18792",
+				WebhookPath: "/feishu/events",
+				AllowFrom:   []string{},
 			},
 		},
 		Providers: ProvidersConfig{},

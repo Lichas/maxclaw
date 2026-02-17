@@ -1,4 +1,4 @@
-.PHONY: build test clean install fmt vet lint coverage bridge bridge-install bridge-build bridge-run webui-install webui-build webui-dev webfetch-install up up-daemon down-daemon restart-daemon
+.PHONY: build test clean install fmt vet lint coverage bridge bridge-install bridge-build bridge-run webui-install webui-build webui-dev webfetch-install up up-daemon down-daemon restart-daemon docker-build docker-run
 
 # 变量
 BINARY_NAME=nanobot-go
@@ -61,6 +61,12 @@ down-daemon:
 
 restart-daemon:
 	./scripts/restart_daemon.sh
+
+docker-build:
+	docker build -t nanobot-go .
+
+docker-run:
+	docker run --rm -v ~/.nanobot:/home/nanobot/.nanobot -p 18890:18890 nanobot-go gateway
 
 # 运行测试并生成覆盖率报告
 coverage:
@@ -125,4 +131,6 @@ help:
 	@echo "  up-daemon  - Start bridge + gateway in background"
 	@echo "  down-daemon - Stop background bridge + gateway"
 	@echo "  restart-daemon - Restart background bridge + gateway"
+	@echo "  docker-build - Build Docker image"
+	@echo "  docker-run - Run gateway in Docker"
 	@echo "  help       - Show this help"

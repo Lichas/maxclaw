@@ -16,7 +16,7 @@ This plan tracks parity work against the Python `nanobot` milestones.
   - [x] Agent lifecycle integration and cleanup
   - [x] Unit/integration tests and full `go test ./...` pass
 
-- [ ] 2026-02-13: v0.1.3.post7
+- [x] 2026-02-13: v0.1.3.post7
   - [x] Security hardening parity
   - [x] WhatsApp bridge shared-secret auth (`bridgeToken` / `BRIDGE_TOKEN`)
   - [x] Telegram `allowFrom` enforcement (ID/username allow-list)
@@ -33,40 +33,40 @@ This plan tracks parity work against the Python `nanobot` milestones.
   - [x] Append-only session semantics with windowed history loading (`GetHistory(500)`)
   - [x] Reliability-focused tests
 
-- [ ] 2026-02-11: CLI experience enhancements + MiniMax provider
-  - [ ] CLI UX parity updates
+- [x] 2026-02-11: CLI experience enhancements + MiniMax provider
+  - [x] CLI UX parity updates
   - [x] CLI interactive baseline improvements (`exit/quit`, EOF graceful exit, robust input trim)
-  - [ ] Advanced CLI parity (prompt history/editing)
+  - [x] Advanced CLI parity (prompt history/editing)
   - [x] CLI compatibility switches (`--markdown/--no-markdown`, `--logs/--no-logs`)
   - [x] MiniMax provider support + tests
 
-- [ ] 2026-02-10: v0.1.3.post6 parity
-  - [ ] Feature improvements and fixes from Python milestone
+- [x] 2026-02-10: v0.1.3.post6 parity
+  - [x] Feature improvements and fixes from Python milestone
 
-- [ ] 2026-02-09: Multi-platform chat support
-  - [ ] Slack (Socket Mode)
-  - [ ] Email (IMAP/SMTP)
-  - [ ] QQ (private chat)
+- [x] 2026-02-09: Multi-platform chat support
+  - [x] Slack (Socket Mode)
+  - [x] Email (IMAP/SMTP)
+  - [x] QQ (private chat)
 
 - [x] 2026-02-08: Provider architecture refactor
   - [x] Add-new-provider in two steps parity (`ProviderSpec + ProvidersConfig` equivalent)
   - [x] Spec-driven API key/base routing (registry order + default API base)
 
-- [ ] 2026-02-07: v0.1.3.post5 parity
+- [x] 2026-02-07: v0.1.3.post5 parity
   - [x] Qwen provider support (DashScope)
-  - [ ] Key improvements parity
+  - [x] Key improvements parity
 
-- [ ] 2026-02-06: Moonshot/Kimi + Discord + security parity check
-  - [ ] Verify full parity and tests
+- [x] 2026-02-06: Moonshot/Kimi + Discord + security parity check
+  - [x] Verify full parity and tests
 
-- [ ] 2026-02-05: Feishu + DeepSeek + scheduler enhancements parity
-  - [ ] Feishu channel
-  - [ ] DeepSeek parity verification
-  - [ ] Enhanced scheduler parity
+- [x] 2026-02-05: Feishu + DeepSeek + scheduler enhancements parity
+  - [x] Feishu channel
+  - [x] DeepSeek parity verification
+  - [x] Enhanced scheduler parity
 
-- [ ] 2026-02-04: v0.1.3.post4 parity
-  - [ ] Multi-provider support verification
-  - [ ] Docker support parity
+- [x] 2026-02-04: v0.1.3.post4 parity
+  - [x] Multi-provider support verification
+  - [x] Docker support parity
 
 - [x] 2026-02-03: vLLM local model parity
   - [x] vLLM support verification

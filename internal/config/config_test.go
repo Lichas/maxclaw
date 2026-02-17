@@ -26,6 +26,11 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Equal(t, 5, cfg.Tools.Web.Search.MaxResults)
 	assert.Equal(t, 60, cfg.Tools.Exec.Timeout)
 	assert.Empty(t, cfg.Tools.MCPServers)
+
+	assert.False(t, cfg.Channels.Slack.Enabled)
+	assert.False(t, cfg.Channels.Email.Enabled)
+	assert.False(t, cfg.Channels.QQ.Enabled)
+	assert.False(t, cfg.Channels.Feishu.Enabled)
 }
 
 func TestGetAPIKey(t *testing.T) {
@@ -102,6 +107,18 @@ func TestGetAPIBaseDashScopeDefault(t *testing.T) {
 	cfg := DefaultConfig()
 	got := cfg.GetAPIBase("qwen-max")
 	assert.Equal(t, "https://dashscope.aliyuncs.com/compatible-mode/v1", got)
+}
+
+func TestGetAPIBaseDeepSeekDefault(t *testing.T) {
+	cfg := DefaultConfig()
+	got := cfg.GetAPIBase("deepseek/deepseek-chat")
+	assert.Equal(t, "https://api.deepseek.com/v1", got)
+}
+
+func TestGetAPIBaseMoonshotDefault(t *testing.T) {
+	cfg := DefaultConfig()
+	got := cfg.GetAPIBase("kimi-k2.5")
+	assert.Equal(t, "https://api.moonshot.ai/v1", got)
 }
 
 func TestWorkspacePath(t *testing.T) {

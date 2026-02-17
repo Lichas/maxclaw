@@ -83,6 +83,26 @@ var statusCmd = &cobra.Command{
 		} else {
 			fmt.Println("  WebSocket: ✗ disabled")
 		}
+		if cfg.Channels.Slack.Enabled {
+			fmt.Println("  Slack: ✓ enabled")
+		} else {
+			fmt.Println("  Slack: ✗ disabled")
+		}
+		if cfg.Channels.Email.Enabled {
+			fmt.Println("  Email: ✓ enabled")
+		} else {
+			fmt.Println("  Email: ✗ disabled")
+		}
+		if cfg.Channels.QQ.Enabled {
+			fmt.Println("  QQ: ✓ enabled")
+		} else {
+			fmt.Println("  QQ: ✗ disabled")
+		}
+		if cfg.Channels.Feishu.Enabled {
+			fmt.Println("  Feishu: ✓ enabled")
+		} else {
+			fmt.Println("  Feishu: ✗ disabled")
+		}
 
 		return nil
 	},

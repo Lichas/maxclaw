@@ -204,6 +204,90 @@ func TestWhatsAppChannelIsEnabled(t *testing.T) {
 	}
 }
 
+func TestSlackChannelName(t *testing.T) {
+	ch := NewSlackChannel(&SlackConfig{Enabled: true, BotToken: "xoxb-1", AppToken: "xapp-1"})
+	assert.Equal(t, "slack", ch.Name())
+}
+
+func TestSlackChannelIsEnabled(t *testing.T) {
+	tests := []struct {
+		name    string
+		config  *SlackConfig
+		enabled bool
+	}{
+		{
+			name: "enabled with tokens",
+			config: &SlackConfig{
+				Enabled:  true,
+				BotToken: "xoxb-1",
+				AppToken: "xapp-1",
+			},
+			enabled: true,
+		},
+		{
+			name: "disabled without app token",
+			config: &SlackConfig{
+				Enabled:  true,
+				BotToken: "xoxb-1",
+			},
+			enabled: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ch := NewSlackChannel(tt.config)
+			assert.Equal(t, tt.enabled, ch.IsEnabled())
+		})
+	}
+}
+
+func TestEmailChannelName(t *testing.T) {
+	ch := NewEmailChannel(&EmailConfig{})
+	assert.Equal(t, "email", ch.Name())
+}
+
+func TestEmailChannelIsEnabled(t *testing.T) {
+	ch := NewEmailChannel(&EmailConfig{
+		Enabled:        true,
+		ConsentGranted: true,
+		IMAPHost:       "imap.example.com",
+		IMAPUsername:   "bot@example.com",
+		IMAPPassword:   "x",
+		SMTPHost:       "smtp.example.com",
+	})
+	assert.True(t, ch.IsEnabled())
+
+	disabled := NewEmailChannel(&EmailConfig{Enabled: false})
+	assert.False(t, disabled.IsEnabled())
+}
+
+func TestQQChannelName(t *testing.T) {
+	ch := NewQQChannel(&QQConfig{Enabled: true, WSURL: "ws://localhost:3002"})
+	assert.Equal(t, "qq", ch.Name())
+}
+
+func TestQQChannelIsEnabled(t *testing.T) {
+	ch := NewQQChannel(&QQConfig{Enabled: true, WSURL: "ws://localhost:3002"})
+	assert.True(t, ch.IsEnabled())
+
+	disabled := NewQQChannel(&QQConfig{Enabled: true, WSURL: ""})
+	assert.False(t, disabled.IsEnabled())
+}
+
+func TestFeishuChannelName(t *testing.T) {
+	ch := NewFeishuChannel(&FeishuConfig{Enabled: true, AppID: "cli", AppSecret: "sec"})
+	assert.Equal(t, "feishu", ch.Name())
+}
+
+func TestFeishuChannelIsEnabled(t *testing.T) {
+	ch := NewFeishuChannel(&FeishuConfig{Enabled: true, AppID: "cli", AppSecret: "sec"})
+	assert.True(t, ch.IsEnabled())
+
+	disabled := NewFeishuChannel(&FeishuConfig{Enabled: true, AppID: "cli"})
+	assert.False(t, disabled.IsEnabled())
+}
+
 func TestDiscordHelperFunctions(t *testing.T) {
 	t.Run("ParseMention", func(t *testing.T) {
 		assert.Equal(t, "<@123456>", ParseMention("123456"))
@@ -276,6 +360,34 @@ func TestSendMessageNotEnabled(t *testing.T) {
 	t.Run("WhatsApp", func(t *testing.T) {
 		ch := NewWhatsAppChannel(&WhatsAppConfig{Enabled: false})
 		err := ch.SendMessage("123", "Hello")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not enabled")
+	})
+
+	t.Run("Slack", func(t *testing.T) {
+		ch := NewSlackChannel(&SlackConfig{Enabled: false})
+		err := ch.SendMessage("C123", "Hello")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not enabled")
+	})
+
+	t.Run("QQ", func(t *testing.T) {
+		ch := NewQQChannel(&QQConfig{Enabled: false})
+		err := ch.SendMessage("123", "Hello")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not enabled")
+	})
+
+	t.Run("Feishu", func(t *testing.T) {
+		ch := NewFeishuChannel(&FeishuConfig{Enabled: false})
+		err := ch.SendMessage("ou_x", "Hello")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not enabled")
+	})
+
+	t.Run("Email", func(t *testing.T) {
+		ch := NewEmailChannel(&EmailConfig{Enabled: false})
+		err := ch.SendMessage("u@example.com", "Hello")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "not enabled")
 	})

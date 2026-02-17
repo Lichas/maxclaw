@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -19,6 +18,7 @@ import (
 	"github.com/Lichas/nanobot-go/internal/cron"
 	"github.com/Lichas/nanobot-go/internal/logging"
 	"github.com/Lichas/nanobot-go/internal/providers"
+	"github.com/peterh/liner"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +32,7 @@ var (
 )
 
 func normalizeInteractiveInput(input string) string {
-	return strings.TrimRight(input, "\r\n")
+	return strings.TrimSpace(strings.TrimRight(input, "\r\n"))
 }
 
 func isExitCommand(input string) bool {
@@ -172,7 +172,23 @@ var agentCmd = &cobra.Command{
 				cancel()
 			}()
 
-			reader := bufio.NewReader(os.Stdin)
+			line := liner.NewLiner()
+			defer line.Close()
+			line.SetCtrlCAborts(true)
+
+			historyPath := filepath.Join(config.GetDataDir(), ".agent_history")
+			if f, err := os.Open(historyPath); err == nil {
+				_, _ = line.ReadHistory(f)
+				_ = f.Close()
+			}
+			defer func() {
+				_ = os.MkdirAll(filepath.Dir(historyPath), 0755)
+				if f, err := os.Create(historyPath); err == nil {
+					_, _ = line.WriteHistory(f)
+					_ = f.Close()
+				}
+			}()
+
 			channel := resolveCLIChannel(markdownFlag)
 			for {
 				select {
@@ -182,9 +198,20 @@ var agentCmd = &cobra.Command{
 				default:
 				}
 
-				fmt.Print("You: ")
-				input, err := reader.ReadString('\n')
+				input, err := line.Prompt("You: ")
 				if err != nil {
+					if errors.Is(err, os.ErrClosed) {
+						fmt.Println("\nGoodbye!")
+						return nil
+					}
+					if errors.Is(err, liner.ErrPromptAborted) {
+						fmt.Println("\nGoodbye!")
+						return nil
+					}
+					if errors.Is(err, context.Canceled) {
+						fmt.Println("\nGoodbye!")
+						return nil
+					}
 					if errors.Is(err, io.EOF) {
 						fmt.Println("\nGoodbye!")
 						return nil
@@ -196,6 +223,7 @@ var agentCmd = &cobra.Command{
 				if input == "" {
 					continue
 				}
+				line.AppendHistory(input)
 				if isExitCommand(input) {
 					fmt.Println("Goodbye!")
 					return nil

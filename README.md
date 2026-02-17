@@ -261,9 +261,52 @@ WhatsApp 通过 `bridge/`（Baileys）接入，Go 侧通过 WebSocket 连接 Bri
       "port": 18791,
       "path": "/ws",
       "allowOrigins": []
+    },
+    "slack": {
+      "enabled": false,
+      "botToken": "xoxb-...",
+      "appToken": "xapp-...",
+      "allowFrom": []
+    },
+    "email": {
+      "enabled": false,
+      "consentGranted": false,
+      "imapHost": "imap.example.com",
+      "imapPort": 993,
+      "imapUsername": "bot@example.com",
+      "imapPassword": "your-imap-password",
+      "smtpHost": "smtp.example.com",
+      "smtpPort": 587,
+      "smtpUsername": "bot@example.com",
+      "smtpPassword": "your-smtp-password",
+      "allowFrom": []
+    },
+    "qq": {
+      "enabled": false,
+      "wsUrl": "ws://localhost:3002",
+      "accessToken": "",
+      "allowFrom": []
+    },
+    "feishu": {
+      "enabled": false,
+      "appId": "cli_xxx",
+      "appSecret": "xxx",
+      "verificationToken": "",
+      "listenAddr": "0.0.0.0:18792",
+      "webhookPath": "/feishu/events",
+      "allowFrom": []
     }
   }
 }
+```
+
+## Docker
+
+仓库已内置 `Dockerfile`，可直接构建运行：
+
+```bash
+make docker-build
+make docker-run
 ```
 
 安全建议：生产环境为 Go 与 Bridge 配置相同的 `bridgeToken`，启用共享密钥认证。

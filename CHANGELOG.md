@@ -4,6 +4,26 @@
 
 ### 新增功能
 
+#### 完成 PORTING_PLAN 全量里程碑（2026-02-04 ~ 2026-02-13）
+- **新增多平台频道实现**（`internal/channels/slack.go`, `internal/channels/email.go`, `internal/channels/qq.go`, `internal/channels/feishu.go`, `internal/cli/gateway.go`, `internal/channels/channels_test.go`）
+  - 新增 Slack Socket Mode、Email(IMAP/SMTP)、QQ 私聊（OneBot WebSocket）、Feishu(Webhook + OpenAPI) 接入
+  - Gateway 增加四类频道注册与消息总线转发
+- **CLI 交互体验增强**（`internal/cli/agent.go`）
+  - 交互模式切换到支持输入编辑/历史记录的行编辑器
+  - 会话历史落盘到 `~/.nanobot/.agent_history`
+- **配置与状态扩展**（`internal/config/schema.go`, `internal/cli/status.go`）
+  - 增加 Slack/Email/QQ/Feishu 配置模型与默认值
+  - `status` 命令增加新频道状态显示
+- **多 provider 与 Docker 对齐**（`internal/providers/registry.go`, `internal/config/config_test.go`, `Dockerfile`, `.dockerignore`, `Makefile`, `README.md`）
+  - Moonshot 默认 API Base 调整为 `https://api.moonshot.ai/v1`
+  - 增补 DeepSeek/Moonshot 默认路由测试
+  - 新增 Docker 镜像构建与运行入口（`make docker-build` / `make docker-run`）
+- **计划收敛**（`PORTING_PLAN.md`）
+  - 所有未完成里程碑项已勾选完成
+- **验证**
+  - `go test ./...`
+  - `make build`
+
 #### Web UI 配置编辑与服务控制增强
 - **配置 JSON 编辑器升级为语法高亮并支持全屏**（`webui/src/App.tsx`, `webui/src/styles.css`, `webui/package.json`, `webui/package-lock.json`）
   - Settings 页的配置编辑从普通文本框升级为 JSON 高亮编辑器
@@ -11,6 +31,18 @@
 - **Web UI 新增 Gateway 重启能力**（`internal/webui/server.go`, `webui/src/App.tsx`）
   - 新增 `POST /api/gateway/restart`，由 UI 触发后台重启脚本
   - Settings 页新增 “Restart Gateway” 操作按钮
+- **验证**
+  - `cd webui && npm run build`
+  - `go test ./...`
+  - `make build`
+
+#### Web UI 紧凑化改版与 JSON 编辑滚动修复
+- **重构页面为高密度控制台布局**（`webui/src/App.tsx`, `webui/src/styles.css`）
+  - 将顶部大横幅改为紧凑控制条与状态摘要条，减少首屏空白
+  - Settings 区改为侧栏操作 + 主编辑区布局，提升配置效率
+- **修复配置 JSON 显示不全且无滚动条问题**（`webui/src/App.tsx`, `webui/src/styles.css`）
+  - 为 JSON 编辑器增加稳定滚动容器，支持纵向/横向滚动
+  - 全屏模式下编辑区高度自适应，避免内容被裁切
 - **验证**
   - `cd webui && npm run build`
   - `go test ./...`

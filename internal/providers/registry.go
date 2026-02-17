@@ -30,7 +30,7 @@ var ProviderSpecs = []ProviderSpec{
 	{Name: "gemini", Keywords: []string{"gemini"}},
 	{Name: "dashscope", Keywords: []string{"dashscope", "qwen"}, DefaultAPIBase: "https://dashscope.aliyuncs.com/compatible-mode/v1"},
 	{Name: "groq", Keywords: []string{"groq"}},
-	{Name: "moonshot", Keywords: []string{"moonshot", "kimi"}, DefaultAPIBase: "https://api.moonshot.cn/v1"},
+	{Name: "moonshot", Keywords: []string{"moonshot", "kimi"}, DefaultAPIBase: "https://api.moonshot.ai/v1"},
 	{Name: "minimax", Keywords: []string{"minimax"}, DefaultAPIBase: "https://api.minimax.io/v1"},
 	{Name: "vllm", Keywords: []string{"vllm"}},
 }
