@@ -8,6 +8,10 @@
 - **修复 Cron 投递链路，避免触发后丢失 chat_id**（`internal/cli/gateway.go`, `internal/cli/cron.go`, `internal/cli/cron_test.go`）
   - Gateway 模式下，可投递 Cron 任务改为直接进入主消息总线（携带 `job.Payload.To`），由现有出站分发器发送到真实频道会话
   - `executeCronJob` 修复入站消息 `chatID` 为空的问题，避免执行后响应落到空会话
+- **增强 message 出站发送链路的可观测性与防呆**（`internal/cli/gateway.go`, `internal/cli/gateway_test.go`）
+  - 出站消息增加空 `channel/chat_id` 校验，避免无效发送
+  - `SendMessage` 失败不再静默吞掉，统一记录到日志便于定位送达问题
+  - 新增网关出站处理单测，覆盖成功发送、空 chat 丢弃、失败后继续处理
 - **降低一次性提醒误建为周期任务的概率**（`pkg/tools/cron.go`, `pkg/tools/cron_test.go`, `internal/agent/prompts/system_prompt.md`）
   - `at` 增加 `HH:MM[:SS]` 解析（按本地下一个该时刻），并拒绝显式过去时间
   - 系统提示增加规则：一次性提醒必须使用 `at`，仅在用户明确要求循环时使用 `cron_expr`/`every_seconds`

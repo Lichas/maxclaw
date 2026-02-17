@@ -354,10 +354,27 @@ func handleOutboundMessages(ctx context.Context, bus *bus.MessageBus, registry *
 			continue
 		}
 
-		// 根据频道发送消息
-		if msg.Channel != "" {
-			if ch, ok := registry.Get(msg.Channel); ok {
-				ch.SendMessage(msg.ChatID, msg.Content)
+		if msg == nil {
+			continue
+		}
+		if msg.Channel == "" || msg.ChatID == "" {
+			if lg := logging.Get(); lg != nil && lg.Gateway != nil {
+				lg.Gateway.Printf("drop outbound: channel=%q chat=%q content=%q", msg.Channel, msg.ChatID, logging.Truncate(msg.Content, 200))
+			}
+			continue
+		}
+
+		ch, ok := registry.Get(msg.Channel)
+		if !ok {
+			if lg := logging.Get(); lg != nil && lg.Gateway != nil {
+				lg.Gateway.Printf("drop outbound: channel %q not registered", msg.Channel)
+			}
+			continue
+		}
+
+		if err := ch.SendMessage(msg.ChatID, msg.Content); err != nil {
+			if lg := logging.Get(); lg != nil && lg.Channels != nil {
+				lg.Channels.Printf("send failed channel=%s chat=%s err=%v", msg.Channel, msg.ChatID, err)
 			}
 		}
 	}
