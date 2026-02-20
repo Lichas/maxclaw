@@ -2,6 +2,7 @@ import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
+import { app } from 'electron';
 import log from 'electron-log';
 import http from 'http';
 
@@ -29,6 +30,12 @@ export class GatewayManager {
 
     const binaryPath = this.getBinaryPath();
     const configPath = path.join(os.homedir(), '.nanobot', 'config.json');
+
+    if (!fs.existsSync(binaryPath)) {
+      const message = `Gateway binary not found: ${binaryPath}. Run "make build" in repository root first.`;
+      this.status = { state: 'error', port: 18890, error: message };
+      throw new Error(message);
+    }
 
     // Ensure config exists
     if (!fs.existsSync(configPath)) {
@@ -157,16 +164,31 @@ export class GatewayManager {
   }
 
   private getBinaryPath(): string {
-    const isDev = process.env.NODE_ENV === 'development';
     const platform = os.platform();
     const ext = platform === 'win32' ? '.exe' : '';
+    const binaryName = `nanobot-go${ext}`;
 
-    if (isDev) {
-      return path.resolve(__dirname, '../../../build/nanobot-go' + ext);
+    if (app.isPackaged) {
+      return path.join(process.resourcesPath, 'bin', binaryName);
     }
 
-    // Production: bundled binary
-    return path.join(process.resourcesPath, 'bin', 'nanobot-go' + ext);
+    const overrideBinaryPath = process.env.NANOBOT_BINARY_PATH;
+    const appPath = app.getAppPath();
+    const candidates = [
+      overrideBinaryPath,
+      path.resolve(appPath, '..', 'build', binaryName),
+      path.resolve(appPath, 'build', binaryName),
+      path.resolve(process.cwd(), '..', 'build', binaryName),
+      path.resolve(process.cwd(), 'build', binaryName)
+    ].filter((candidate): candidate is string => Boolean(candidate));
+
+    const existingPath = candidates.find(candidate => fs.existsSync(candidate));
+    if (existingPath) {
+      return existingPath;
+    }
+
+    log.warn('Gateway binary was not found in expected locations:', candidates);
+    return candidates[0];
   }
 
   private attemptRestart(): void {

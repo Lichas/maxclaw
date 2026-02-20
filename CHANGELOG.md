@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### Bug 修复
+
+#### 修复 Electron 安装后无法启动（二进制缺失与 Gateway 路径错误）
+- **新增 Electron 二进制自愈流程**（`electron/scripts/ensure-electron.cjs`, `electron/package.json`, `electron/.npmrc`）
+  - `npm install`/`npm run dev`/`npm run start` 会先校验 Electron 二进制，缺失时自动补装，避免出现 `Electron failed to install correctly`
+- **修复主进程开发态判断与 Gateway 可执行文件定位**（`electron/src/main/index.ts`, `electron/src/main/gateway.ts`）
+  - 开发态改为基于 `app.isPackaged` 判断；支持 `ELECTRON_RENDERER_URL`/`VITE_DEV_SERVER_URL`，否则回退加载构建产物
+  - Gateway 二进制路径按开发态/打包态分别解析，并在缺失时给出明确错误
+- **验证**
+  - `cd electron && npm install --foreground-scripts`
+  - `cd electron && npm run dev`（冒烟，确认不再报 `Electron failed to install correctly`）
+  - `cd electron && npm run start`（冒烟）
+  - `cd electron && npm run build`
+  - `make build`
+
 ### Added
 
 #### Electron Desktop App 实现

@@ -11,7 +11,7 @@ log.initialize();
 let mainWindow: BrowserWindow | null = null;
 let gatewayManager: GatewayManager | null = null;
 
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = !app.isPackaged;
 
 async function initializeApp(): Promise<void> {
   log.info('Initializing Nanobot Desktop App');
@@ -32,11 +32,15 @@ async function initializeApp(): Promise<void> {
   mainWindow = createWindow();
 
   // Load content
-  if (isDev) {
-    await mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
+  const rendererDevURL = process.env.ELECTRON_RENDERER_URL || process.env.VITE_DEV_SERVER_URL;
+  if (rendererDevURL) {
+    await mainWindow.loadURL(rendererDevURL);
   } else {
     await mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+  }
+
+  if (isDev) {
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
 
   // Initialize tray
