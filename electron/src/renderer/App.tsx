@@ -1,0 +1,60 @@
+import React, { useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, setStatus, setActiveTab } from './store';
+import { TitleBar } from './components/TitleBar';
+import { Sidebar } from './components/Sidebar';
+import { ChatView } from './views/ChatView';
+import { SessionsView } from './views/SessionsView';
+import { ScheduledTasksView } from './views/ScheduledTasksView';
+import { SkillsView } from './views/SkillsView';
+import { SettingsView } from './views/SettingsView';
+
+function App() {
+  const dispatch = useDispatch();
+  const { activeTab } = useSelector((state: RootState) => state.ui);
+
+  useEffect(() => {
+    // Initialize Gateway status
+    window.electronAPI.gateway.getStatus().then(status => {
+      dispatch(setStatus(status));
+    });
+
+    // Listen for status changes
+    const unsubscribe = window.electronAPI.gateway.onStatusChange((status) => {
+      dispatch(setStatus(status));
+    });
+
+    // Listen for tray events
+    const unsubscribeNewChat = window.electronAPI.tray.onNewChat(() => {
+      dispatch(setActiveTab('chat'));
+    });
+
+    const unsubscribeSettings = window.electronAPI.tray.onOpenSettings(() => {
+      dispatch(setActiveTab('settings'));
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeNewChat();
+      unsubscribeSettings();
+    };
+  }, [dispatch]);
+
+  return (
+    <div className="h-screen flex flex-col bg-background text-foreground">
+      <TitleBar />
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 overflow-hidden">
+          {activeTab === 'chat' && <ChatView />}
+          {activeTab === 'sessions' && <SessionsView />}
+          {activeTab === 'scheduled' && <ScheduledTasksView />}
+          {activeTab === 'skills' && <SkillsView />}
+          {activeTab === 'settings' && <SettingsView />}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+export default App;

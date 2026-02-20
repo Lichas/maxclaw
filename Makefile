@@ -105,6 +105,28 @@ mod:
 lint: fmt vet
 	@echo "Linting complete"
 
+# Electron Desktop App
+electron-install:
+	cd electron && npm install
+
+electron-dev:
+	cd electron && npm run dev
+
+electron-build:
+	cd electron && npm run build
+
+electron-dist: build
+	cd electron && npm run dist
+
+electron-dist-mac: build
+	cd electron && npm run dist:mac
+
+electron-dist-win: build
+	cd electron && npm run dist:win
+
+electron-dist-linux: build
+	cd electron && npm run dist:linux
+
 # 帮助
 help:
 	@echo "Available targets:"
@@ -127,6 +149,13 @@ help:
 	@echo "  webui-build    - Build web UI"
 	@echo "  webui-dev      - Run web UI dev server"
 	@echo "  webfetch-install - Install Playwright web fetcher"
+	@echo "  electron-install - Install Electron app dependencies"
+	@echo "  electron-dev     - Run Electron app in dev mode"
+	@echo "  electron-build   - Build Electron app"
+	@echo "  electron-dist    - Create Electron distributable"
+	@echo "  electron-dist-mac - Create macOS distributable"
+	@echo "  electron-dist-win - Create Windows distributable"
+	@echo "  electron-dist-linux - Create Linux distributable"
 	@echo "  up         - Start bridge + gateway"
 	@echo "  up-daemon  - Start bridge + gateway in background"
 	@echo "  down-daemon - Stop background bridge + gateway"

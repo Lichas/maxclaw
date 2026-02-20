@@ -1,0 +1,30 @@
+appId: com.nanobot.desktop
+productName: Nanobot
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**/*
+  - assets/**/*
+  - package.json
+extraResources:
+  - from: ../build/nanobot-go${ext}
+    to: bin/nanobot-go${ext}
+mac:
+  category: public.app-category.productivity
+  target:
+    - dmg
+    - zip
+win:
+  target:
+    - nsis
+    - portable
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Office
+publish:
+  provider: github
+  owner: Lichas
+  repo: nanobot-go

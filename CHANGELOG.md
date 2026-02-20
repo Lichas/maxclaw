@@ -2,7 +2,41 @@
 
 ## [Unreleased]
 
+### Added
+
+#### Electron Desktop App 实现
+- **全新的桌面应用程序** (`electron/`)
+  - 项目结构：package.json, tsconfig.json, Vite 配置, electron-builder.yml
+  - 主进程：窗口管理 (window.ts)、Gateway 进程管理 (gateway.ts)、系统托盘 (tray.ts)
+  - 渲染进程：React 18 + Redux Toolkit + Tailwind CSS
+  - 安全预加载脚本与 IPC 通信桥接 (ipc.ts, preload/index.ts)
+  - 聊天界面支持 SSE 流式响应 (ChatView.tsx)
+  - 设置面板：主题、语言、自动启动、Gateway 状态管理
+  - 跨平台支持（macOS、Windows、Linux）
+- **Makefile 新增目标**
+  - `electron-install` - 安装 Electron 依赖
+  - `electron-dev` - 开发模式运行
+  - `electron-build` - 构建 Electron 应用
+  - `electron-dist` - 创建可分发的安装包
+- **验证**
+  - `cd electron && npm install`
+  - `cd electron && npm run build:main`
+  - `cd electron && npm run build:preload`
+  - `cd electron && npm run build:renderer`
+  - `make build`
+
 ### 新增功能
+
+#### 竞品分析与 Electron PRD 文档
+- **新增桌面 Agent CoWork App 竞品特性分析与 Electron 开发需求文档** (`docs/Electron_PRD.md`)
+  - 梳理核心交互层、任务系统、技能系统、模型配置、集成通知、系统设置六大模块特性
+  - 基于 LobsterAI 技术栈优化选型：Electron 40.2.1 + React 18.2.0 + TypeScript 5.7.3 + Vite 5.1.4 + Redux Toolkit + better-sqlite3
+  - **关键架构决策**：Electron App 作为 nanobot-go Gateway 的桌面端封装，复用现有 Agent Loop、Cron Service、Channels 能力
+  - 设计进程架构：Main Process 管理 Gateway 子进程，Renderer Process 通过 HTTP API + WebSocket 与 Gateway 通信
+  - 规划与 nanobot-go 集成方案：Gateway 进程管理、API 客户端封装、实时消息推送、配置同步机制
+  - 制定开发里程碑（4 个 Phase）与 Gateway API 清单
+- **验证**
+  - 文档 Review
 
 #### Web Fetch 新增 Chrome 会话打通模式
 - **新增 `web_fetch` 的 `mode=chrome`，支持复用本机 Chrome 登录态与持久化 profile**（`pkg/tools/web.go`, `webfetcher/fetch.mjs`, `internal/config/schema.go`, `internal/agent/web_fetch.go`）
