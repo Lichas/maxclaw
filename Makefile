@@ -115,6 +115,9 @@ electron-dev:
 electron-build:
 	cd electron && npm run build
 
+electron-start: build
+	cd electron && npm start
+
 electron-dist: build
 	cd electron && npm run dist
 
@@ -150,7 +153,8 @@ help:
 	@echo "  webui-dev      - Run web UI dev server"
 	@echo "  webfetch-install - Install Playwright web fetcher"
 	@echo "  electron-install - Install Electron app dependencies"
-	@echo "  electron-dev     - Run Electron app in dev mode"
+	@echo "  electron-dev     - Run Electron app in dev mode (with hot reload)"
+	@echo "  electron-start   - Build and run Electron app (production mode)"
 	@echo "  electron-build   - Build Electron app"
 	@echo "  electron-dist    - Create Electron distributable"
 	@echo "  electron-dist-mac - Create macOS distributable"

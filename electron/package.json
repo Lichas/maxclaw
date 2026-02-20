@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "description": "Nanobot AI Assistant Desktop App",
   "type": "module",
-  "main": "./dist/main/index.js",
+  "main": "./dist/main/index.cjs",
   "scripts": {
-    "dev": "concurrently \"npm run dev:main\" \"npm run dev:renderer\"",
+    "dev": "npm run build && concurrently \"npm run dev:main\" \"npm run dev:preload\" \"npm run dev:renderer\" \"npm run electron:start\"",
     "dev:main": "vite build --config vite.main.config.ts --watch",
     "dev:preload": "vite build --config vite.preload.config.ts --watch",
     "dev:renderer": "vite build --config vite.renderer.config.ts --watch",
+    "electron:start": "sleep 1 && electron .",
+    "start": "npm run build && electron .",
     "build": "npm run build:main && npm run build:preload && npm run build:renderer",
     "build:main": "vite build --config vite.main.config.ts",
     "build:preload": "vite build --config vite.preload.config.ts",
@@ -25,6 +27,7 @@
     "electron-updater": "^6.1.7"
   },
   "devDependencies": {
+    "@reduxjs/toolkit": "^2.0.1",
     "@types/auto-launch": "^5.0.5",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.0",
@@ -38,9 +41,9 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-redux": "^9.0.4",
-    "@reduxjs/toolkit": "^2.0.1",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3",
-    "vite": "^5.0.10"
+    "vite": "^5.0.10",
+    "wait-on": "^7.2.0"
   }
 }
