@@ -27,6 +27,32 @@
 
 ---
 
+## 2026-02-21 - Electron 启动时窗口闪动两次、DevTools 打开两份
+
+**问题**：
+- 启动 Desktop App 时，主窗口出现明显双闪。
+- 开发模式下偶发出现两个 detached DevTools 窗口。
+
+**根因**：
+- 启动链路里 `initializeApp()` 需要等待 `gateway.startFresh()`，在此期间 `mainWindow` 仍为 `null`。
+- macOS 可能在这段时间触发 `app.on('activate')`，导致与 `initializeApp()` 并发调用开窗逻辑。
+- 两条路径同时执行 `openMainWindow()`，形成重复窗口创建与重复 `openDevTools()` 调用。
+
+**修复**：
+- 在主进程新增窗口创建去重入口 `ensureMainWindow()`（Promise 锁），统一给 `initializeApp()` 与 `activate` 复用。
+- 已有窗口存在时直接 `show()`，不再重复创建。
+- Dev 模式仅在未打开 DevTools 时调用 `openDevTools`。
+
+**修复文件**：
+- `electron/src/main/index.ts`
+
+**验证**：
+- `cd electron && npm run build`
+- `make build`
+- `cd electron && npm run dev`（观察启动阶段不再双闪、DevTools 不再重复弹出）
+
+---
+
 ## Bug #1: OpenAI Provider 消息格式错误
 
 **发现时间**: 2026-02-07

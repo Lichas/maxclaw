@@ -4,6 +4,13 @@
 
 ### Bug 修复
 
+#### 补充 BUGFIX 文档：启动双闪与重复 DevTools 根因说明
+- **新增故障说明与排障结论**（`BUGFIX.md`）
+  - 补充 Electron 启动阶段窗口并发创建导致“双闪/双 DevTools”的问题描述、根因与修复方案
+  - 记录对应验证命令，方便后续回归排查
+- **验证**
+  - `make build`
+
 #### 修复启动阶段窗口并发创建导致的双闪与重复 DevTools
 - **主进程窗口创建增加并发去重锁**（`electron/src/main/index.ts`）
   - 在 `initializeApp` 与 `app.on('activate')` 同时触发时，统一走 `ensureMainWindow()`，避免并发创建多个窗口
