@@ -13,6 +13,28 @@ let gatewayManager: GatewayManager | null = null;
 
 const isDev = !app.isPackaged;
 
+async function openMainWindow(): Promise<void> {
+  mainWindow = createWindow();
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+
+  const rendererDevURL = process.env.ELECTRON_RENDERER_URL || process.env.VITE_DEV_SERVER_URL;
+  if (rendererDevURL) {
+    await mainWindow.loadURL(rendererDevURL);
+  } else {
+    await mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+  }
+
+  if (isDev) {
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
+  }
+
+  if (gatewayManager) {
+    createIPCHandlers(mainWindow, gatewayManager);
+  }
+}
+
 async function initializeApp(): Promise<void> {
   log.info('Initializing Nanobot Desktop App');
 
@@ -28,35 +50,18 @@ async function initializeApp(): Promise<void> {
     // Continue anyway - will show error in UI
   }
 
-  // Create main window
-  mainWindow = createWindow();
-
-  // Load content
-  const rendererDevURL = process.env.ELECTRON_RENDERER_URL || process.env.VITE_DEV_SERVER_URL;
-  if (rendererDevURL) {
-    await mainWindow.loadURL(rendererDevURL);
-  } else {
-    await mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
-  }
-
-  if (isDev) {
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
-  }
+  await openMainWindow();
 
   // Initialize tray
   initializeTray(mainWindow);
-
-  // Setup IPC handlers
-  createIPCHandlers(mainWindow, gatewayManager);
-
-  // Handle window closed
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
 }
 
 // App event handlers
-app.whenReady().then(initializeApp);
+app.whenReady().then(() => {
+  void initializeApp().catch((error) => {
+    log.error('Failed to initialize app:', error);
+  });
+});
 
 app.on('window-all-closed', () => {
   // Keep Gateway running in background on macOS
@@ -68,7 +73,9 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (mainWindow === null) {
-    mainWindow = createWindow();
+    void openMainWindow().catch((error) => {
+      log.error('Failed to reopen main window:', error);
+    });
   } else {
     mainWindow.show();
   }

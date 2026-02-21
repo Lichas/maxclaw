@@ -78,7 +78,9 @@ export function createWindow(): BrowserWindow {
   });
 
   // Handle window control IPC
+  ipcMain.removeHandler('window:minimize');
   ipcMain.handle('window:minimize', () => window.minimize());
+  ipcMain.removeHandler('window:maximize');
   ipcMain.handle('window:maximize', () => {
     if (window.isMaximized()) {
       window.unmaximize();
@@ -88,7 +90,9 @@ export function createWindow(): BrowserWindow {
       return true;
     }
   });
+  ipcMain.removeHandler('window:close');
   ipcMain.handle('window:close', () => window.close());
+  ipcMain.removeHandler('window:isMaximized');
   ipcMain.handle('window:isMaximized', () => window.isMaximized());
 
   return window;

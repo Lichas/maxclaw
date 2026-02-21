@@ -31,10 +31,21 @@ const autoLauncher = new AutoLaunch({
   path: app.getPath('exe')
 });
 
+let handlersRegistered = false;
+let currentMainWindow: BrowserWindow | null = null;
+let gatewayStatusTimer: NodeJS.Timeout | null = null;
+
 export function createIPCHandlers(
   mainWindow: BrowserWindow,
   gatewayManager: GatewayManager
 ): void {
+  currentMainWindow = mainWindow;
+
+  if (handlersRegistered) {
+    return;
+  }
+  handlersRegistered = true;
+
   // Gateway IPC
   ipcMain.handle('gateway:getStatus', () => gatewayManager.getStatus());
 
@@ -66,7 +77,9 @@ export function createIPCHandlers(
     }
 
     // Notify renderer of config change
-    mainWindow.webContents.send('config:change', updated);
+    if (currentMainWindow && !currentMainWindow.isDestroyed()) {
+      currentMainWindow.webContents.send('config:change', updated);
+    }
 
     return updated;
   });
@@ -87,7 +100,8 @@ export function createIPCHandlers(
   });
 
   ipcMain.handle('system:selectFolder', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
+    const targetWindow = currentMainWindow && !currentMainWindow.isDestroyed() ? currentMainWindow : undefined;
+    const result = await dialog.showOpenDialog(targetWindow, {
       properties: ['openDirectory'],
       title: 'Select Folder'
     });
@@ -100,7 +114,8 @@ export function createIPCHandlers(
   });
 
   ipcMain.handle('system:selectFile', async (_, filters) => {
-    const result = await dialog.showOpenDialog(mainWindow, {
+    const targetWindow = currentMainWindow && !currentMainWindow.isDestroyed() ? currentMainWindow : undefined;
+    const result = await dialog.showOpenDialog(targetWindow, {
       properties: ['openFile'],
       filters: filters || [{ name: 'All Files', extensions: ['*'] }],
       title: 'Select File'
@@ -114,8 +129,13 @@ export function createIPCHandlers(
   });
 
   // Gateway status polling - notify renderer
-  setInterval(() => {
+  gatewayStatusTimer = setInterval(() => {
     const status = gatewayManager.getStatus();
-    mainWindow.webContents.send('gateway:status-change', status);
+    if (currentMainWindow && !currentMainWindow.isDestroyed()) {
+      currentMainWindow.webContents.send('gateway:status-change', status);
+    }
   }, 5000);
+
+  // Keep Node process from being blocked by this timer on shutdown.
+  gatewayStatusTimer.unref();
 }

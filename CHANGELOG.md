@@ -4,6 +4,18 @@
 
 ### Bug 修复
 
+#### 修复 Electron 启动时重复注册窗口 IPC 导致报错与白屏
+- **修复窗口 IPC 重复注册**（`electron/src/main/window.ts`）
+  - 在注册 `window:minimize/maximize/close/isMaximized` 前先 `removeHandler`，避免二次创建窗口时报 `Attempted to register a second handler`
+- **修复主窗口重建流程与未捕获初始化异常**（`electron/src/main/index.ts`, `electron/src/main/ipc.ts`）
+  - 抽取窗口打开流程，`activate` 重新开窗时会加载内容并更新窗口引用
+  - IPC 主处理器改为幂等注册，并在窗口切换后向当前窗口推送状态
+  - `app.whenReady()` 初始化链路增加显式 `catch`，避免 unhandled rejection
+- **验证**
+  - `cd electron && npm run build`
+  - `cd electron && npm run dev`（冒烟，确认不再出现 `Attempted to register a second handler for 'window:minimize'`）
+  - `make build`
+
 #### 修复 Electron 安装后无法启动（二进制缺失与 Gateway 路径错误）
 - **新增 Electron 二进制自愈流程**（`electron/scripts/ensure-electron.cjs`, `electron/package.json`, `electron/.npmrc`）
   - `npm install`/`npm run dev`/`npm run start` 会先校验 Electron 二进制，缺失时自动补装，避免出现 `Electron failed to install correctly`
