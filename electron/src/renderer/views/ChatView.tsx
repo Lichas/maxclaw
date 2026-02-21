@@ -29,6 +29,12 @@ type TimelineEntry =
       text: string;
     };
 
+const iterationStatusPattern = /^Iteration\s+\d+$/i;
+
+function isIterationStatus(summary: string): boolean {
+  return iterationStatusPattern.test(summary.trim());
+}
+
 const starterCards = [
   {
     title: '工作汇报',
@@ -165,6 +171,9 @@ export function ChatView() {
         if (!summary) {
           return null;
         }
+        if (isIterationStatus(summary)) {
+          return null;
+        }
         return {
           type: 'status',
           summary
@@ -249,6 +258,9 @@ export function ChatView() {
     const normalized: TimelineEntry[] = [];
     entries.forEach((entry, index) => {
       if (entry.kind === 'activity' && entry.activity && entry.activity.summary) {
+        if (entry.activity.type === 'status' && isIterationStatus(entry.activity.summary)) {
+          return;
+        }
         normalized.push({
           id: `${prefix}-activity-${index}`,
           kind: 'activity',

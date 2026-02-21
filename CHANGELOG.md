@@ -4,6 +4,14 @@
 
 ### Bug 修复
 
+#### 聊天窗口隐藏冗余的 “Thinking: Iteration N” 状态
+- **前端过滤迭代计数状态展示**（`electron/src/renderer/views/ChatView.tsx`）
+  - 实时流与历史回放均不再渲染 `Iteration N` 这类状态条目
+  - 保留工具执行与其他状态信息，降低时间线噪音
+- **验证**
+  - `cd electron && npm run build`
+  - `make build`
+
 #### 补充 BUGFIX 文档：启动双闪与重复 DevTools 根因说明
 - **新增故障说明与排障结论**（`BUGFIX.md`）
   - 补充 Electron 启动阶段窗口并发创建导致“双闪/双 DevTools”的问题描述、根因与修复方案
