@@ -4,6 +4,28 @@
 
 ### 新增功能
 
+#### Electron 功能增强（消息搜索、会话管理、@提及、快捷命令）
+- **实现消息搜索功能**（`electron/src/renderer/components/Sidebar.tsx`）
+  - 侧边栏任务记录区域添加搜索输入框
+  - 支持按最后消息内容或会话 key 搜索
+  - 实时过滤会话列表，最多显示 20 条匹配结果
+- **实现会话删除与重命名**（`electron/src/renderer/components/Sidebar.tsx`, `electron/src/renderer/hooks/useGateway.ts`）
+  - 每个会话项显示更多操作菜单（三点图标）
+  - 删除会话：确认后调用 `/api/sessions/{key}` DELETE 接口
+  - 重命名会话：内联编辑框，调用 `/api/sessions/{key}/rename` POST 接口
+  - 新增 `deleteSession` 和 `renameSession` 方法到 useGateway hook
+- **实现 @mention 技能选择**（`electron/src/renderer/views/ChatView.tsx`）
+  - 输入框中输入 `@` 触发技能选择下拉菜单
+  - 支持键盘导航（↑↓）和确认（Enter/Tab）
+  - 模糊匹配技能名称和描述
+  - 选中后自动插入 `@技能名` 到输入内容
+- **实现快捷命令 /slash commands**（`electron/src/renderer/views/ChatView.tsx`）
+  - 输入框中输入 `/` 触发命令选择下拉菜单
+  - 支持命令：`/new` 新建会话、`/clear` 清空消息、`/help` 显示帮助
+  - 支持键盘导航和快捷执行
+- **验证**
+  - `cd electron && npm run build`
+
 #### Electron 核心功能完善（Markdown、模型切换、定时任务、技能管理）
 - **实现 Markdown 渲染与代码高亮**（`electron/src/renderer/components/MarkdownRenderer.tsx`, `electron/src/renderer/views/ChatView.tsx`）
   - 新增 `react-markdown`、`remark-gfm`、`react-syntax-highlighter` 依赖
@@ -44,6 +66,14 @@
   - `make build`
 
 ### Bug 修复
+
+#### 修复 Electron 渲染端中文字体回退导致的 CoreText 警告
+- **调整全局字体栈优先级为中文友好顺序**（`electron/src/renderer/styles/globals.css`）
+  - 在 macOS 优先使用 `PingFang SC` / `Hiragino Sans GB`，并补充 `Microsoft YaHei`、`Noto Sans CJK SC` 等回退字体
+  - 减少浏览器自动化与中文渲染场景下频繁出现的 `.HiraKakuInterface-* -> TimesNewRomanPSMT` 日志
+- **验证**
+  - `cd electron && npm run build`
+  - `make build`
 
 #### 修复工具步骤中文参数在 UI 中出现乱码
 - **后端事件文本截断改为按 Unicode 字符边界处理**（`internal/agent/loop.go`）
