@@ -43,6 +43,8 @@ const zh: Translations = {
   'settings.gateway.currentModel': '当前模型',
   'settings.gateway.workspace': '工作空间',
   'settings.gateway.notConfigured': '未配置',
+  'settings.notifications': '通知',
+  'settings.notifications.enable': '启用系统通知',
 
   // Skills
   'skills.title': '技能市场',
@@ -121,6 +123,8 @@ const en: Translations = {
   'settings.gateway.currentModel': 'Current Model',
   'settings.gateway.workspace': 'Workspace',
   'settings.gateway.notConfigured': 'Not configured',
+  'settings.notifications': 'Notifications',
+  'settings.notifications.enable': 'Enable System Notifications',
 
   // Skills
   'skills.title': 'Skills Marketplace',

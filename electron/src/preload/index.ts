@@ -48,7 +48,9 @@ const electronAPI = {
   // System features
   system: {
     showNotification: (title: string, body: string) =>
-      ipcRenderer.invoke('system:showNotification', title, body),
+      ipcRenderer.invoke('notification:show', { title, body }),
+    requestNotificationPermission: () =>
+      ipcRenderer.invoke('notification:request-permission'),
     openExternal: (url: string) => ipcRenderer.invoke('system:openExternal', url),
     selectFolder: () => ipcRenderer.invoke('system:selectFolder'),
     selectFile: (filters?: Array<{ name: string; extensions: string[] }>) =>

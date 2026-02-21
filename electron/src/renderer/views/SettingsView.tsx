@@ -8,6 +8,7 @@ interface Settings {
   language: 'zh' | 'en';
   autoLaunch: boolean;
   minimizeToTray: boolean;
+  notificationsEnabled: boolean;
 }
 
 export function SettingsView() {
@@ -19,7 +20,8 @@ export function SettingsView() {
     theme: 'system',
     language: 'zh',
     autoLaunch: false,
-    minimizeToTray: true
+    minimizeToTray: true,
+    notificationsEnabled: true
   });
   const [gatewayConfig, setGatewayConfig] = useState<any>(null);
 
@@ -30,9 +32,15 @@ export function SettingsView() {
         theme: config.theme || 'system',
         language: config.language || 'zh',
         autoLaunch: config.autoLaunch || false,
-        minimizeToTray: config.minimizeToTray !== false
+        minimizeToTray: config.minimizeToTray !== false,
+        notificationsEnabled: config.notificationsEnabled !== false
       });
     });
+
+    // Request notification permission on mount
+    if (window.electronAPI.system.requestNotificationPermission) {
+      window.electronAPI.system.requestNotificationPermission();
+    }
 
     // Load Gateway config
     fetch('http://localhost:18890/api/config')
@@ -122,6 +130,22 @@ export function SettingsView() {
               type="checkbox"
               checked={settings.minimizeToTray}
               onChange={(e) => handleChange('minimizeToTray', e.target.checked)}
+              className="w-4 h-4"
+            />
+          </label>
+        </div>
+      </section>
+
+      {/* Notifications */}
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">{t('settings.notifications')}</h2>
+        <div className="space-y-4">
+          <label className="flex items-center justify-between cursor-pointer">
+            <span className="text-sm font-medium">{t('settings.notifications.enable')}</span>
+            <input
+              type="checkbox"
+              checked={settings.notificationsEnabled}
+              onChange={(e) => handleChange('notificationsEnabled', e.target.checked)}
               className="w-4 h-4"
             />
           </label>
