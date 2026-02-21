@@ -4,6 +4,18 @@
 
 ### Bug 修复
 
+#### `/api/message` 新增可选流式返回（兼容 Telegram 与旧客户端）
+- **后端新增 SSE 分支，默认 JSON 行为保持不变**（`internal/webui/server.go`, `internal/agent/loop.go`）
+  - 当 `stream=1` 或 `Accept: text/event-stream` 时，`/api/message` 按 `data: {"delta":"..."}` 增量返回
+  - 默认请求仍返回原有 JSON（`response/sessionKey`），不会影响 Telegram 与其他现有调用方
+- **Electron 聊天请求切换为优先流式**（`electron/src/renderer/hooks/useGateway.ts`）
+  - 发送 `stream=true` + `Accept: text/event-stream`，优先使用 SSE 增量
+  - 兼容流式末尾 `done/response/sessionKey` 元信息，避免重复拼接
+- **验证**
+  - `go test ./internal/agent ./internal/webui`
+  - `cd electron && npm run build`
+  - `make build`
+
 #### Electron 聊天窗支持实时打字机效果
 - **新增回复字符队列与逐字渲染机制**（`electron/src/renderer/views/ChatView.tsx`）
   - 将模型回复增量先入队，再按固定节奏逐字渲染到 `streamingContent`

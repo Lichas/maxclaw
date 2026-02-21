@@ -29,6 +29,14 @@ type Server struct {
 	uiDir           string
 }
 
+type messagePayload struct {
+	SessionKey string `json:"sessionKey"`
+	Content    string `json:"content"`
+	Channel    string `json:"channel"`
+	ChatID     string `json:"chatId"`
+	Stream     bool   `json:"stream,omitempty"`
+}
+
 func NewServer(cfg *config.Config, agentLoop *agent.AgentLoop, cronService *cron.Service, registry *channels.Registry) *Server {
 	return &Server{
 		cfg:             cfg,
@@ -153,12 +161,7 @@ func (s *Server) handleMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var payload struct {
-		SessionKey string `json:"sessionKey"`
-		Content    string `json:"content"`
-		Channel    string `json:"channel"`
-		ChatID     string `json:"chatId"`
-	}
+	var payload messagePayload
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		writeError(w, err)
@@ -180,6 +183,11 @@ func (s *Server) handleMessage(w http.ResponseWriter, r *http.Request) {
 		payload.ChatID = payload.SessionKey
 	}
 
+	if wantsStreamResponse(r, payload) {
+		s.handleMessageStream(w, r, payload)
+		return
+	}
+
 	resp, err := s.agentLoop.ProcessDirect(r.Context(), payload.Content, payload.SessionKey, payload.Channel, payload.ChatID)
 	if err != nil {
 		writeError(w, err)
@@ -197,6 +205,94 @@ func (s *Server) handleMessage(w http.ResponseWriter, r *http.Request) {
 		"response":   resp,
 		"sessionKey": payload.SessionKey,
 	})
+}
+
+func (s *Server) handleMessageStream(w http.ResponseWriter, r *http.Request, payload messagePayload) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeError(w, fmt.Errorf("streaming is not supported by this server"))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+	w.WriteHeader(http.StatusOK)
+	flusher.Flush()
+
+	writeSSE := func(v interface{}) error {
+		body, err := json.Marshal(v)
+		if err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(w, "data: %s\n\n", body); err != nil {
+			return err
+		}
+		flusher.Flush()
+		return nil
+	}
+
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+
+	var streamWriteErr error
+	resp, err := s.agentLoop.ProcessDirectStream(
+		ctx,
+		payload.Content,
+		payload.SessionKey,
+		payload.Channel,
+		payload.ChatID,
+		func(delta string) {
+			if streamWriteErr != nil {
+				return
+			}
+			if err := writeSSE(map[string]interface{}{"delta": delta}); err != nil {
+				streamWriteErr = err
+				cancel()
+			}
+		},
+	)
+
+	if streamWriteErr != nil {
+		if lg := logging.Get(); lg != nil && lg.Web != nil {
+			lg.Web.Printf("stream write aborted session=%s channel=%s err=%v", payload.SessionKey, payload.Channel, streamWriteErr)
+		}
+		return
+	}
+
+	if err != nil {
+		_ = writeSSE(map[string]interface{}{"error": err.Error()})
+		_, _ = fmt.Fprint(w, "data: [DONE]\n\n")
+		flusher.Flush()
+		if lg := logging.Get(); lg != nil && lg.Web != nil {
+			lg.Web.Printf("message stream error session=%s channel=%s err=%v", payload.SessionKey, payload.Channel, err)
+		}
+		return
+	}
+
+	_ = writeSSE(map[string]interface{}{
+		"response":   resp,
+		"sessionKey": payload.SessionKey,
+		"done":       true,
+	})
+	_, _ = fmt.Fprint(w, "data: [DONE]\n\n")
+	flusher.Flush()
+
+	if lg := logging.Get(); lg != nil && lg.Web != nil {
+		lg.Web.Printf("message stream session=%s channel=%s content=%q", payload.SessionKey, payload.Channel, logging.Truncate(payload.Content, 300))
+	}
+}
+
+func wantsStreamResponse(r *http.Request, payload messagePayload) bool {
+	if payload.Stream {
+		return true
+	}
+	if stream := strings.TrimSpace(strings.ToLower(r.URL.Query().Get("stream"))); stream == "1" || stream == "true" || stream == "yes" {
+		return true
+	}
+	accept := strings.ToLower(r.Header.Get("Accept"))
+	return strings.Contains(accept, "text/event-stream")
 }
 
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {

@@ -34,14 +34,18 @@ export function useGateway() {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:18890/api/message', {
+      const response = await fetch('http://localhost:18890/api/message?stream=1', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream, application/json'
+        },
         body: JSON.stringify({
           content,
           sessionKey,
           channel: 'desktop',
-          chatId: sessionKey
+          chatId: sessionKey,
+          stream: true
         })
       });
 
@@ -70,6 +74,8 @@ export function useGateway() {
       const decoder = new TextDecoder();
       let buffer = '';
       let fullResponse = '';
+      let sawDelta = false;
+      let resolvedSessionKey = sessionKey;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -87,13 +93,18 @@ export function useGateway() {
             }
 
             try {
-              const parsed = JSON.parse(data) as { delta?: string; response?: string };
+              const parsed = JSON.parse(data) as { delta?: string; response?: string; sessionKey?: string };
               if (parsed.delta) {
+                sawDelta = true;
                 fullResponse += parsed.delta;
                 onDelta(parsed.delta);
-              } else if (parsed.response) {
+              } else if (parsed.response && !sawDelta) {
                 fullResponse += parsed.response;
                 onDelta(parsed.response);
+              }
+
+              if (parsed.sessionKey) {
+                resolvedSessionKey = parsed.sessionKey;
               }
             } catch {
               // Handle plain text deltas
@@ -109,7 +120,7 @@ export function useGateway() {
 
       return {
         response: fullResponse,
-        sessionKey
+        sessionKey: resolvedSessionKey
       };
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');

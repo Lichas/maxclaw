@@ -236,6 +236,10 @@ func (h *streamHandler) GetToolCalls() []providers.ToolCall {
 
 // ProcessMessage 处理单个消息（流式版本）
 func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage) (*bus.OutboundMessage, error) {
+	return a.processMessageWithDelta(ctx, msg, nil)
+}
+
+func (a *AgentLoop) processMessageWithDelta(ctx context.Context, msg *bus.InboundMessage, onDelta func(string)) (*bus.OutboundMessage, error) {
 	a.ensureMCPConnected(ctx)
 
 	if lg := logging.Get(); lg != nil && lg.Session != nil {
@@ -277,13 +281,15 @@ func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage)
 	toolDefs := a.tools.GetDefinitions()
 
 	for i := 0; i < a.MaxIterations; i++ {
-		// 流式调用 LLM
-		handler := newStreamHandler(msg.Channel, msg.ChatID, a.Bus, func(delta string) {
-			// 实时发送流式内容（可选）
-			if msg.Channel == "cli" {
+		deltaCallback := onDelta
+		if deltaCallback == nil && msg.Channel == "cli" {
+			deltaCallback = func(delta string) {
 				fmt.Print(delta)
 			}
-		})
+		}
+
+		// 流式调用 LLM
+		handler := newStreamHandler(msg.Channel, msg.ChatID, a.Bus, deltaCallback)
 
 		err := a.Provider.ChatStream(ctx, messages, toolDefs, a.Model, handler)
 		if err != nil {
@@ -291,7 +297,7 @@ func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage)
 		}
 
 		// CLI 换行
-		if msg.Channel == "cli" {
+		if msg.Channel == "cli" && onDelta == nil {
 			fmt.Println()
 		}
 
@@ -378,6 +384,27 @@ func (a *AgentLoop) ProcessDirect(ctx context.Context, content, sessionKey, chan
 	}
 	// CLI 模式下流式输出已实时打印，返回空字符串避免重复输出
 	if channel == "cli" {
+		return "", nil
+	}
+	return resp.Content, nil
+}
+
+// ProcessDirectStream 直接处理消息并按 delta 回调流式输出。
+func (a *AgentLoop) ProcessDirectStream(
+	ctx context.Context,
+	content, sessionKey, channel, chatID string,
+	onDelta func(string),
+) (string, error) {
+	msg := bus.NewInboundMessage(channel, "user", chatID, content)
+	if sessionKey != "" {
+		msg.SessionKey = sessionKey
+	}
+
+	resp, err := a.processMessageWithDelta(ctx, msg, onDelta)
+	if err != nil {
+		return "", err
+	}
+	if resp == nil {
 		return "", nil
 	}
 	return resp.Content, nil
