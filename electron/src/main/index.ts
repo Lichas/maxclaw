@@ -4,12 +4,14 @@ import { createWindow } from './window';
 import { initializeTray } from './tray';
 import { GatewayManager } from './gateway';
 import { createIPCHandlers } from './ipc';
+import { NotificationManager } from './notifications';
 import log from 'electron-log';
 
 log.initialize();
 
 let mainWindow: BrowserWindow | null = null;
 let gatewayManager: GatewayManager | null = null;
+let notificationManager: NotificationManager | null = null;
 let openingMainWindow: Promise<void> | null = null;
 
 const isDev = !app.isPackaged;
@@ -37,7 +39,8 @@ async function openMainWindow(): Promise<void> {
   }
 
   if (gatewayManager) {
-    createIPCHandlers(mainWindow, gatewayManager);
+    notificationManager = new NotificationManager(mainWindow);
+    createIPCHandlers(mainWindow, gatewayManager, notificationManager);
   }
 }
 
