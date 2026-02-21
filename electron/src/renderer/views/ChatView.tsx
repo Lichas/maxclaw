@@ -937,7 +937,7 @@ export function ChatView() {
 
   if (isStarterMode) {
     return (
-      <div className="h-full overflow-y-auto bg-[#f7f8fb] px-8 py-10">
+      <div className="h-full overflow-y-auto bg-background px-8 py-10">
         <div className="mx-auto max-w-4xl">
           <div className="mb-8 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff6a4d] to-[#d92d20] text-2xl text-white shadow-md">
@@ -970,7 +970,7 @@ export function ChatView() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-[#f7f8fb]">
+    <div className="h-full flex flex-col bg-background">
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.map((message) => (
           <div

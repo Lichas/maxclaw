@@ -148,7 +148,7 @@ export function SessionsView() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-[#f7f8fb] p-6">
+    <div className="h-full overflow-y-auto bg-background p-6">
       <div className="mx-auto max-w-5xl">
         {/* Header */}
         <div className="mb-6">

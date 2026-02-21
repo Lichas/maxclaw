@@ -115,7 +115,7 @@ export function ScheduledTasksView() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-[#f7f8fb] p-6">
+    <div className="h-full overflow-y-auto bg-background p-6">
       <div className="mx-auto max-w-4xl">
         <div className="mb-6 flex items-center justify-between">
           <div>

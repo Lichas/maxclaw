@@ -4,20 +4,29 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #0f0f0f;
+  --foreground: #1f2937;
   --primary: #2563eb;
   --primary-foreground: #ffffff;
   --secondary: #f3f4f6;
+  --secondary-foreground: #4b5563;
   --border: #e5e7eb;
+  --muted: #9ca3af;
+  --card: #ffffff;
+  --card-foreground: #1f2937;
 }
 
+/* Soft dark theme - reduced contrast for eye comfort */
 .dark {
-  --background: #0f0f0f;
-  --foreground: #f3f4f6;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --secondary: #1f2937;
-  --border: #374151;
+  --background: #1e1e2e;
+  --foreground: #cdd6f4;
+  --primary: #89b4fa;
+  --primary-foreground: #1e1e2e;
+  --secondary: #313244;
+  --secondary-foreground: #a6adc8;
+  --border: #45475a;
+  --muted: #6c7086;
+  --card: #252535;
+  --card-foreground: #cdd6f4;
 }
 
 * {

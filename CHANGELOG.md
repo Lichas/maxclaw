@@ -4,6 +4,23 @@
 
 ### Bug 修复
 
+#### 修复深色主题样式（`electron/src/renderer/styles/globals.css`, 各视图组件）
+- **问题**：深色模式下侧边栏文字看不清，主内容区背景仍是浅色，对比度过高不柔和
+- **原因**：使用了硬编码的 `#f7f8fb` 浅色背景，深色主题对比度太强（#0f0f0f 到 #f3f4f6）
+- **修复**：
+  - 更新深色主题颜色为柔和色调（inspired by Catppuccin Mocha）：
+    - background: #1e1e2e（深蓝灰）
+    - foreground: #cdd6f4（柔和浅蓝白）
+    - secondary: #313244（略亮的背景）
+    - border: #45475a（柔和边框）
+  - 新增 CSS 变量：secondary-foreground, muted, card, card-foreground
+  - 修复所有视图硬编码背景色：`bg-[#f7f8fb]` → `bg-background`
+  - 修复错误提示样式，添加深色模式支持
+  - 修复 Sidebar 透明度问题：`bg-secondary/90` → `bg-secondary`
+- **验证**
+  - `cd electron && npm run build`
+  - 深色模式下所有区域显示正确，对比度柔和舒适
+
 #### 修复语言切换不生效（`electron/src/renderer/i18n/`, `store/index.ts`, `SettingsView.tsx`, `Sidebar.tsx`, `SkillsView.tsx`）
 - **问题**：语言设置为"中文"但 Settings 页面仍显示英文
 - **原因**：所有 UI 文本都是硬编码，没有国际化支持

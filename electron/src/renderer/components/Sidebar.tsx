@@ -154,7 +154,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`bg-secondary/90 border-r border-border flex flex-col transition-all duration-200 ${
+      className={`bg-secondary border-r border-border flex flex-col transition-all duration-200 ${
         sidebarCollapsed ? 'w-16' : 'w-64'
       }`}
     >

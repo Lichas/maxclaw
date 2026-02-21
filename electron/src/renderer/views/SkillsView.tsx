@@ -92,7 +92,7 @@ export function SkillsView() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-[#f7f8fb] p-6">
+    <div className="h-full overflow-y-auto bg-background p-6">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 flex items-center justify-between">
           <div>
@@ -108,7 +108,7 @@ export function SkillsView() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
             {error}
           </div>
         )}
