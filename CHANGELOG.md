@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+### 新增功能
+
+#### Mermaid 图表渲染支持（`electron/src/renderer/components/MermaidRenderer.tsx`）
+- **功能**：聊天界面支持渲染 Mermaid 图表（流程图、时序图、类图等）
+- **实现**：
+  - 安装 mermaid@10.9.5 库
+  - 新增 `MermaidRenderer` 组件，支持异步渲染
+  - 集成到 `MarkdownRenderer`，自动检测 `mermaid` 代码块
+  - 支持深色/浅色主题自动切换（mermaid 内置 dark/default 主题）
+  - 错误处理：语法错误时显示友好错误信息和源代码
+- **验证**
+  - `cd electron && npm run build` 成功
+  - 支持多种图表类型：flowchart、sequenceDiagram、classDiagram、gantt 等
+- **文件**
+  - `electron/src/renderer/components/MermaidRenderer.tsx` - 新组件
+  - `electron/src/renderer/components/MarkdownRenderer.tsx` - 集成 mermaid
+  - `electron/src/renderer/styles/globals.css` - 添加 mermaid 样式
+
 ### Bug 修复
 
 #### 修复深色主题样式（`electron/src/renderer/styles/globals.css`, 各视图组件）

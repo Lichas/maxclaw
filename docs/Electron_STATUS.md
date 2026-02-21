@@ -174,7 +174,7 @@
 | react-markdown | ✅ | 已集成，支持完整 Markdown 渲染 |
 | remark-gfm | ✅ | 已集成，支持表格、删除线等 GFM 特性 |
 | remark-math/rehype-katex | ❌ | 未实现 |
-| mermaid | ❌ | 未实现 |
+| mermaid | ✅ | 已集成，支持流程图/时序图/类图等 |
 | react-syntax-highlighter | ✅ | 已集成，代码块语法高亮 |
 | DOMPurify | ❌ | 未使用 |
 

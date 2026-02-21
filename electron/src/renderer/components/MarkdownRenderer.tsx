@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { MermaidRenderer } from './MermaidRenderer';
 
 interface MarkdownRendererProps {
   content: string;
@@ -10,6 +13,14 @@ interface MarkdownRendererProps {
 }
 
 export function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
+  const { theme } = useSelector((state: RootState) => state.ui);
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  const processedContent = useMemo(() => {
+    // Handle mermaid code blocks by preserving them
+    return content;
+  }, [content]);
+
   return (
     <div className={`prose prose-sm dark:prose-invert max-w-none ${className}`}>
       <ReactMarkdown
@@ -22,6 +33,16 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           }) {
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';
+
+            // Handle mermaid code blocks
+            if (!inline && language === 'mermaid') {
+              return (
+                <MermaidRenderer
+                  chart={String(children).replace(/\n$/, '')}
+                  theme={isDark ? 'dark' : 'light'}
+                />
+              );
+            }
 
             if (!inline && language) {
               return (

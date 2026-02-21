@@ -81,3 +81,33 @@ body {
 .no-drag {
   -webkit-app-region: no-drag;
 }
+
+/* Mermaid Chart Styles */
+.mermaid-chart {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.mermaid-chart svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ensure mermaid text is readable in both themes */
+.mermaid-chart .node rect,
+.mermaid-chart .node circle,
+.mermaid-chart .node ellipse,
+.mermaid-chart .node polygon {
+  stroke-width: 2px;
+}
+
+.mermaid-chart .edgeLabel {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Dark theme adjustments */
+.dark .mermaid-chart {
+  background-color: var(--card);
+}
