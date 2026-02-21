@@ -44,6 +44,34 @@
   - `electron/src/renderer/components/FileAttachment.tsx` - 附件组件（新增）
   - `electron/src/renderer/views/ChatView.tsx` - 集成附件功能（修改）
 
+#### 系统通知支持（`electron/src/main/notifications.ts`, `internal/webui/notifications.go`）
+- **功能**：定时任务完成时显示系统级通知
+- **实现**：
+  - Electron 主进程：`electron/src/main/notifications.ts` - NotificationManager
+    - 使用 Electron Notification API 显示原生系统通知
+    - 点击通知可唤起应用窗口
+    - 支持请求通知权限
+  - 后端：`internal/webui/notifications.go` - 通知存储和 API
+    - NotificationStore 管理待发送通知队列
+    - `/api/notifications/pending` - 获取待发送通知
+    - `/api/notifications/{id}/delivered` - 标记已发送
+  - Cron 服务集成：`internal/cron/service.go` - 任务完成时触发通知
+    - 成功/失败都发送通知
+    - 通过 NotificationFunc 回调解耦
+  - 前端设置：`electron/src/renderer/views/SettingsView.tsx`
+    - 通知开关设置
+    - i18n 翻译支持
+- **验证**
+  - `cd electron && npm run build` 成功
+  - `make build` 成功
+- **文件**
+  - `electron/src/main/notifications.ts` - NotificationManager（新增）
+  - `electron/src/main/ipc.ts` - 通知 IPC 处理（修改）
+  - `electron/src/main/index.ts` - 初始化通知管理器（修改）
+  - `internal/webui/notifications.go` - 后端通知 API（新增）
+  - `internal/cron/service.go` - 任务完成通知（修改）
+  - `internal/cli/gateway.go` - 连接通知处理器（修改）
+
 ### Bug 修复
 
 #### 修复深色主题样式（`electron/src/renderer/styles/globals.css`, 各视图组件）
