@@ -4,6 +4,17 @@
 
 ### Bug 修复
 
+#### Electron 聊天窗支持实时打字机效果
+- **新增回复字符队列与逐字渲染机制**（`electron/src/renderer/views/ChatView.tsx`）
+  - 将模型回复增量先入队，再按固定节奏逐字渲染到 `streamingContent`
+  - 发送完成后等待队列清空再落盘 assistant 消息，避免“一次性整段出现”
+- **兼容 JSON 与增量回调两种回复模式**（`electron/src/renderer/views/ChatView.tsx`）
+  - 后端返回整段文本时也会走打字机输出
+  - 流式增量到达时保持连续打字体验
+- **验证**
+  - `cd electron && npm run build`
+  - `make build`
+
 #### 启动 Electron 时自动重启 Gateway（清理旧进程）
 - **新增 Gateway 启动前清理逻辑**（`electron/src/main/gateway.ts`, `electron/src/main/index.ts`）
   - 启动主进程时改为 `startFresh()`：先停止已托管进程，再清理历史残留的 `nanobot-go gateway -p 18890` 进程，然后启动新 Gateway

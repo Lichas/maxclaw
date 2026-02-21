@@ -45,12 +45,57 @@ export function ChatView() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isComposingRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingQueueRef = useRef<string[]>([]);
+  const typingTimerRef = useRef<number | null>(null);
 
   const isStarterMode = messages.length === 0 && !streamingContent;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingContent]);
+
+  const stopTypingTimer = () => {
+    if (typingTimerRef.current !== null) {
+      window.clearInterval(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
+  };
+
+  const resetTypingState = () => {
+    typingQueueRef.current = [];
+    stopTypingTimer();
+    setStreamingContent('');
+  };
+
+  const ensureTypingTimer = () => {
+    if (typingTimerRef.current !== null) {
+      return;
+    }
+
+    typingTimerRef.current = window.setInterval(() => {
+      if (typingQueueRef.current.length === 0) {
+        stopTypingTimer();
+        return;
+      }
+
+      const chunk = typingQueueRef.current.splice(0, 2).join('');
+      setStreamingContent((prev) => prev + chunk);
+    }, 18);
+  };
+
+  const enqueueTyping = (text: string) => {
+    if (!text) {
+      return;
+    }
+    typingQueueRef.current.push(...Array.from(text));
+    ensureTypingTimer();
+  };
+
+  const waitForTypingDrain = async () => {
+    while (typingQueueRef.current.length > 0 || typingTimerRef.current !== null) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -72,11 +117,11 @@ export function ChatView() {
           }));
 
         setMessages(restored);
-        setStreamingContent('');
+        resetTypingState();
       } catch {
         if (!cancelled) {
           setMessages([]);
-          setStreamingContent('');
+          resetTypingState();
         }
       }
     };
@@ -85,6 +130,7 @@ export function ChatView() {
 
     return () => {
       cancelled = true;
+      resetTypingState();
     };
   }, [currentSessionKey, getSession]);
 
@@ -103,14 +149,14 @@ export function ChatView() {
 
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
-    setStreamingContent('');
+    resetTypingState();
 
     let assistantContent = '';
 
     try {
       const result = await sendMessage(userMessage.content, currentSessionKey, (delta) => {
         assistantContent += delta;
-        setStreamingContent(assistantContent);
+        enqueueTyping(delta);
       });
 
       if (result.sessionKey && result.sessionKey !== currentSessionKey) {
@@ -119,7 +165,10 @@ export function ChatView() {
 
       if (!assistantContent && result.response) {
         assistantContent = result.response;
+        enqueueTyping(result.response);
       }
+
+      await waitForTypingDrain();
 
       setMessages((prev) => [
         ...prev,
@@ -130,9 +179,9 @@ export function ChatView() {
           timestamp: new Date()
         }
       ]);
-      setStreamingContent('');
+      resetTypingState();
     } catch {
-      setStreamingContent('');
+      resetTypingState();
       setMessages((prev) => [
         ...prev,
         {
