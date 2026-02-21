@@ -223,5 +223,36 @@ export function useGateway() {
     return data.skills || [];
   }, []);
 
-  return { sendMessage, getSessions, getSession, getConfig, getSkills, isLoading, error };
+  const getModels = useCallback(async () => {
+    const config = await getConfig();
+    const providers = config.providers || {};
+    const models: Array<{ id: string; name: string; provider: string }> = [];
+
+    for (const [providerKey, providerConfig] of Object.entries(providers)) {
+      const pc = providerConfig as { enabled?: boolean; models?: string[] };
+      if (pc.enabled !== false && Array.isArray(pc.models)) {
+        for (const modelId of pc.models) {
+          models.push({
+            id: modelId,
+            name: modelId.split('/').pop() || modelId,
+            provider: providerKey
+          });
+        }
+      }
+    }
+
+    return models;
+  }, [getConfig]);
+
+  const updateConfig = useCallback(async (updates: { model?: string }) => {
+    const response = await fetch('http://localhost:18890/api/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!response.ok) throw new Error('Failed to update config');
+    return response.json();
+  }, []);
+
+  return { sendMessage, getSessions, getSession, getConfig, getSkills, getModels, updateConfig, isLoading, error };
 }

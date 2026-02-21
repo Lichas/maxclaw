@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, setCurrentSessionKey } from '../store';
 import { GatewayStreamEvent, SkillSummary, useGateway } from '../hooks/useGateway';
+import { MarkdownRenderer } from '../components/MarkdownRenderer';
 
 interface Message {
   id: string;
@@ -61,7 +62,7 @@ const starterCards = [
 export function ChatView() {
   const dispatch = useDispatch();
   const { currentSessionKey } = useSelector((state: RootState) => state.ui);
-  const { sendMessage, getSession, getSkills, isLoading } = useGateway();
+  const { sendMessage, getSession, getSkills, getModels, updateConfig, isLoading } = useGateway();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -71,6 +72,9 @@ export function ChatView() {
   const [skillsQuery, setSkillsQuery] = useState('');
   const [skillsPickerOpen, setSkillsPickerOpen] = useState(false);
   const [skillsLoadError, setSkillsLoadError] = useState<string | null>(null);
+  const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string; provider: string }>>([]);
+  const [currentModel, setCurrentModel] = useState<string>('');
+  const [modelsLoading, setModelsLoading] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const skillsPickerRef = useRef<HTMLDivElement>(null);
@@ -112,6 +116,28 @@ export function ChatView() {
       cancelled = true;
     };
   }, [getSkills]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadModels = async () => {
+      try {
+        setModelsLoading(true);
+        const models = await getModels();
+        if (cancelled) return;
+        setAvailableModels(models);
+      } catch {
+        if (!cancelled) setAvailableModels([]);
+      } finally {
+        if (!cancelled) setModelsLoading(false);
+      }
+    };
+
+    void loadModels();
+    return () => {
+      cancelled = true;
+    };
+  }, [getModels]);
 
   useEffect(() => {
     if (!skillsPickerOpen) {
@@ -526,6 +552,15 @@ export function ChatView() {
     );
   };
 
+  const handleModelChange = async (modelId: string) => {
+    try {
+      await updateConfig({ model: modelId });
+      setCurrentModel(modelId);
+    } catch (err) {
+      console.error('Failed to switch model:', err);
+    }
+  };
+
   const renderComposer = (landing: boolean) => (
     <form
       onSubmit={handleSubmit}
@@ -533,6 +568,24 @@ export function ChatView() {
         landing ? 'p-4' : 'p-3'
       }`}
     >
+      {/* Model Selector */}
+      <div className="mb-3 flex items-center gap-2">
+        <select
+          value={currentModel}
+          onChange={(e) => handleModelChange(e.target.value)}
+          disabled={modelsLoading || isLoading}
+          className="rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-foreground focus:border-primary/40 focus:outline-none disabled:opacity-50"
+        >
+          <option value="">选择模型...</option>
+          {availableModels.map((model) => (
+            <option key={model.id} value={model.id}>
+              {model.provider} / {model.name}
+            </option>
+          ))}
+        </select>
+        {modelsLoading && <span className="text-xs text-foreground/50">加载中...</span>}
+      </div>
+
       <textarea
         ref={inputRef}
         value={input}
@@ -684,11 +737,11 @@ export function ChatView() {
                 <pre className="whitespace-pre-wrap break-all font-sans">{message.content}</pre>
               </div>
             ) : (
-              <div className="w-full px-1 py-1 text-sm leading-7 text-foreground">
+              <div className="w-full px-1 py-1 text-foreground">
                 {message.timeline && message.timeline.length > 0 ? (
                   renderTimeline(message.timeline, false)
                 ) : (
-                  <pre className="whitespace-pre-wrap break-all font-sans">{message.content}</pre>
+                  <MarkdownRenderer content={message.content} />
                 )}
               </div>
             )}

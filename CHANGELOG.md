@@ -4,6 +4,30 @@
 
 ### 新增功能
 
+#### Electron 核心功能完善（Markdown、模型切换、定时任务、技能管理）
+- **实现 Markdown 渲染与代码高亮**（`electron/src/renderer/components/MarkdownRenderer.tsx`, `electron/src/renderer/views/ChatView.tsx`）
+  - 新增 `react-markdown`、`remark-gfm`、`react-syntax-highlighter` 依赖
+  - 支持代码块语法高亮、表格、列表、链接等 Markdown 元素
+  - 集成 Tailwind Typography 插件优化排版
+- **实现模型切换下拉框**（`electron/src/renderer/views/ChatView.tsx`, `electron/src/renderer/hooks/useGateway.ts`）
+  - 从 Gateway 配置读取可用模型列表
+  - 输入框上方模型选择器，支持切换不同 LLM
+  - 调用 `/api/config` 更新模型配置
+- **实现定时任务管理界面**（`electron/src/renderer/views/ScheduledTasksView.tsx`）
+  - 完整的任务创建表单：标题、提示词、调度类型（Cron/Every/Once）、工作目录
+  - 任务列表展示：执行状态、上次/下次执行时间
+  - 任务操作：启用/禁用/删除
+- **实现技能网格展示与管理**（`electron/src/renderer/views/SkillsView.tsx`）
+  - 卡片式技能网格：图标、名称、描述、安装时间
+  - 技能开关：启用/禁用控制
+  - 技能安装：支持 GitHub URL、Zip 文件、本地文件夹三种方式
+- **补充依赖**（`electron/package.json`）
+  - `@tailwindcss/typography` 用于 Markdown 排版
+- **验证**
+  - `cd electron && npm install`
+  - `cd electron && npm run build`
+  - `make build`
+
 #### 聊天窗口支持多选 Skills 并随消息生效
 - **后端新增技能列表接口与消息技能筛选透传**（`internal/webui/server.go`, `internal/bus/events.go`, `internal/agent/loop.go`, `internal/agent/context.go`, `internal/agent/skills.go`）
   - 新增 `GET /api/skills` 返回可选技能列表（名称、展示名、简介）
