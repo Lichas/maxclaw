@@ -530,10 +530,14 @@ func summarizeToolResult(name, result string, err error) string {
 }
 
 func truncateEventText(input string, max int) string {
-	if max <= 0 || len(input) <= max {
+	if max <= 0 {
 		return input
 	}
-	return input[:max] + "..."
+	runes := []rune(input)
+	if len(runes) <= max {
+		return input
+	}
+	return string(runes[:max]) + "..."
 }
 
 func appendTimelineFromEvent(timeline []session.TimelineEntry, event StreamEvent) []session.TimelineEntry {

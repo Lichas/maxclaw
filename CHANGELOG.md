@@ -4,6 +4,15 @@
 
 ### Bug 修复
 
+#### 修复工具步骤中文参数在 UI 中出现乱码
+- **后端事件文本截断改为按 Unicode 字符边界处理**（`internal/agent/loop.go`）
+  - 解决工具参数/结果在截断时按字节切分导致中文被切半，UI 显示 `�` 的问题
+- **补充回归测试**（`internal/agent/loop_test.go`）
+  - 新增 UTF-8 边界截断单测，覆盖中文与 emoji 场景
+- **验证**
+  - `go test ./internal/agent ./internal/webui`
+  - `make build`
+
 #### 聊天窗口隐藏冗余的 “Thinking: Iteration N” 状态
 - **前端过滤迭代计数状态展示**（`electron/src/renderer/views/ChatView.tsx`）
   - 实时流与历史回放均不再渲染 `Iteration N` 这类状态条目

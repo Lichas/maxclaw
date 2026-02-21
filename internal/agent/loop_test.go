@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/Lichas/nanobot-go/internal/bus"
 	"github.com/Lichas/nanobot-go/internal/config"
@@ -414,4 +415,13 @@ func TestAgentLoopProcessDirectEventStreamEmitsStructuredEvents(t *testing.T) {
 
 	assert.True(t, timelineHasActivity)
 	assert.True(t, timelineHasText)
+}
+
+func TestTruncateEventTextPreservesUTF8Boundaries(t *testing.T) {
+	input := "从零开始理解🌟AI入门课程"
+	truncated := truncateEventText(input, 7)
+
+	assert.True(t, utf8.ValidString(truncated))
+	assert.NotContains(t, truncated, "�")
+	assert.Equal(t, "从零开始理解🌟...", truncated)
 }
