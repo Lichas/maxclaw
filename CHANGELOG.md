@@ -4,6 +4,15 @@
 
 ### Bug 修复
 
+#### Electron 执行步骤与回复正文改为同一时序流
+- **聊天区改为单一时序 timeline 渲染**（`electron/src/renderer/views/ChatView.tsx`）
+  - 将 `status/tool_start/tool_result/error` 与 `content_delta` 合并到同一时间线，按到达顺序穿插显示
+  - 不再分成“工具区 + 正文区”两块，流式体验与执行轨迹保持一致
+  - 流式阶段只展开当前步骤；当后续文本/步骤到达时，前一步自动折叠
+- **验证**
+  - `cd electron && npm run build`
+  - `make build`
+
 #### Electron 对话区改为“无气泡正文 + 自动折叠执行步骤”
 - **修复流式文本穿行与杂项事件混入正文**（`electron/src/renderer/hooks/useGateway.ts`）
   - SSE 仅解析 `data:` 事件行，避免将非 `data` 行误当正文增量拼接

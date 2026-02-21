@@ -8,15 +8,26 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  activities?: StreamActivity[];
+  timeline?: TimelineEntry[];
 }
 
 interface StreamActivity {
-  id: string;
   type: 'status' | 'tool_start' | 'tool_result' | 'error';
   summary: string;
   detail?: string;
 }
+
+type TimelineEntry =
+  | {
+      id: string;
+      kind: 'activity';
+      activity: StreamActivity;
+    }
+  | {
+      id: string;
+      kind: 'text';
+      text: string;
+    };
 
 const starterCards = [
   {
@@ -48,21 +59,21 @@ export function ChatView() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [streamingContent, setStreamingContent] = useState('');
-  const [streamingActivities, setStreamingActivities] = useState<StreamActivity[]>([]);
+  const [streamingTimeline, setStreamingTimeline] = useState<TimelineEntry[]>([]);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isComposingRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingQueueRef = useRef<string[]>([]);
   const typingTimerRef = useRef<number | null>(null);
-  const activitySeqRef = useRef(0);
+  const entrySeqRef = useRef(0);
+  const streamingTimelineRef = useRef<TimelineEntry[]>([]);
 
-  const isStarterMode = messages.length === 0 && !streamingContent && streamingActivities.length === 0;
+  const isStarterMode = messages.length === 0 && streamingTimeline.length === 0;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingContent, streamingActivities]);
+  }, [messages, streamingTimeline]);
 
   const stopTypingTimer = () => {
     if (typingTimerRef.current !== null) {
@@ -74,8 +85,16 @@ export function ChatView() {
   const resetTypingState = () => {
     typingQueueRef.current = [];
     stopTypingTimer();
-    setStreamingContent('');
-    setStreamingActivities([]);
+    streamingTimelineRef.current = [];
+    setStreamingTimeline([]);
+  };
+
+  const setStreamingTimelineWithRef = (updater: (prev: TimelineEntry[]) => TimelineEntry[]) => {
+    setStreamingTimeline((prev) => {
+      const next = updater(prev);
+      streamingTimelineRef.current = next;
+      return next;
+    });
   };
 
   const ensureTypingTimer = () => {
@@ -90,7 +109,23 @@ export function ChatView() {
       }
 
       const chunk = typingQueueRef.current.splice(0, 2).join('');
-      setStreamingContent((prev) => prev + chunk);
+      setStreamingTimelineWithRef((prev) => {
+        if (chunk === '') {
+          return prev;
+        }
+        const last = prev[prev.length - 1];
+        if (last && last.kind === 'text') {
+          return [...prev.slice(0, -1), { ...last, text: last.text + chunk }];
+        }
+        return [
+          ...prev,
+          {
+            id: nextEntryID('text'),
+            kind: 'text',
+            text: chunk
+          }
+        ];
+      });
     }, 18);
   };
 
@@ -108,9 +143,9 @@ export function ChatView() {
     }
   };
 
-  const nextActivityID = (prefix: string) => {
-    activitySeqRef.current += 1;
-    return `${prefix}-${activitySeqRef.current}`;
+  const nextEntryID = (prefix: string) => {
+    entrySeqRef.current += 1;
+    return `${prefix}-${entrySeqRef.current}`;
   };
 
   const toStreamActivity = (event: GatewayStreamEvent): StreamActivity | null => {
@@ -131,7 +166,6 @@ export function ChatView() {
           return null;
         }
         return {
-          id: nextActivityID('status'),
           type: 'status',
           summary
         };
@@ -139,7 +173,6 @@ export function ChatView() {
       case 'tool_start': {
         const summary = event.summary || `${event.toolName || 'Tool'} started`;
         return {
-          id: nextActivityID(`tool-start-${event.toolId || 'unknown'}`),
           type: 'tool_start',
           summary,
           detail: trimDetail(event.toolArgs)
@@ -148,7 +181,6 @@ export function ChatView() {
       case 'tool_result': {
         const summary = event.summary || `${event.toolName || 'Tool'} completed`;
         return {
-          id: nextActivityID(`tool-result-${event.toolId || 'unknown'}`),
           type: 'tool_result',
           summary,
           detail: trimDetail(event.toolResult)
@@ -156,7 +188,6 @@ export function ChatView() {
       }
       case 'error':
         return {
-          id: nextActivityID('error'),
           type: 'error',
           summary: event.error || '请求失败'
         };
@@ -165,12 +196,28 @@ export function ChatView() {
     }
   };
 
-  const mergeActivity = (prev: StreamActivity[], next: StreamActivity) => {
-    const last = prev[prev.length - 1];
-    if (last && last.type === next.type && last.summary === next.summary && last.detail === next.detail) {
-      return prev;
-    }
-    return [...prev, next];
+  const appendActivityToTimeline = (activity: StreamActivity) => {
+    setStreamingTimelineWithRef((prev) => {
+      const last = prev[prev.length - 1];
+      if (
+        last &&
+        last.kind === 'activity' &&
+        last.activity.type === activity.type &&
+        last.activity.summary === activity.summary &&
+        last.activity.detail === activity.detail
+      ) {
+        return prev;
+      }
+
+      return [
+        ...prev,
+        {
+          id: nextEntryID('activity'),
+          kind: 'activity',
+          activity
+        }
+      ];
+    });
   };
 
   const getActivityLabel = (type: StreamActivity['type']) => {
@@ -238,7 +285,6 @@ export function ChatView() {
     resetTypingState();
 
     let assistantContent = '';
-    let currentActivities: StreamActivity[] = [];
 
     try {
       const result = await sendMessage(
@@ -253,8 +299,7 @@ export function ChatView() {
           if (!activity) {
             return;
           }
-          currentActivities = mergeActivity(currentActivities, activity);
-          setStreamingActivities(currentActivities);
+          appendActivityToTimeline(activity);
         }
       );
 
@@ -276,11 +321,12 @@ export function ChatView() {
           role: 'assistant',
           content: assistantContent,
           timestamp: new Date(),
-          activities: currentActivities.length > 0 ? currentActivities : undefined
+          timeline: streamingTimelineRef.current.length > 0 ? [...streamingTimelineRef.current] : undefined
         }
       ]);
       resetTypingState();
     } catch (err) {
+      const errorTimeline = streamingTimelineRef.current.length > 0 ? [...streamingTimelineRef.current] : undefined;
       resetTypingState();
       setMessages((prev) => [
         ...prev,
@@ -289,7 +335,7 @@ export function ChatView() {
           role: 'assistant',
           content: err instanceof Error ? `消息发送失败：${err.message}` : '消息发送失败，请检查 Gateway 状态后重试。',
           timestamp: new Date(),
-          activities: currentActivities.length > 0 ? currentActivities : undefined
+          timeline: errorTimeline
         }
       ]);
     }
@@ -310,26 +356,33 @@ export function ChatView() {
     inputRef.current?.focus();
   };
 
-  const renderActivityList = (items: StreamActivity[], streaming: boolean) => {
-    const openIndex = streaming ? items.length - 1 : -1;
+  const renderTimeline = (items: TimelineEntry[], streaming: boolean) => {
+    const openIndex =
+      streaming && items.length > 0 && items[items.length - 1].kind === 'activity' ? items.length - 1 : -1;
+
     return (
-      <div className="mb-4 rounded-xl border border-border/75 bg-background/70 px-3 py-2 text-xs">
-        <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-foreground/45">Execution</div>
+      <div className="space-y-3">
         <div className="space-y-2">
-          {items.map((activity, index) => (
-            <div key={activity.id} className="rounded-lg border border-border/70 bg-background">
-              <details open={index === openIndex ? true : undefined}>
-                <summary className="cursor-pointer list-none px-3 py-2 font-medium text-foreground/75">
-                  {getActivityLabel(activity.type)}: {activity.summary}
-                </summary>
-                {activity.detail && (
-                  <pre className="border-t border-border/70 px-3 py-2 whitespace-pre-wrap break-all font-sans text-foreground/60">
-                    {activity.detail}
-                  </pre>
-                )}
-              </details>
-            </div>
-          ))}
+          {items.map((entry, index) =>
+            entry.kind === 'activity' ? (
+              <div key={entry.id} className="rounded-lg border border-border/70 bg-background">
+                <details open={index === openIndex ? true : undefined}>
+                  <summary className="cursor-pointer list-none px-3 py-2 font-medium text-foreground/75">
+                    {getActivityLabel(entry.activity.type)}: {entry.activity.summary}
+                  </summary>
+                  {entry.activity.detail && (
+                    <pre className="border-t border-border/70 px-3 py-2 whitespace-pre-wrap break-all font-sans text-foreground/60">
+                      {entry.activity.detail}
+                    </pre>
+                  )}
+                </details>
+              </div>
+            ) : (
+              <pre key={entry.id} className="whitespace-pre-wrap break-all font-sans text-sm leading-7 text-foreground">
+                {entry.text}
+              </pre>
+            )
+          )}
         </div>
       </div>
     );
@@ -433,18 +486,20 @@ export function ChatView() {
               </div>
             ) : (
               <div className="w-full px-1 py-1 text-sm leading-7 text-foreground">
-                {message.activities && message.activities.length > 0 && renderActivityList(message.activities, false)}
-                <pre className="whitespace-pre-wrap break-all font-sans">{message.content}</pre>
+                {message.timeline && message.timeline.length > 0 ? (
+                  renderTimeline(message.timeline, false)
+                ) : (
+                  <pre className="whitespace-pre-wrap break-all font-sans">{message.content}</pre>
+                )}
               </div>
             )}
           </div>
         ))}
 
-        {(streamingActivities.length > 0 || streamingContent) && (
+        {streamingTimeline.length > 0 && (
           <div className="flex justify-start">
             <div className="w-full px-1 py-1 text-sm leading-7 text-foreground">
-              {streamingActivities.length > 0 && renderActivityList(streamingActivities, true)}
-              {streamingContent && <pre className="whitespace-pre-wrap break-all font-sans">{streamingContent}</pre>}
+              {renderTimeline(streamingTimeline, true)}
               <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-primary" />
             </div>
           </div>
