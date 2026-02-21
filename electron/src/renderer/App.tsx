@@ -8,6 +8,7 @@ import { SessionsView } from './views/SessionsView';
 import { ScheduledTasksView } from './views/ScheduledTasksView';
 import { SkillsView } from './views/SkillsView';
 import { SettingsView } from './views/SettingsView';
+import { wsClient } from './services/websocket';
 
 function App() {
   const dispatch = useDispatch();
@@ -44,6 +45,15 @@ function App() {
       }
     });
 
+    // Connect WebSocket for real-time updates
+    wsClient.connect();
+
+    // Subscribe to WebSocket messages
+    const unsubscribeWS = wsClient.on('message', (data) => {
+      console.log('Received WebSocket message:', data);
+      // Could trigger session refresh here if needed
+    });
+
     // Listen for tray events
     const unsubscribeNewChat = window.electronAPI.tray.onNewChat(() => {
       dispatch(setActiveTab('chat'));
@@ -58,6 +68,8 @@ function App() {
       unsubscribeConfig();
       unsubscribeNewChat();
       unsubscribeSettings();
+      unsubscribeWS();
+      wsClient.disconnect();
     };
   }, [dispatch]);
 
