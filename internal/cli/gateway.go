@@ -278,6 +278,11 @@ var gatewayCmd = &cobra.Command{
 			}
 		}()
 
+		// 设置定时任务通知处理器
+		cronService.SetNotificationHandler(func(title, body string, data map[string]interface{}) {
+			webServer.AddNotification(title, body, data)
+		})
+
 		fmt.Println("✓ Gateway ready")
 		fmt.Println("\nPress Ctrl+C to stop")
 

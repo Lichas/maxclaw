@@ -101,6 +101,11 @@ func (s *Server) Stop(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
+// AddNotification adds a notification to the store
+func (s *Server) AddNotification(title, body string, data map[string]interface{}) string {
+	return s.notificationStore.Add(title, body, data)
+}
+
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)

@@ -15,16 +15,20 @@ import (
 // JobFunc 任务执行函数类型
 type JobFunc func(job *Job) (string, error)
 
+// NotificationFunc 通知函数类型
+type NotificationFunc func(title, body string, data map[string]interface{})
+
 // Service 定时任务服务
 type Service struct {
-	jobs      map[string]*Job
-	mu        sync.RWMutex
-	storePath string
-	running   bool
-	stopChan  chan struct{}
-	wg        sync.WaitGroup
-	onJob     JobFunc
-	cron      *cron.Cron
+	jobs         map[string]*Job
+	mu           sync.RWMutex
+	storePath    string
+	running      bool
+	stopChan     chan struct{}
+	wg           sync.WaitGroup
+	onJob        JobFunc
+	onNotify     NotificationFunc
+	cron         *cron.Cron
 }
 
 // NewService 创建定时任务服务
@@ -42,6 +46,11 @@ func NewService(storePath string) *Service {
 // SetJobHandler 设置任务处理器
 func (s *Service) SetJobHandler(handler JobFunc) {
 	s.onJob = handler
+}
+
+// SetNotificationHandler 设置通知处理器
+func (s *Service) SetNotificationHandler(handler NotificationFunc) {
+	s.onNotify = handler
 }
 
 // AddJob 添加任务
@@ -260,8 +269,34 @@ func (s *Service) executeJob(job *Job, trigger string) {
 	result, err := s.onJob(job)
 	if err != nil {
 		s.logCronf("cron failed trigger=%s job=%s job_id=%s err=%v", trigger, job.Name, job.ID, err)
+		// Send notification on failure
+		if s.onNotify != nil {
+			s.onNotify(
+				"定时任务执行失败",
+				fmt.Sprintf("任务 \"%s\" 执行失败: %v", job.Name, err),
+				map[string]interface{}{
+					"type":    "scheduled_task",
+					"jobId":   job.ID,
+					"jobName": job.Name,
+					"status":  "failed",
+				},
+			)
+		}
 	} else {
 		s.logCronf("cron completed trigger=%s job=%s job_id=%s result=%q", trigger, job.Name, job.ID, logging.Truncate(result, 400))
+		// Send notification on success
+		if s.onNotify != nil {
+			s.onNotify(
+				"定时任务完成",
+				fmt.Sprintf("任务 \"%s\" 执行完成", job.Name),
+				map[string]interface{}{
+					"type":    "scheduled_task",
+					"jobId":   job.ID,
+					"jobName": job.Name,
+					"status":  "success",
+				},
+			)
+		}
 	}
 }
 
