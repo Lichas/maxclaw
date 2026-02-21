@@ -23,18 +23,22 @@ func TestBuildSkillsSectionSelectors(t *testing.T) {
 
 	builder := NewContextBuilder(workspace)
 
-	allSkills := builder.buildSkillsSection("do something")
+	allSkills := builder.buildSkillsSection("do something", nil)
 	assert.Contains(t, allSkills, "### Alpha")
 	assert.Contains(t, allSkills, "### Beta")
 
-	betaOnly := builder.buildSkillsSection("use @skill:beta")
+	betaOnly := builder.buildSkillsSection("use @skill:beta", nil)
 	assert.NotContains(t, betaOnly, "### Alpha")
 	assert.Contains(t, betaOnly, "### Beta")
 
-	alphaOnly := builder.buildSkillsSection("use $alpha now")
+	alphaOnly := builder.buildSkillsSection("use $alpha now", nil)
 	assert.Contains(t, alphaOnly, "### Alpha")
 	assert.NotContains(t, alphaOnly, "### Beta")
 
-	none := builder.buildSkillsSection("disable with @skill:none")
+	none := builder.buildSkillsSection("disable with @skill:none", nil)
 	assert.Equal(t, "", none)
+
+	explicitAlpha := builder.buildSkillsSection("use @skill:beta", []string{"alpha"})
+	assert.Contains(t, explicitAlpha, "### Alpha")
+	assert.NotContains(t, explicitAlpha, "### Beta")
 }

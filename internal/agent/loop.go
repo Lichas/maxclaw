@@ -301,7 +301,8 @@ func (a *AgentLoop) processMessageWithCallbacks(
 	history := a.convertSessionMessages(sess.GetHistory(sessionContextWindow))
 
 	// 构建消息
-	messages := a.context.BuildMessages(history, msg.Content, msg.Media, msg.Channel, msg.ChatID)
+	selectedSkillRefs := normalizeSkillRefs(msg.SelectedSkills)
+	messages := a.context.BuildMessagesWithSkillRefs(history, msg.Content, selectedSkillRefs, msg.Media, msg.Channel, msg.ChatID)
 
 	// Agent 循环
 	var finalContent string
@@ -449,10 +450,20 @@ func (a *AgentLoop) processMessageWithCallbacks(
 
 // ProcessDirect 直接处理消息（用于 CLI）
 func (a *AgentLoop) ProcessDirect(ctx context.Context, content, sessionKey, channel, chatID string) (string, error) {
+	return a.ProcessDirectWithSkills(ctx, content, sessionKey, channel, chatID, nil)
+}
+
+func (a *AgentLoop) ProcessDirectWithSkills(
+	ctx context.Context,
+	content, sessionKey, channel, chatID string,
+	selectedSkills []string,
+) (string, error) {
 	msg := bus.NewInboundMessage(channel, "user", chatID, content)
 	if sessionKey != "" {
 		msg.SessionKey = sessionKey
 	}
+	msg.SelectedSkills = normalizeSkillRefs(selectedSkills)
+
 	resp, err := a.ProcessMessage(ctx, msg)
 	if err != nil {
 		return "", err
@@ -494,10 +505,20 @@ func (a *AgentLoop) ProcessDirectEventStream(
 	content, sessionKey, channel, chatID string,
 	onEvent func(StreamEvent),
 ) (string, error) {
+	return a.ProcessDirectEventStreamWithSkills(ctx, content, sessionKey, channel, chatID, nil, onEvent)
+}
+
+func (a *AgentLoop) ProcessDirectEventStreamWithSkills(
+	ctx context.Context,
+	content, sessionKey, channel, chatID string,
+	selectedSkills []string,
+	onEvent func(StreamEvent),
+) (string, error) {
 	msg := bus.NewInboundMessage(channel, "user", chatID, content)
 	if sessionKey != "" {
 		msg.SessionKey = sessionKey
 	}
+	msg.SelectedSkills = normalizeSkillRefs(selectedSkills)
 
 	resp, err := a.processMessageWithCallbacks(ctx, msg, nil, onEvent)
 	if err != nil {
@@ -538,6 +559,41 @@ func truncateEventText(input string, max int) string {
 		return input
 	}
 	return string(runes[:max]) + "..."
+}
+
+func normalizeSkillRefs(selectedSkills []string) []string {
+	if len(selectedSkills) == 0 {
+		return nil
+	}
+
+	out := make([]string, 0, len(selectedSkills))
+	seen := make(map[string]struct{}, len(selectedSkills))
+	for _, raw := range selectedSkills {
+		ref := sanitizeSkillRef(raw)
+		if ref == "" {
+			continue
+		}
+		if _, ok := seen[ref]; ok {
+			continue
+		}
+		seen[ref] = struct{}{}
+		out = append(out, ref)
+	}
+	return out
+}
+
+func sanitizeSkillRef(raw string) string {
+	raw = strings.ToLower(strings.TrimSpace(raw))
+	if raw == "" {
+		return ""
+	}
+	var b strings.Builder
+	for _, r := range raw {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '_' || r == '.' || r == '-' {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 func appendTimelineFromEvent(timeline []session.TimelineEntry, event StreamEvent) []session.TimelineEntry {

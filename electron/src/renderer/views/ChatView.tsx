@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, setCurrentSessionKey } from '../store';
-import { GatewayStreamEvent, useGateway } from '../hooks/useGateway';
+import { GatewayStreamEvent, SkillSummary, useGateway } from '../hooks/useGateway';
 
 interface Message {
   id: string;
@@ -61,13 +61,19 @@ const starterCards = [
 export function ChatView() {
   const dispatch = useDispatch();
   const { currentSessionKey } = useSelector((state: RootState) => state.ui);
-  const { sendMessage, getSession, isLoading } = useGateway();
+  const { sendMessage, getSession, getSkills, isLoading } = useGateway();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [streamingTimeline, setStreamingTimeline] = useState<TimelineEntry[]>([]);
+  const [availableSkills, setAvailableSkills] = useState<SkillSummary[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [skillsQuery, setSkillsQuery] = useState('');
+  const [skillsPickerOpen, setSkillsPickerOpen] = useState(false);
+  const [skillsLoadError, setSkillsLoadError] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const skillsPickerRef = useRef<HTMLDivElement>(null);
   const isComposingRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingQueueRef = useRef<string[]>([]);
@@ -80,6 +86,52 @@ export function ChatView() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingTimeline]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSkills = async () => {
+      try {
+        const skills = await getSkills();
+        if (cancelled) {
+          return;
+        }
+        setAvailableSkills(skills);
+        setSkillsLoadError(null);
+      } catch (err) {
+        if (cancelled) {
+          return;
+        }
+        setAvailableSkills([]);
+        setSkillsLoadError(err instanceof Error ? err.message : '加载技能失败');
+      }
+    };
+
+    void loadSkills();
+    return () => {
+      cancelled = true;
+    };
+  }, [getSkills]);
+
+  useEffect(() => {
+    if (!skillsPickerOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!skillsPickerRef.current) {
+        return;
+      }
+      if (!skillsPickerRef.current.contains(event.target as Node)) {
+        setSkillsPickerOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [skillsPickerOpen]);
 
   const stopTypingTimer = () => {
     if (typingTimerRef.current !== null) {
@@ -152,6 +204,25 @@ export function ChatView() {
   const nextEntryID = (prefix: string) => {
     entrySeqRef.current += 1;
     return `${prefix}-${entrySeqRef.current}`;
+  };
+
+  const filteredSkills = useMemo(() => {
+    const query = skillsQuery.trim().toLowerCase();
+    if (query === '') {
+      return availableSkills;
+    }
+    return availableSkills.filter((skill) =>
+      [skill.displayName, skill.name, skill.description || '']
+        .join(' ')
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [availableSkills, skillsQuery]);
+
+  const toggleSkill = (name: string) => {
+    setSelectedSkills((prev) =>
+      prev.includes(name) ? prev.filter((skillName) => skillName !== name) : [...prev, name]
+    );
   };
 
   const toStreamActivity = (event: GatewayStreamEvent): StreamActivity | null => {
@@ -347,6 +418,7 @@ export function ChatView() {
 
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
+    setSkillsPickerOpen(false);
     resetTypingState();
 
     let assistantContent = '';
@@ -365,7 +437,8 @@ export function ChatView() {
             return;
           }
           appendActivityToTimeline(activity);
-        }
+        },
+        selectedSkills
       );
 
       if (result.sessionKey && result.sessionKey !== currentSessionKey) {
@@ -477,7 +550,7 @@ export function ChatView() {
       />
 
       <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/70 pt-3">
-        <div className="flex items-center gap-2 text-xs text-foreground/55">
+        <div ref={skillsPickerRef} className="relative flex items-center gap-2 text-xs text-foreground/55">
           <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1">
             <FolderIcon className="h-3.5 w-3.5" />
             project
@@ -486,10 +559,71 @@ export function ChatView() {
             <PaperClipIcon className="h-3.5 w-3.5" />
             附件
           </span>
-          <span className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-2 py-1 text-primary">
+          <button
+            type="button"
+            onClick={() => setSkillsPickerOpen((prev) => !prev)}
+            className={`inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors ${
+              selectedSkills.length > 0 || skillsPickerOpen
+                ? 'bg-primary/15 text-primary'
+                : 'bg-secondary text-foreground/70 hover:bg-secondary/80'
+            }`}
+          >
             <PuzzleIcon className="h-3.5 w-3.5" />
-            pptx
-          </span>
+            skills{selectedSkills.length > 0 ? `(${selectedSkills.length})` : ''}
+          </button>
+          {selectedSkills.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelectedSkills([])}
+              className="rounded-md border border-border px-1.5 py-1 text-[11px] text-foreground/55 hover:bg-secondary"
+            >
+              清空
+            </button>
+          )}
+
+          {skillsPickerOpen && (
+            <div className="absolute bottom-10 left-0 z-30 w-80 rounded-xl border border-border bg-background p-3 shadow-xl">
+              <input
+                value={skillsQuery}
+                onChange={(event) => setSkillsQuery(event.target.value)}
+                placeholder="搜索技能"
+                className="mb-2 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+              />
+              <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+                {filteredSkills.map((skill) => {
+                  const checked = selectedSkills.includes(skill.name);
+                  return (
+                    <label
+                      key={skill.name}
+                      className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-secondary/70"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleSkill(skill.name)}
+                        className="mt-0.5 h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary/30"
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium text-foreground">{skill.displayName || skill.name}</span>
+                        {skill.description && (
+                          <span className="block truncate text-foreground/55">{skill.description}</span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
+                {filteredSkills.length === 0 && (
+                  <div className="px-2 py-1 text-xs text-foreground/45">没有匹配的技能</div>
+                )}
+              </div>
+              {skillsLoadError && (
+                <p className="mt-2 text-xs text-red-500">技能加载失败: {skillsLoadError}</p>
+              )}
+              <p className="mt-2 text-[11px] text-foreground/45">
+                已选择 {selectedSkills.length} 个技能。未选择时按系统默认策略加载。
+              </p>
+            </div>
+          )}
         </div>
 
         <button

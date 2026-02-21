@@ -44,10 +44,20 @@ func NewContextBuilder(workspace string) *ContextBuilder {
 
 // BuildMessages 构建消息列表
 func (b *ContextBuilder) BuildMessages(history []providers.Message, currentMessage string, media *bus.MediaAttachment, channel, chatID string) []providers.Message {
+	return b.BuildMessagesWithSkillRefs(history, currentMessage, nil, media, channel, chatID)
+}
+
+func (b *ContextBuilder) BuildMessagesWithSkillRefs(
+	history []providers.Message,
+	currentMessage string,
+	explicitSkillRefs []string,
+	media *bus.MediaAttachment,
+	channel, chatID string,
+) []providers.Message {
 	messages := make([]providers.Message, 0)
 
 	// 系统提示
-	systemPrompt := b.buildSystemPrompt(channel, chatID, currentMessage)
+	systemPrompt := b.buildSystemPrompt(channel, chatID, currentMessage, explicitSkillRefs)
 	messages = append(messages, providers.Message{
 		Role:    "system",
 		Content: systemPrompt,
@@ -94,7 +104,7 @@ func (b *ContextBuilder) AddToolResult(messages []providers.Message, toolCallID,
 }
 
 // buildSystemPrompt 构建系统提示
-func (b *ContextBuilder) buildSystemPrompt(channel, chatID, currentMessage string) string {
+func (b *ContextBuilder) buildSystemPrompt(channel, chatID, currentMessage string, explicitSkillRefs []string) string {
 	var parts []string
 
 	// 1. 嵌入的基础系统提示
@@ -131,7 +141,7 @@ func (b *ContextBuilder) buildSystemPrompt(channel, chatID, currentMessage strin
 	}
 
 	// 7. Skills
-	if skillsSection := b.buildSkillsSection(currentMessage); skillsSection != "" {
+	if skillsSection := b.buildSkillsSection(currentMessage, explicitSkillRefs); skillsSection != "" {
 		parts = append(parts, skillsSection)
 	}
 

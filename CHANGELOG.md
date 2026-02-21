@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+### 新增功能
+
+#### 聊天窗口支持多选 Skills 并随消息生效
+- **后端新增技能列表接口与消息技能筛选透传**（`internal/webui/server.go`, `internal/bus/events.go`, `internal/agent/loop.go`, `internal/agent/context.go`, `internal/agent/skills.go`）
+  - 新增 `GET /api/skills` 返回可选技能列表（名称、展示名、简介）
+  - `/api/message` 支持 `selectedSkills` 字段，按所选技能构建系统提示中的 Skills 区块
+  - 保持用户原始消息内容不被 `@skill:` 选择器污染（仅用于系统提示构建）
+- **Electron 聊天输入区新增 Skills 多选器**（`electron/src/renderer/hooks/useGateway.ts`, `electron/src/renderer/views/ChatView.tsx`）
+  - 支持搜索并勾选一个或多个技能
+  - 发送消息时自动携带所选技能到后端
+- **补充测试**（`internal/agent/loop_test.go`, `internal/agent/skills_test.go`）
+  - 覆盖“仅加载所选技能”与显式筛选覆盖行为
+- **验证**
+  - `go test ./internal/agent ./internal/webui`
+  - `cd electron && npm run build`
+  - `make build`
+
 ### Bug 修复
 
 #### 修复工具步骤中文参数在 UI 中出现乱码

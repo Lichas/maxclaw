@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Lichas/nanobot-go/internal/agent"
 	"github.com/Lichas/nanobot-go/internal/channels"
@@ -18,6 +19,7 @@ import (
 	"github.com/Lichas/nanobot-go/internal/cron"
 	"github.com/Lichas/nanobot-go/internal/logging"
 	"github.com/Lichas/nanobot-go/internal/session"
+	workspaceSkills "github.com/Lichas/nanobot-go/internal/skills"
 )
 
 type Server struct {
@@ -30,11 +32,12 @@ type Server struct {
 }
 
 type messagePayload struct {
-	SessionKey string `json:"sessionKey"`
-	Content    string `json:"content"`
-	Channel    string `json:"channel"`
-	ChatID     string `json:"chatId"`
-	Stream     bool   `json:"stream,omitempty"`
+	SessionKey     string   `json:"sessionKey"`
+	Content        string   `json:"content"`
+	Channel        string   `json:"channel"`
+	ChatID         string   `json:"chatId"`
+	SelectedSkills []string `json:"selectedSkills,omitempty"`
+	Stream         bool     `json:"stream,omitempty"`
 }
 
 func NewServer(cfg *config.Config, agentLoop *agent.AgentLoop, cronService *cron.Service, registry *channels.Registry) *Server {
@@ -54,6 +57,7 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	mux.HandleFunc("/api/status", s.handleStatus)
 	mux.HandleFunc("/api/sessions", s.handleSessions)
 	mux.HandleFunc("/api/sessions/", s.handleSessionByKey)
+	mux.HandleFunc("/api/skills", s.handleSkills)
 	mux.HandleFunc("/api/message", s.handleMessage)
 	mux.HandleFunc("/api/config", s.handleConfig)
 	mux.HandleFunc("/api/gateway/restart", s.handleGatewayRestart)
@@ -188,7 +192,7 @@ func (s *Server) handleMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := s.agentLoop.ProcessDirect(r.Context(), payload.Content, payload.SessionKey, payload.Channel, payload.ChatID)
+	resp, err := s.agentLoop.ProcessDirectWithSkills(r.Context(), payload.Content, payload.SessionKey, payload.Channel, payload.ChatID, payload.SelectedSkills)
 	if err != nil {
 		writeError(w, err)
 		if lg := logging.Get(); lg != nil && lg.Web != nil {
@@ -237,12 +241,13 @@ func (s *Server) handleMessageStream(w http.ResponseWriter, r *http.Request, pay
 	defer cancel()
 
 	var streamWriteErr error
-	resp, err := s.agentLoop.ProcessDirectEventStream(
+	resp, err := s.agentLoop.ProcessDirectEventStreamWithSkills(
 		ctx,
 		payload.Content,
 		payload.SessionKey,
 		payload.Channel,
 		payload.ChatID,
+		payload.SelectedSkills,
 		func(event agent.StreamEvent) {
 			if streamWriteErr != nil {
 				return
@@ -292,6 +297,38 @@ func (s *Server) handleMessageStream(w http.ResponseWriter, r *http.Request, pay
 	if lg := logging.Get(); lg != nil && lg.Web != nil {
 		lg.Web.Printf("message stream session=%s channel=%s content=%q", payload.SessionKey, payload.Channel, logging.Truncate(payload.Content, 300))
 	}
+}
+
+func (s *Server) handleSkills(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	entries, err := workspaceSkills.Discover(filepath.Join(s.cfg.Agents.Defaults.Workspace, "skills"))
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	type skillSummary struct {
+		Name        string `json:"name"`
+		DisplayName string `json:"displayName"`
+		Description string `json:"description,omitempty"`
+	}
+
+	results := make([]skillSummary, 0, len(entries))
+	for _, entry := range entries {
+		results = append(results, skillSummary{
+			Name:        entry.Name,
+			DisplayName: entry.DisplayName,
+			Description: summarizeSkillBody(entry.Body, 120),
+		})
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"skills": results,
+	})
 }
 
 func wantsStreamResponse(r *http.Request, payload messagePayload) bool {
@@ -407,6 +444,18 @@ func listSessions(workspace string) ([]sessionSummary, error) {
 	})
 
 	return results, nil
+}
+
+func summarizeSkillBody(body string, maxRunes int) string {
+	trimmed := strings.TrimSpace(body)
+	if trimmed == "" {
+		return ""
+	}
+	firstLine := strings.SplitN(trimmed, "\n", 2)[0]
+	if maxRunes <= 0 || utf8.RuneCountInString(firstLine) <= maxRunes {
+		return firstLine
+	}
+	return string([]rune(firstLine)[:maxRunes]) + "..."
 }
 
 type sessionSummary struct {

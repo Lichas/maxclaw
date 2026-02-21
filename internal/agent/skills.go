@@ -28,14 +28,20 @@ func truncateRunes(s string, limit int, suffix string) string {
 	return strings.TrimSpace(string(runes[:limit])) + suffix
 }
 
-func (b *ContextBuilder) buildSkillsSection(currentMessage string) string {
+func (b *ContextBuilder) buildSkillsSection(currentMessage string, explicitSkillRefs []string) string {
 	skillsDir := filepath.Join(b.workspace, "skills")
 	entries, err := skills.Discover(skillsDir)
 	if err != nil || len(entries) == 0 {
 		return ""
 	}
 
-	selected := skills.FilterByMessage(entries, currentMessage)
+	selected := entries
+	if len(explicitSkillRefs) > 0 {
+		selectorMessage := strings.TrimSpace(strings.Join(skillRefsToSelectors(explicitSkillRefs), " "))
+		selected = skills.FilterByMessage(entries, selectorMessage)
+	} else {
+		selected = skills.FilterByMessage(entries, currentMessage)
+	}
 	if len(selected) == 0 {
 		return ""
 	}
@@ -57,4 +63,16 @@ func (b *ContextBuilder) buildSkillsSection(currentMessage string) string {
 	}
 
 	return strings.TrimSpace(sb.String())
+}
+
+func skillRefsToSelectors(refs []string) []string {
+	selectors := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ref = strings.TrimSpace(ref)
+		if ref == "" {
+			continue
+		}
+		selectors = append(selectors, "@skill:"+ref)
+	}
+	return selectors
 }

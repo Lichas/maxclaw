@@ -5,6 +5,12 @@ interface SendMessageResult {
   sessionKey: string;
 }
 
+export interface SkillSummary {
+  name: string;
+  displayName: string;
+  description?: string;
+}
+
 export interface GatewayStreamEvent {
   type?: string;
   iteration?: number;
@@ -105,7 +111,8 @@ export function useGateway() {
     content: string,
     sessionKey: string,
     onDelta: (delta: string) => void,
-    onEvent?: (event: GatewayStreamEvent) => void
+    onEvent?: (event: GatewayStreamEvent) => void,
+    selectedSkills?: string[]
   ): Promise<SendMessageResult> => {
     setIsLoading(true);
     setError(null);
@@ -122,6 +129,7 @@ export function useGateway() {
           sessionKey,
           channel: 'desktop',
           chatId: sessionKey,
+          selectedSkills: (selectedSkills || []).filter(Boolean),
           stream: true
         })
       });
@@ -208,5 +216,12 @@ export function useGateway() {
     return response.json();
   }, []);
 
-  return { sendMessage, getSessions, getSession, getConfig, isLoading, error };
+  const getSkills = useCallback(async () => {
+    const response = await fetch('http://localhost:18890/api/skills');
+    if (!response.ok) throw new Error('Failed to fetch skills');
+    const data = await response.json() as { skills?: SkillSummary[] };
+    return data.skills || [];
+  }, []);
+
+  return { sendMessage, getSessions, getSession, getConfig, getSkills, isLoading, error };
 }

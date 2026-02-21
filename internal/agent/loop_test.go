@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"unicode/utf8"
 
@@ -104,6 +105,27 @@ func (p *streamEventProvider) ChatStream(ctx context.Context, messages []provide
 }
 
 func (p *streamEventProvider) GetDefaultModel() string {
+	return "test-model"
+}
+
+type captureSkillsProvider struct {
+	systemPrompt string
+}
+
+func (p *captureSkillsProvider) Chat(ctx context.Context, messages []providers.Message, defs []map[string]interface{}, model string) (*providers.Response, error) {
+	return nil, nil
+}
+
+func (p *captureSkillsProvider) ChatStream(ctx context.Context, messages []providers.Message, defs []map[string]interface{}, model string, handler providers.StreamHandler) error {
+	if len(messages) > 0 && messages[0].Role == "system" {
+		p.systemPrompt = messages[0].Content
+	}
+	handler.OnContent("ok")
+	handler.OnComplete()
+	return nil
+}
+
+func (p *captureSkillsProvider) GetDefaultModel() string {
 	return "test-model"
 }
 
@@ -424,4 +446,39 @@ func TestTruncateEventTextPreservesUTF8Boundaries(t *testing.T) {
 	assert.True(t, utf8.ValidString(truncated))
 	assert.NotContains(t, truncated, "�")
 	assert.Equal(t, "从零开始理解🌟...", truncated)
+}
+
+func TestProcessDirectWithSkillsUsesOnlySelectedSkills(t *testing.T) {
+	workspace := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(workspace, "skills"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(workspace, "skills", "alpha.md"), []byte("# Alpha\nAlpha content"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(workspace, "skills", "beta.md"), []byte("# Beta\nBeta content"), 0644))
+
+	provider := &captureSkillsProvider{}
+	loop := NewAgentLoop(
+		bus.NewMessageBus(10),
+		provider,
+		workspace,
+		"test-model",
+		2,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		nil,
+		nil,
+	)
+
+	resp, err := loop.ProcessDirectWithSkills(context.Background(), "hello", "desktop:test", "desktop", "chat-1", []string{"alpha"})
+	require.NoError(t, err)
+	assert.Equal(t, "ok", resp)
+
+	assert.Contains(t, provider.systemPrompt, "### Alpha")
+	assert.NotContains(t, provider.systemPrompt, "### Beta")
+
+	sessionMgr := session.NewManager(workspace)
+	sess := sessionMgr.GetOrCreate("desktop:test")
+	require.Len(t, sess.Messages, 2)
+	assert.Equal(t, "hello", strings.TrimSpace(sess.Messages[0].Content))
+	assert.NotContains(t, sess.Messages[0].Content, "@skill:")
 }

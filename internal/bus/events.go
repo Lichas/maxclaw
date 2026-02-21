@@ -10,12 +10,13 @@ type MediaAttachment struct {
 
 // InboundMessage 入站消息
 type InboundMessage struct {
-	Channel    string           `json:"channel"`  // telegram, discord, whatsapp, cli
-	SenderID   string           `json:"senderId"` // 发送者 ID
-	ChatID     string           `json:"chatId"`   // 会话 ID
-	Content    string           `json:"content"`  // 消息内容
-	Media      *MediaAttachment `json:"media,omitempty"`
-	SessionKey string           `json:"sessionKey"` // channel:chatId
+	Channel        string           `json:"channel"`                  // telegram, discord, whatsapp, cli
+	SenderID       string           `json:"senderId"`                 // 发送者 ID
+	ChatID         string           `json:"chatId"`                   // 会话 ID
+	Content        string           `json:"content"`                  // 消息内容
+	SelectedSkills []string         `json:"selectedSkills,omitempty"` // optional explicit skill filters
+	Media          *MediaAttachment `json:"media,omitempty"`
+	SessionKey     string           `json:"sessionKey"` // channel:chatId
 }
 
 // NewInboundMessage 创建入站消息
