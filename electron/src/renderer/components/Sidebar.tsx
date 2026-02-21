@@ -2,19 +2,15 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, setActiveTab, setCurrentSessionKey } from '../store';
 import { SessionSummary, useGateway } from '../hooks/useGateway';
+import { useTranslation } from '../i18n';
 
 const menuItems = [
-  { id: 'sessions', label: '搜索任务', icon: SearchIcon },
-  { id: 'scheduled', label: '定时任务', icon: ClockIcon },
-  { id: 'skills', label: '技能', icon: PuzzleIcon },
+  { id: 'sessions', labelKey: 'nav.sessions', icon: SearchIcon },
+  { id: 'scheduled', labelKey: 'nav.scheduled', icon: ClockIcon },
+  { id: 'skills', labelKey: 'nav.skills', icon: PuzzleIcon },
 ] as const;
 
 const baseChannelOptions = ['desktop', 'telegram', 'webui'] as const;
-const channelLabelMap: Record<string, string> = {
-  desktop: '桌面',
-  telegram: 'Telegram',
-  webui: 'WebUI'
-};
 
 function extractSessionChannel(sessionKey: string): string {
   const prefix = sessionKey.split(':', 2)[0];
@@ -24,12 +20,10 @@ function extractSessionChannel(sessionKey: string): string {
   return prefix.toLowerCase();
 }
 
-function getChannelLabel(channel: string): string {
-  return channelLabelMap[channel] || channel;
-}
 
 export function Sidebar() {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const { activeTab, sidebarCollapsed, currentSessionKey } = useSelector((state: RootState) => state.ui);
   const { status } = useSelector((state: RootState) => state.gateway);
   const { getSessions, deleteSession, renameSession } = useGateway();
@@ -45,7 +39,7 @@ export function Sidebar() {
   const buildDraftSession = (key: string): SessionSummary => ({
     key,
     messageCount: 0,
-    lastMessage: '新任务',
+    lastMessage: t('sidebar.newTask'),
     lastMessageAt: new Date().toISOString()
   });
 
@@ -61,7 +55,7 @@ export function Sidebar() {
   }, []);
 
   const handleDelete = async (sessionKey: string) => {
-    if (!confirm('确定要删除这个会话吗？此操作不可恢复。')) return;
+    if (!confirm(t('sidebar.confirmDelete'))) return;
     try {
       await deleteSession(sessionKey);
       setSessions((prev) => prev.filter((s) => s.key !== sessionKey));
@@ -69,7 +63,7 @@ export function Sidebar() {
         dispatch(setCurrentSessionKey(''));
       }
     } catch {
-      alert('删除会话失败');
+      alert(t('common.error'));
     }
     setOpenMenuKey(null);
   };
@@ -93,7 +87,7 @@ export function Sidebar() {
         )
       );
     } catch {
-      alert('重命名失败');
+      alert(t('common.error'));
     }
     setEditingSession(null);
     setEditTitle('');
@@ -171,7 +165,7 @@ export function Sidebar() {
           className="w-full flex items-center justify-center gap-2 bg-primary/15 text-primary border border-primary/30 rounded-lg py-2.5 px-4 hover:bg-primary/20 transition-colors"
         >
           <EditIcon className="w-5 h-5" />
-          {!sidebarCollapsed && <span className="font-medium">新建任务</span>}
+          {!sidebarCollapsed && <span className="font-medium">{t('sidebar.newTask')}</span>}
         </button>
       </div>
 
@@ -192,14 +186,14 @@ export function Sidebar() {
               }`}
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
-              {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
+              {!sidebarCollapsed && <span className="font-medium">{t(item.labelKey)}</span>}
             </button>
           );
         })}
 
         {!sidebarCollapsed && (
           <div className="mt-4 px-2">
-            <p className="text-xs font-semibold text-foreground/45 tracking-wide mb-2">任务记录</p>
+            <p className="text-xs font-semibold text-foreground/45 tracking-wide mb-2">{t('nav.sessions')}</p>
             <div className="mb-2 relative">
               <select
                 value={channelFilter}
@@ -208,7 +202,7 @@ export function Sidebar() {
               >
                 {channelOptions.map((channel) => (
                   <option key={channel} value={channel}>
-                    渠道: {getChannelLabel(channel)}
+                    {channel}
                   </option>
                 ))}
               </select>
@@ -218,7 +212,7 @@ export function Sidebar() {
             <div className="space-y-1 mt-2">
               {sessionItems.length === 0 && (
                 <div className="text-sm text-foreground/45 px-2 py-1">
-                  暂无 {getChannelLabel(channelFilter)} 任务记录
+                  {t('skills.empty')}
                 </div>
               )}
 
@@ -243,7 +237,7 @@ export function Sidebar() {
                         className="w-full text-sm font-medium bg-transparent border-b border-primary/50 focus:outline-none focus:border-primary text-foreground"
                       />
                       <p className="text-xs text-foreground/40 mt-1">
-                        按 Enter 确认，Esc 取消
+                        Enter to confirm, Esc to cancel
                       </p>
                     </div>
                   );
@@ -291,14 +285,14 @@ export function Sidebar() {
                             className="w-full px-3 py-2 text-sm text-left hover:bg-secondary flex items-center gap-2"
                           >
                             <EditIcon className="w-3.5 h-3.5" />
-                            重命名
+                            {t('sidebar.rename')}
                           </button>
                           <button
                             onClick={() => handleDelete(session.key)}
                             className="w-full px-3 py-2 text-sm text-left hover:bg-red-50 text-red-600 flex items-center gap-2"
                           >
                             <TrashIcon className="w-3.5 h-3.5" />
-                            删除
+                            {t('sidebar.delete')}
                           </button>
                         </div>
                       )}
@@ -331,7 +325,7 @@ export function Sidebar() {
               }`}
             />
           </div>
-          {!sidebarCollapsed && <span className="text-sm">设置</span>}
+          {!sidebarCollapsed && <span className="text-sm">{t('nav.settings')}</span>}
         </button>
       </div>
     </aside>

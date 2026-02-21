@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, setStatus, setActiveTab } from './store';
+import { RootState, setStatus, setActiveTab, setTheme, setLanguage } from './store';
 import { TitleBar } from './components/TitleBar';
 import { Sidebar } from './components/Sidebar';
 import { ChatView } from './views/ChatView';
@@ -11,9 +11,19 @@ import { SettingsView } from './views/SettingsView';
 
 function App() {
   const dispatch = useDispatch();
-  const { activeTab } = useSelector((state: RootState) => state.ui);
+  const { activeTab, theme, language } = useSelector((state: RootState) => state.ui);
 
   useEffect(() => {
+    // Load app settings from electron store
+    window.electronAPI.config.get().then((config) => {
+      if (config.theme) {
+        dispatch(setTheme(config.theme));
+      }
+      if (config.language) {
+        dispatch(setLanguage(config.language));
+      }
+    });
+
     // Initialize Gateway status
     window.electronAPI.gateway.getStatus().then(status => {
       dispatch(setStatus(status));
@@ -22,6 +32,16 @@ function App() {
     // Listen for status changes
     const unsubscribe = window.electronAPI.gateway.onStatusChange((status) => {
       dispatch(setStatus(status));
+    });
+
+    // Listen for config changes
+    const unsubscribeConfig = window.electronAPI.config.onChange((config) => {
+      if (config.theme) {
+        dispatch(setTheme(config.theme));
+      }
+      if (config.language) {
+        dispatch(setLanguage(config.language));
+      }
     });
 
     // Listen for tray events
@@ -35,10 +55,22 @@ function App() {
 
     return () => {
       unsubscribe();
+      unsubscribeConfig();
       unsubscribeNewChat();
       unsubscribeSettings();
     };
   }, [dispatch]);
+
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.classList.remove('light', 'dark');
+    if (theme === 'system') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.classList.add(prefersDark ? 'dark' : 'light');
+    } else {
+      document.documentElement.classList.add(theme);
+    }
+  }, [theme]);
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">

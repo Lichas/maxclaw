@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from '../i18n';
 
 interface Skill {
   name: string;
@@ -10,6 +11,7 @@ interface Skill {
 }
 
 export function SkillsView() {
+  const { t } = useTranslation();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,11 +28,11 @@ export function SkillsView() {
       setSkills(data.skills || []);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载失败');
+      setError(err instanceof Error ? err.message : t('common.error'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void fetchSkills();
@@ -44,7 +46,7 @@ export function SkillsView() {
       if (!response.ok) throw new Error('Failed to toggle skill');
       void fetchSkills();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '操作失败');
+      setError(err instanceof Error ? err.message : t('common.error'));
     }
   };
 
@@ -64,13 +66,12 @@ export function SkillsView() {
       setInstallUrl('');
       void fetchSkills();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '安装失败');
+      setError(err instanceof Error ? err.message : t('common.error'));
     }
   };
 
   const getSkillIcon = (skill: Skill) => {
     if (skill.icon) return skill.icon;
-    // Default icons based on skill name
     if (skill.name.includes('docx') || skill.name.includes('document')) return '📄';
     if (skill.name.includes('xlsx') || skill.name.includes('excel') || skill.name.includes('sheet')) return '📊';
     if (skill.name.includes('pptx') || skill.name.includes('slide')) return '📽️';
@@ -81,19 +82,28 @@ export function SkillsView() {
     return '🦞';
   };
 
+  const getInstallPlaceholder = () => {
+    switch (installType) {
+      case 'github': return t('skills.install.placeholder.github');
+      case 'zip': return t('skills.install.placeholder.zip');
+      case 'folder': return t('skills.install.placeholder.folder');
+      default: return '';
+    }
+  };
+
   return (
     <div className="h-full overflow-y-auto bg-[#f7f8fb] p-6">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">技能市场</h1>
-            <p className="mt-1 text-sm text-foreground/55">管理和安装 AI 技能插件</p>
+            <h1 className="text-2xl font-bold text-foreground">{t('skills.title')}</h1>
+            <p className="mt-1 text-sm text-foreground/55">{t('skills.subtitle')}</p>
           </div>
           <button
             onClick={() => setInstallModalOpen(true)}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            + 安装技能
+            + {t('skills.install')}
           </button>
         </div>
 
@@ -105,7 +115,7 @@ export function SkillsView() {
 
         {installModalOpen && (
           <div className="mb-6 rounded-xl border border-border bg-background p-5 shadow-sm">
-            <h3 className="mb-4 text-base font-semibold">安装新技能</h3>
+            <h3 className="mb-4 text-base font-semibold">{t('skills.install.title')}</h3>
             <form onSubmit={handleInstall} className="space-y-4">
               <div className="flex gap-4">
                 <label className="flex items-center gap-2">
@@ -116,7 +126,7 @@ export function SkillsView() {
                     onChange={() => { setInstallType('github'); setInstallUrl(''); }}
                     className="h-4 w-4 text-primary"
                   />
-                  <span className="text-sm">GitHub</span>
+                  <span className="text-sm">{t('skills.install.github')}</span>
                 </label>
                 <label className="flex items-center gap-2">
                   <input
@@ -126,7 +136,7 @@ export function SkillsView() {
                     onChange={() => { setInstallType('zip'); setInstallUrl(''); }}
                     className="h-4 w-4 text-primary"
                   />
-                  <span className="text-sm">ZIP 文件</span>
+                  <span className="text-sm">{t('skills.install.zip')}</span>
                 </label>
                 <label className="flex items-center gap-2">
                   <input
@@ -136,7 +146,7 @@ export function SkillsView() {
                     onChange={() => { setInstallType('folder'); setInstallUrl(''); }}
                     className="h-4 w-4 text-primary"
                   />
-                  <span className="text-sm">本地文件夹</span>
+                  <span className="text-sm">{t('skills.install.folder')}</span>
                 </label>
               </div>
 
@@ -145,13 +155,7 @@ export function SkillsView() {
                   type="text"
                   value={installUrl}
                   onChange={(e) => setInstallUrl(e.target.value)}
-                  placeholder={
-                    installType === 'github'
-                      ? 'https://github.com/username/skill-repo'
-                      : installType === 'zip'
-                      ? '/path/to/skill.zip'
-                      : '/path/to/skill-folder'
-                  }
+                  placeholder={getInstallPlaceholder()}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
                   required
                 />
@@ -163,13 +167,13 @@ export function SkillsView() {
                   onClick={() => setInstallModalOpen(false)}
                   className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary"
                 >
-                  取消
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                 >
-                  安装
+                  {t('common.confirm')}
                 </button>
               </div>
             </form>
@@ -177,11 +181,11 @@ export function SkillsView() {
         )}
 
         {loading && skills.length === 0 ? (
-          <div className="py-12 text-center text-foreground/50">加载中...</div>
+          <div className="py-12 text-center text-foreground/50">{t('common.loading')}</div>
         ) : skills.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-foreground/50">暂无已安装技能</p>
-            <p className="mt-1 text-sm text-foreground/40">点击右上角安装新技能</p>
+            <p className="text-foreground/50">{t('skills.empty')}</p>
+            <p className="mt-1 text-sm text-foreground/40">{t('skills.empty.hint')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -222,7 +226,7 @@ export function SkillsView() {
 
                 {skill.installedAt && (
                   <p className="mt-3 text-xs text-foreground/40">
-                    安装于: {new Date(skill.installedAt).toLocaleDateString()}
+                    {new Date(skill.installedAt).toLocaleDateString()}
                   </p>
                 )}
               </div>

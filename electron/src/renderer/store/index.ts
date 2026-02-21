@@ -8,6 +8,7 @@ interface GatewayState {
 
 interface UIState {
   theme: 'light' | 'dark' | 'system';
+  language: 'zh' | 'en';
   sidebarCollapsed: boolean;
   activeTab: 'chat' | 'sessions' | 'scheduled' | 'skills' | 'settings';
   currentSessionKey: string;
@@ -30,6 +31,7 @@ const uiSlice = createSlice({
   name: 'ui',
   initialState: {
     theme: 'system',
+    language: 'zh',
     sidebarCollapsed: false,
     activeTab: 'chat',
     currentSessionKey: 'desktop:default'
@@ -37,6 +39,9 @@ const uiSlice = createSlice({
   reducers: {
     setTheme: (state, action: PayloadAction<'light' | 'dark' | 'system'>) => {
       state.theme = action.payload;
+    },
+    setLanguage: (state, action: PayloadAction<'zh' | 'en'>) => {
+      state.language = action.payload;
     },
     toggleSidebar: (state) => {
       state.sidebarCollapsed = !state.sidebarCollapsed;
@@ -51,7 +56,7 @@ const uiSlice = createSlice({
 });
 
 export const { setStatus } = gatewaySlice.actions;
-export const { setTheme, toggleSidebar, setActiveTab, setCurrentSessionKey } = uiSlice.actions;
+export const { setTheme, setLanguage, toggleSidebar, setActiveTab, setCurrentSessionKey } = uiSlice.actions;
 
 export const store = configureStore({
   reducer: {

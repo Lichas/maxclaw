@@ -4,6 +4,21 @@
 
 ### Bug 修复
 
+#### 修复语言切换不生效（`electron/src/renderer/i18n/`, `store/index.ts`, `SettingsView.tsx`, `Sidebar.tsx`, `SkillsView.tsx`）
+- **问题**：语言设置为"中文"但 Settings 页面仍显示英文
+- **原因**：所有 UI 文本都是硬编码，没有国际化支持
+- **修复**：
+  - 新增 `electron/src/renderer/i18n/index.ts` 国际化系统，支持中英文翻译
+  - 在 Redux store 中添加 `language` 状态和 `setLanguage` action
+  - 修改 `App.tsx` 从 electron store 加载语言设置并同步到 Redux
+  - 重写 `SettingsView.tsx` 使用 `useTranslation` hook
+  - 重写 `SkillsView.tsx` 使用翻译系统
+  - 重写 `Sidebar.tsx` 使用翻译系统
+  - 添加翻译键：settings.*, skills.*, nav.*, sidebar.*, common.*
+- **验证**
+  - `cd electron && npm run build`
+  - 切换语言后所有界面文本正确更新
+
 #### 修复技能描述显示（`internal/skills/loader.go`, `internal/webui/server.go`）
 - **问题**：技能市场界面中技能卡片显示 "---" 而非实际描述
 - **原因**：技能文件使用 YAML frontmatter 存储描述，但 `Entry` 结构体没有 `Description` 字段，`extractTitleAndBody` 也未解析 frontmatter
