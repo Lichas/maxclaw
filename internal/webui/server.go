@@ -68,6 +68,8 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	mux.HandleFunc("/api/gateway/restart", s.handleGatewayRestart)
 	mux.HandleFunc("/api/cron", s.handleCron)
 	mux.HandleFunc("/api/cron/", s.handleCronByID)
+	mux.HandleFunc("/api/upload", s.handleUpload)
+	mux.HandleFunc("/api/uploads/", s.handleGetUpload)
 
 	mux.Handle("/", spaHandler(s.uiDir))
 

@@ -7,6 +7,7 @@ toolchain go1.24.2
 require (
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/emersion/go-imap v1.2.1
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/mdp/qrterminal/v3 v3.2.1
 	github.com/peterh/liner v1.2.2
