@@ -13,6 +13,7 @@ export function ChatView() {
   const [input, setInput] = useState('');
   const [streamingContent, setStreamingContent] = useState('');
   const [sessionKey, setSessionKey] = useState('desktop:default');
+  const isComposingRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { sendMessage, isLoading } = useGateway();
 
@@ -115,8 +116,16 @@ export function ChatView() {
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onCompositionStart={() => {
+              isComposingRef.current = true;
+            }}
+            onCompositionEnd={() => {
+              isComposingRef.current = false;
+            }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              const nativeEvent = e.nativeEvent as KeyboardEvent & { isComposing?: boolean; keyCode?: number };
+              const isComposing = isComposingRef.current || nativeEvent.isComposing === true || nativeEvent.keyCode === 229;
+              if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
                 e.preventDefault();
                 handleSubmit(e);
               }

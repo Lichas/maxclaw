@@ -4,6 +4,14 @@
 
 ### Bug 修复
 
+#### 修复拼音输入法（IME）回车上屏时误触发发送
+- **修复 Chat 输入框 Enter 逻辑**（`electron/src/renderer/views/ChatView.tsx`）
+  - 增加 `compositionstart/compositionend` 状态跟踪
+  - 组合输入期间（含 `nativeEvent.isComposing` 与 `keyCode=229`）按 Enter 只用于上屏候选词，不触发发送
+- **验证**
+  - `cd electron && npm run build`
+  - `make build`
+
 #### 修复 Electron Chat 回复未渲染与会话键回退为 `webui:default`
 - **修复消息请求字段命名不匹配**（`electron/src/renderer/hooks/useGateway.ts`）
   - `/api/message` 请求参数改为后端可识别的 `sessionKey/chatId`（此前使用 `session_key/chat_id` 会被服务端回退到 `webui:default`）
