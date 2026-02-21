@@ -230,6 +230,58 @@ export function ChatView() {
     return 'Tool';
   };
 
+  const normalizeStoredTimeline = (
+    entries: Array<{
+      kind: 'activity' | 'text';
+      activity?: {
+        type: 'status' | 'tool_start' | 'tool_result' | 'error';
+        summary: string;
+        detail?: string;
+      };
+      text?: string;
+    }> | undefined,
+    prefix: string
+  ): TimelineEntry[] | undefined => {
+    if (!entries || entries.length === 0) {
+      return undefined;
+    }
+
+    const normalized: TimelineEntry[] = [];
+    entries.forEach((entry, index) => {
+      if (entry.kind === 'activity' && entry.activity && entry.activity.summary) {
+        normalized.push({
+          id: `${prefix}-activity-${index}`,
+          kind: 'activity',
+          activity: {
+            type: entry.activity.type,
+            summary: entry.activity.summary,
+            detail: entry.activity.detail
+          }
+        });
+        return;
+      }
+
+      if (entry.kind === 'text' && entry.text) {
+        const last = normalized[normalized.length - 1];
+        if (last && last.kind === 'text') {
+          normalized[normalized.length - 1] = { ...last, text: last.text + entry.text };
+        } else {
+          normalized.push({
+            id: `${prefix}-text-${index}`,
+            kind: 'text',
+            text: entry.text
+          });
+        }
+      }
+    });
+
+    if (normalized.length === 0) {
+      return undefined;
+    }
+
+    return normalized;
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -246,7 +298,8 @@ export function ChatView() {
             id: `${currentSessionKey}-${index}`,
             role: message.role as 'user' | 'assistant',
             content: message.content,
-            timestamp: new Date(message.timestamp)
+            timestamp: new Date(message.timestamp),
+            timeline: normalizeStoredTimeline(message.timeline, `${currentSessionKey}-${index}`)
           }));
 
         setMessages(restored);

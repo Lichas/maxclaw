@@ -47,6 +47,35 @@ func TestAddMessage(t *testing.T) {
 	assert.Equal(t, "assistant", session.Messages[1].Role)
 }
 
+func TestAddMessageWithTimeline(t *testing.T) {
+	session := &Session{
+		Key:      "test",
+		Messages: []Message{},
+	}
+
+	timeline := []TimelineEntry{
+		{
+			Kind: "activity",
+			Activity: &TimelineActivity{
+				Type:    "status",
+				Summary: "Iteration 1",
+			},
+		},
+		{
+			Kind: "text",
+			Text: "hello",
+		},
+	}
+
+	session.AddMessageWithTimeline("assistant", "hello", timeline)
+	require.Len(t, session.Messages, 1)
+	require.Len(t, session.Messages[0].Timeline, 2)
+	assert.Equal(t, "activity", session.Messages[0].Timeline[0].Kind)
+	assert.Equal(t, "status", session.Messages[0].Timeline[0].Activity.Type)
+	assert.Equal(t, "text", session.Messages[0].Timeline[1].Kind)
+	assert.Equal(t, "hello", session.Messages[0].Timeline[1].Text)
+}
+
 func TestGetHistory(t *testing.T) {
 	session := &Session{
 		Key: "test",
@@ -112,6 +141,37 @@ func TestSaveAndLoad(t *testing.T) {
 	assert.Equal(t, "Hello", loaded.Messages[0].Content)
 	assert.Equal(t, "assistant", loaded.Messages[1].Role)
 	assert.Equal(t, 1, loaded.LastConsolidated)
+}
+
+func TestSaveAndLoadTimeline(t *testing.T) {
+	tmpDir := t.TempDir()
+	manager := NewManager(tmpDir)
+
+	session := manager.GetOrCreate("cli:timeline")
+	session.AddMessage("user", "Hello")
+	session.AddMessageWithTimeline("assistant", "Hi!", []TimelineEntry{
+		{
+			Kind: "activity",
+			Activity: &TimelineActivity{
+				Type:    "status",
+				Summary: "Iteration 1",
+			},
+		},
+		{
+			Kind: "text",
+			Text: "Hi!",
+		},
+	})
+	require.NoError(t, manager.Save(session))
+
+	manager2 := NewManager(tmpDir)
+	loaded := manager2.GetOrCreate("cli:timeline")
+	require.Len(t, loaded.Messages, 2)
+	require.Len(t, loaded.Messages[1].Timeline, 2)
+	assert.Equal(t, "activity", loaded.Messages[1].Timeline[0].Kind)
+	assert.Equal(t, "status", loaded.Messages[1].Timeline[0].Activity.Type)
+	assert.Equal(t, "text", loaded.Messages[1].Timeline[1].Kind)
+	assert.Equal(t, "Hi!", loaded.Messages[1].Timeline[1].Text)
 }
 
 func TestSanitizeFilename(t *testing.T) {

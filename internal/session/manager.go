@@ -11,9 +11,22 @@ import (
 
 // Message 会话消息
 type Message struct {
-	Role      string    `json:"role"`
-	Content   string    `json:"content"`
-	Timestamp time.Time `json:"timestamp"`
+	Role      string          `json:"role"`
+	Content   string          `json:"content"`
+	Timeline  []TimelineEntry `json:"timeline,omitempty"`
+	Timestamp time.Time       `json:"timestamp"`
+}
+
+type TimelineActivity struct {
+	Type    string `json:"type"`
+	Summary string `json:"summary"`
+	Detail  string `json:"detail,omitempty"`
+}
+
+type TimelineEntry struct {
+	Kind     string            `json:"kind"`
+	Activity *TimelineActivity `json:"activity,omitempty"`
+	Text     string            `json:"text,omitempty"`
 }
 
 // Session 会话
@@ -71,9 +84,19 @@ func (m *Manager) Save(session *Session) error {
 
 // AddMessage 添加消息到会话
 func (s *Session) AddMessage(role, content string) {
+	s.AddMessageWithTimeline(role, content, nil)
+}
+
+func (s *Session) AddMessageWithTimeline(role, content string, timeline []TimelineEntry) {
+	var timelineCopy []TimelineEntry
+	if len(timeline) > 0 {
+		timelineCopy = append([]TimelineEntry(nil), timeline...)
+	}
+
 	s.Messages = append(s.Messages, Message{
 		Role:      role,
 		Content:   content,
+		Timeline:  timelineCopy,
 		Timestamp: time.Now(),
 	})
 }

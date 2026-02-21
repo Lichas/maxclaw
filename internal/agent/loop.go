@@ -262,6 +262,13 @@ func (a *AgentLoop) processMessageWithCallbacks(
 	onEvent func(StreamEvent),
 ) (*bus.OutboundMessage, error) {
 	a.ensureMCPConnected(ctx)
+	timeline := make([]session.TimelineEntry, 0, 64)
+	emitEvent := func(event StreamEvent) {
+		timeline = appendTimelineFromEvent(timeline, event)
+		if onEvent != nil {
+			onEvent(event)
+		}
+	}
 
 	if lg := logging.Get(); lg != nil && lg.Session != nil {
 		lg.Session.Printf("inbound channel=%s chat=%s sender=%s content=%q", msg.Channel, msg.ChatID, msg.SenderID, logging.Truncate(msg.Content, 400))
@@ -303,13 +310,11 @@ func (a *AgentLoop) processMessageWithCallbacks(
 
 	for i := 0; i < a.MaxIterations; i++ {
 		iteration := i + 1
-		if onEvent != nil {
-			onEvent(StreamEvent{
-				Type:      "status",
-				Iteration: iteration,
-				Message:   fmt.Sprintf("Iteration %d", iteration),
-			})
-		}
+		emitEvent(StreamEvent{
+			Type:      "status",
+			Iteration: iteration,
+			Message:   fmt.Sprintf("Iteration %d", iteration),
+		})
 
 		deltaCallback := onDelta
 		if deltaCallback == nil && msg.Channel == "cli" {
@@ -321,13 +326,11 @@ func (a *AgentLoop) processMessageWithCallbacks(
 			if deltaCallback != nil {
 				deltaCallback(delta)
 			}
-			if onEvent != nil {
-				onEvent(StreamEvent{
-					Type:      "content_delta",
-					Delta:     delta,
-					Iteration: iteration,
-				})
-			}
+			emitEvent(StreamEvent{
+				Type:      "content_delta",
+				Delta:     delta,
+				Iteration: iteration,
+			})
 		}
 
 		// 流式调用 LLM
@@ -348,29 +351,25 @@ func (a *AgentLoop) processMessageWithCallbacks(
 
 		// 处理工具调用
 		if len(toolCalls) > 0 {
-			if onEvent != nil {
-				onEvent(StreamEvent{
-					Type:      "status",
-					Iteration: iteration,
-					Message:   "Executing tools",
-				})
-			}
+			emitEvent(StreamEvent{
+				Type:      "status",
+				Iteration: iteration,
+				Message:   "Executing tools",
+			})
 
 			// 添加助手消息（带工具调用）
 			messages = a.context.AddAssistantMessage(messages, content, toolCalls)
 
 			// 执行工具调用并显示结果
 			for _, tc := range toolCalls {
-				if onEvent != nil {
-					onEvent(StreamEvent{
-						Type:      "tool_start",
-						Iteration: iteration,
-						ToolID:    tc.ID,
-						ToolName:  tc.Function.Name,
-						ToolArgs:  truncateEventText(tc.Function.Arguments, 600),
-						Summary:   summarizeToolStart(tc.Function.Name, tc.Function.Arguments),
-					})
-				}
+				emitEvent(StreamEvent{
+					Type:      "tool_start",
+					Iteration: iteration,
+					ToolID:    tc.ID,
+					ToolName:  tc.Function.Name,
+					ToolArgs:  truncateEventText(tc.Function.Arguments, 600),
+					Summary:   summarizeToolStart(tc.Function.Name, tc.Function.Arguments),
+				})
 
 				var args map[string]interface{}
 				if err := json.Unmarshal([]byte(tc.Function.Arguments), &args); err != nil {
@@ -392,16 +391,14 @@ func (a *AgentLoop) processMessageWithCallbacks(
 					fmt.Printf("[Result: %s]\n%s\n\n", tc.Function.Name, result)
 				}
 
-				if onEvent != nil {
-					onEvent(StreamEvent{
-						Type:       "tool_result",
-						Iteration:  iteration,
-						ToolID:     tc.ID,
-						ToolName:   tc.Function.Name,
-						ToolResult: truncateEventText(result, 2000),
-						Summary:    summarizeToolResult(tc.Function.Name, result, execErr),
-					})
-				}
+				emitEvent(StreamEvent{
+					Type:       "tool_result",
+					Iteration:  iteration,
+					ToolID:     tc.ID,
+					ToolName:   tc.Function.Name,
+					ToolResult: truncateEventText(result, 2000),
+					Summary:    summarizeToolResult(tc.Function.Name, result, execErr),
+				})
 
 				messages = a.context.AddToolResult(messages, tc.ID, tc.Function.Name, result)
 			}
@@ -409,13 +406,11 @@ func (a *AgentLoop) processMessageWithCallbacks(
 			// 没有工具调用，结束循环
 			finalContent = content
 			maxIterationReached = false
-			if onEvent != nil {
-				onEvent(StreamEvent{
-					Type:      "status",
-					Iteration: iteration,
-					Message:   "Preparing final response",
-				})
-			}
+			emitEvent(StreamEvent{
+				Type:      "status",
+				Iteration: iteration,
+				Message:   "Preparing final response",
+			})
 			break
 		}
 	}
@@ -434,7 +429,11 @@ func (a *AgentLoop) processMessageWithCallbacks(
 
 	// 保存到会话
 	sess.AddMessage("user", msg.Content)
-	sess.AddMessage("assistant", finalContent)
+	if len(timeline) > 0 {
+		sess.AddMessageWithTimeline("assistant", finalContent, timeline)
+	} else {
+		sess.AddMessage("assistant", finalContent)
+	}
 
 	if len(sess.Messages) > sessionConsolidateThreshold {
 		if _, err := memory.ConsolidateSession(a.Workspace, sess, sessionConsolidateKeepRecent); err != nil {
@@ -535,6 +534,64 @@ func truncateEventText(input string, max int) string {
 		return input
 	}
 	return input[:max] + "..."
+}
+
+func appendTimelineFromEvent(timeline []session.TimelineEntry, event StreamEvent) []session.TimelineEntry {
+	switch event.Type {
+	case "content_delta":
+		if event.Delta == "" {
+			return timeline
+		}
+		if len(timeline) > 0 && timeline[len(timeline)-1].Kind == "text" {
+			last := timeline[len(timeline)-1]
+			last.Text += event.Delta
+			timeline[len(timeline)-1] = last
+			return timeline
+		}
+		return append(timeline, session.TimelineEntry{
+			Kind: "text",
+			Text: event.Delta,
+		})
+	case "status", "tool_start", "tool_result", "error":
+		summary := strings.TrimSpace(event.Summary)
+		if summary == "" {
+			summary = strings.TrimSpace(event.Message)
+		}
+		detail := ""
+		switch event.Type {
+		case "tool_start":
+			detail = strings.TrimSpace(event.ToolArgs)
+		case "tool_result":
+			detail = strings.TrimSpace(event.ToolResult)
+		}
+
+		if summary == "" && detail == "" {
+			return timeline
+		}
+
+		activity := session.TimelineActivity{
+			Type:    event.Type,
+			Summary: summary,
+			Detail:  detail,
+		}
+
+		if len(timeline) > 0 {
+			last := timeline[len(timeline)-1]
+			if last.Kind == "activity" && last.Activity != nil &&
+				last.Activity.Type == activity.Type &&
+				last.Activity.Summary == activity.Summary &&
+				last.Activity.Detail == activity.Detail {
+				return timeline
+			}
+		}
+
+		return append(timeline, session.TimelineEntry{
+			Kind:     "activity",
+			Activity: &activity,
+		})
+	default:
+		return timeline
+	}
 }
 
 // convertSessionMessages 转换会话消息

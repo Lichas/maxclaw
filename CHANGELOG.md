@@ -4,6 +4,19 @@
 
 ### Bug 修复
 
+#### Electron 历史会话支持时序 timeline 回放
+- **后端将执行时序持久化到会话消息**（`internal/session/manager.go`, `internal/agent/loop.go`）
+  - 会话消息新增 `timeline` 字段（活动步骤 + 文本增量）
+  - Agent 处理阶段将 `status/tool_start/tool_result/content_delta` 写入 timeline，并随 assistant 消息保存
+- **历史加载消费 timeline 并按同样样式回放**（`electron/src/renderer/hooks/useGateway.ts`, `electron/src/renderer/views/ChatView.tsx`）
+  - `/api/sessions/:key` 返回 timeline 后，Chat 历史渲染沿用实时对话的统一时序时间线
+- **补充测试**（`internal/session/session_test.go`, `internal/agent/loop_test.go`）
+  - 覆盖 timeline 的保存/加载与事件流落盘
+- **验证**
+  - `go test ./internal/session ./internal/agent ./internal/webui`
+  - `cd electron && npm run build`
+  - `make build`
+
 #### Electron 执行步骤与回复正文改为同一时序流
 - **聊天区改为单一时序 timeline 渲染**（`electron/src/renderer/views/ChatView.tsx`）
   - 将 `status/tool_start/tool_result/error` 与 `content_delta` 合并到同一时间线，按到达顺序穿插显示

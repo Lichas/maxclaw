@@ -34,6 +34,15 @@ export interface SessionDetail {
     role: string;
     content: string;
     timestamp: string;
+    timeline?: Array<{
+      kind: 'activity' | 'text';
+      activity?: {
+        type: 'status' | 'tool_start' | 'tool_result' | 'error';
+        summary: string;
+        detail?: string;
+      };
+      text?: string;
+    }>;
   }>;
 }
 

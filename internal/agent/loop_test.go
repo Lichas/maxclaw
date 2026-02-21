@@ -395,4 +395,23 @@ func TestAgentLoopProcessDirectEventStreamEmitsStructuredEvents(t *testing.T) {
 	assert.True(t, hasToolStart)
 	assert.True(t, hasToolResult)
 	assert.True(t, hasDelta)
+
+	mgr := session.NewManager(workspace)
+	sess := mgr.GetOrCreate("desktop:test")
+	require.Len(t, sess.Messages, 2)
+	require.NotEmpty(t, sess.Messages[1].Timeline)
+
+	var timelineHasActivity bool
+	var timelineHasText bool
+	for _, entry := range sess.Messages[1].Timeline {
+		if entry.Kind == "activity" {
+			timelineHasActivity = true
+		}
+		if entry.Kind == "text" && entry.Text != "" {
+			timelineHasText = true
+		}
+	}
+
+	assert.True(t, timelineHasActivity)
+	assert.True(t, timelineHasText)
 }
