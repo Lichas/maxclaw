@@ -173,6 +173,16 @@ export function ChatView() {
     return [...prev, next];
   };
 
+  const getActivityLabel = (type: StreamActivity['type']) => {
+    if (type === 'status') {
+      return 'Thinking';
+    }
+    if (type === 'error') {
+      return 'Error';
+    }
+    return 'Tool';
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -300,18 +310,30 @@ export function ChatView() {
     inputRef.current?.focus();
   };
 
-  const renderActivityList = (items: StreamActivity[]) => (
-    <div className="mb-3 space-y-1.5 rounded-xl border border-border/80 bg-secondary/55 p-3 text-xs">
-      {items.map((activity) => (
-        <div key={activity.id} className="text-foreground/75">
-          <p className="font-medium">
-            {activity.type === 'error' ? 'Error' : activity.type === 'status' ? 'Status' : 'Tool'}: {activity.summary}
-          </p>
-          {activity.detail && <pre className="mt-1 whitespace-pre-wrap font-sans text-foreground/60">{activity.detail}</pre>}
+  const renderActivityList = (items: StreamActivity[], streaming: boolean) => {
+    const openIndex = streaming ? items.length - 1 : -1;
+    return (
+      <div className="mb-4 rounded-xl border border-border/75 bg-background/70 px-3 py-2 text-xs">
+        <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-foreground/45">Execution</div>
+        <div className="space-y-2">
+          {items.map((activity, index) => (
+            <div key={activity.id} className="rounded-lg border border-border/70 bg-background">
+              <details open={index === openIndex ? true : undefined}>
+                <summary className="cursor-pointer list-none px-3 py-2 font-medium text-foreground/75">
+                  {getActivityLabel(activity.type)}: {activity.summary}
+                </summary>
+                {activity.detail && (
+                  <pre className="border-t border-border/70 px-3 py-2 whitespace-pre-wrap break-all font-sans text-foreground/60">
+                    {activity.detail}
+                  </pre>
+                )}
+              </details>
+            </div>
+          ))}
         </div>
-      ))}
-    </div>
-  );
+      </div>
+    );
+  };
 
   const renderComposer = (landing: boolean) => (
     <form
@@ -405,24 +427,24 @@ export function ChatView() {
             key={message.id}
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div
-              className={`max-w-3xl rounded-2xl px-4 py-3 text-sm leading-6 ${
-                message.role === 'user'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-background text-foreground border border-border'
-              }`}
-            >
-              {message.role === 'assistant' && message.activities && message.activities.length > 0 && renderActivityList(message.activities)}
-              <pre className="whitespace-pre-wrap font-sans">{message.content}</pre>
-            </div>
+            {message.role === 'user' ? (
+              <div className="max-w-3xl rounded-2xl bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground">
+                <pre className="whitespace-pre-wrap break-all font-sans">{message.content}</pre>
+              </div>
+            ) : (
+              <div className="w-full px-1 py-1 text-sm leading-7 text-foreground">
+                {message.activities && message.activities.length > 0 && renderActivityList(message.activities, false)}
+                <pre className="whitespace-pre-wrap break-all font-sans">{message.content}</pre>
+              </div>
+            )}
           </div>
         ))}
 
         {(streamingActivities.length > 0 || streamingContent) && (
           <div className="flex justify-start">
-            <div className="max-w-3xl rounded-2xl border border-border bg-background px-4 py-3 text-sm leading-6 text-foreground">
-              {streamingActivities.length > 0 && renderActivityList(streamingActivities)}
-              {streamingContent && <pre className="whitespace-pre-wrap font-sans">{streamingContent}</pre>}
+            <div className="w-full px-1 py-1 text-sm leading-7 text-foreground">
+              {streamingActivities.length > 0 && renderActivityList(streamingActivities, true)}
+              {streamingContent && <pre className="whitespace-pre-wrap break-all font-sans">{streamingContent}</pre>}
               <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-primary" />
             </div>
           </div>

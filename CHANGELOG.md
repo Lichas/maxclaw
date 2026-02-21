@@ -4,6 +4,17 @@
 
 ### Bug 修复
 
+#### Electron 对话区改为“无气泡正文 + 自动折叠执行步骤”
+- **修复流式文本穿行与杂项事件混入正文**（`electron/src/renderer/hooks/useGateway.ts`）
+  - SSE 仅解析 `data:` 事件行，避免将非 `data` 行误当正文增量拼接
+- **优化执行过程展示与自动折叠**（`electron/src/renderer/views/ChatView.tsx`）
+  - 工具/思考步骤改为可折叠执行时间线，流式阶段仅自动展开当前步骤，前一步自动折叠
+  - 长文本与长 URL 使用 `break-all` 处理，避免穿行/溢出
+  - assistant 输出去除气泡容器，改为无边框正文样式
+- **验证**
+  - `cd electron && npm run build`
+  - `make build`
+
 #### `/api/message` 升级为结构化流式事件，Electron 增强执行过程可视化（保持兼容）
 - **后端 SSE 事件从纯文本增量升级为结构化事件**（`internal/agent/loop.go`, `internal/webui/server.go`）
   - 新增 `status/tool_start/tool_result/content_delta/final/error` 事件类型

@@ -156,16 +156,16 @@ export function useGateway() {
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            parseStreamChunk(line.slice(6), onDelta, onEvent, state);
-          } else if (line.trim() !== '') {
-            parseStreamChunk(line, onDelta, onEvent, state);
+          if (line.startsWith('data:')) {
+            const payload = line.replace(/^data:\s?/, '');
+            parseStreamChunk(payload, onDelta, onEvent, state);
           }
         }
       }
 
-      if (buffer.trim() !== '') {
-        parseStreamChunk(buffer.trim(), onDelta, onEvent, state);
+      if (buffer.trim().startsWith('data:')) {
+        const payload = buffer.trim().replace(/^data:\s?/, '');
+        parseStreamChunk(payload, onDelta, onEvent, state);
       }
 
       return {
