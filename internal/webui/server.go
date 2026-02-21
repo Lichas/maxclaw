@@ -237,17 +237,22 @@ func (s *Server) handleMessageStream(w http.ResponseWriter, r *http.Request, pay
 	defer cancel()
 
 	var streamWriteErr error
-	resp, err := s.agentLoop.ProcessDirectStream(
+	resp, err := s.agentLoop.ProcessDirectEventStream(
 		ctx,
 		payload.Content,
 		payload.SessionKey,
 		payload.Channel,
 		payload.ChatID,
-		func(delta string) {
+		func(event agent.StreamEvent) {
 			if streamWriteErr != nil {
 				return
 			}
-			if err := writeSSE(map[string]interface{}{"delta": delta}); err != nil {
+
+			if event.Type == "" {
+				event.Type = "content_delta"
+			}
+
+			if err := writeSSE(event); err != nil {
 				streamWriteErr = err
 				cancel()
 			}
@@ -262,7 +267,11 @@ func (s *Server) handleMessageStream(w http.ResponseWriter, r *http.Request, pay
 	}
 
 	if err != nil {
-		_ = writeSSE(map[string]interface{}{"error": err.Error()})
+		_ = writeSSE(map[string]interface{}{
+			"type":       "error",
+			"error":      err.Error(),
+			"sessionKey": payload.SessionKey,
+		})
 		_, _ = fmt.Fprint(w, "data: [DONE]\n\n")
 		flusher.Flush()
 		if lg := logging.Get(); lg != nil && lg.Web != nil {
@@ -272,6 +281,7 @@ func (s *Server) handleMessageStream(w http.ResponseWriter, r *http.Request, pay
 	}
 
 	_ = writeSSE(map[string]interface{}{
+		"type":       "final",
 		"response":   resp,
 		"sessionKey": payload.SessionKey,
 		"done":       true,

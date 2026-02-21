@@ -183,6 +183,9 @@ func extractTitleAndBody(content string) (string, string) {
 	return "", content
 }
 
+// extractRefs 从用户消息中提取技能引用。
+// 输入: message 用户消息字符串（包含 @skill:<name> 或 $<name> 的引用）。
+// 输出: refs 已标准化为小写的技能名切片；若无引用则返回空切片。
 func extractRefs(message string) []string {
 	var refs []string
 	for _, match := range atSkillPattern.FindAllStringSubmatch(message, -1) {

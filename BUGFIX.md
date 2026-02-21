@@ -6,6 +6,27 @@
 
 ---
 
+## 2026-02-21 - Electron 聊天窗“只见文本不见执行过程”与流式事件兼容问题
+
+**问题**：
+- Electron 端原先只消费 `delta/response` 文本，无法展示 Agent 的执行状态和工具调用过程。
+- `/api/message` 流式链路在演进后，前端对结构化事件未解析，导致 UI 信息密度明显落后于竞品。
+
+**根因**：
+- 网关 Hook 仅按“纯文本增量”处理 SSE，未消费 `status/tool_start/tool_result/error` 等事件类型。
+- 聊天视图只有气泡文本，没有事件轨迹容器，工具执行细节被丢失。
+
+**修复**：
+- 后端流式输出统一为结构化事件：`status/tool_start/tool_result/content_delta/final/error`，并保留原 JSON 非流式返回。
+- Electron `useGateway` 增加结构化 SSE 解析与兼容分支（旧 `delta/response` 仍可工作）。
+- Electron `ChatView` 新增执行轨迹卡片，流式展示状态与工具结果，同时保留打字机文本体验。
+
+**兼容性结论**：
+- Telegram 不依赖 `/api/message` 的 SSE 分支，仍走既有消息总线流程，不受本次改造影响。
+- `/api/message` 的非流式 JSON 行为保持不变，旧客户端可继续使用。
+
+---
+
 ## Bug #1: OpenAI Provider 消息格式错误
 
 **发现时间**: 2026-02-07

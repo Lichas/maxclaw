@@ -1,13 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, setCurrentSessionKey } from '../store';
-import { useGateway } from '../hooks/useGateway';
+import { GatewayStreamEvent, useGateway } from '../hooks/useGateway';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  activities?: StreamActivity[];
+}
+
+interface StreamActivity {
+  id: string;
+  type: 'status' | 'tool_start' | 'tool_result' | 'error';
+  summary: string;
+  detail?: string;
 }
 
 const starterCards = [
@@ -41,18 +49,20 @@ export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [streamingContent, setStreamingContent] = useState('');
+  const [streamingActivities, setStreamingActivities] = useState<StreamActivity[]>([]);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isComposingRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingQueueRef = useRef<string[]>([]);
   const typingTimerRef = useRef<number | null>(null);
+  const activitySeqRef = useRef(0);
 
-  const isStarterMode = messages.length === 0 && !streamingContent;
+  const isStarterMode = messages.length === 0 && !streamingContent && streamingActivities.length === 0;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingContent]);
+  }, [messages, streamingContent, streamingActivities]);
 
   const stopTypingTimer = () => {
     if (typingTimerRef.current !== null) {
@@ -65,6 +75,7 @@ export function ChatView() {
     typingQueueRef.current = [];
     stopTypingTimer();
     setStreamingContent('');
+    setStreamingActivities([]);
   };
 
   const ensureTypingTimer = () => {
@@ -95,6 +106,71 @@ export function ChatView() {
     while (typingQueueRef.current.length > 0 || typingTimerRef.current !== null) {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
+  };
+
+  const nextActivityID = (prefix: string) => {
+    activitySeqRef.current += 1;
+    return `${prefix}-${activitySeqRef.current}`;
+  };
+
+  const toStreamActivity = (event: GatewayStreamEvent): StreamActivity | null => {
+    const trimDetail = (value?: string, max = 360) => {
+      if (!value) {
+        return undefined;
+      }
+      if (value.length <= max) {
+        return value;
+      }
+      return `${value.slice(0, max)}...`;
+    };
+
+    switch (event.type) {
+      case 'status': {
+        const summary = event.message || event.summary;
+        if (!summary) {
+          return null;
+        }
+        return {
+          id: nextActivityID('status'),
+          type: 'status',
+          summary
+        };
+      }
+      case 'tool_start': {
+        const summary = event.summary || `${event.toolName || 'Tool'} started`;
+        return {
+          id: nextActivityID(`tool-start-${event.toolId || 'unknown'}`),
+          type: 'tool_start',
+          summary,
+          detail: trimDetail(event.toolArgs)
+        };
+      }
+      case 'tool_result': {
+        const summary = event.summary || `${event.toolName || 'Tool'} completed`;
+        return {
+          id: nextActivityID(`tool-result-${event.toolId || 'unknown'}`),
+          type: 'tool_result',
+          summary,
+          detail: trimDetail(event.toolResult)
+        };
+      }
+      case 'error':
+        return {
+          id: nextActivityID('error'),
+          type: 'error',
+          summary: event.error || '请求失败'
+        };
+      default:
+        return null;
+    }
+  };
+
+  const mergeActivity = (prev: StreamActivity[], next: StreamActivity) => {
+    const last = prev[prev.length - 1];
+    if (last && last.type === next.type && last.summary === next.summary && last.detail === next.detail) {
+      return prev;
+    }
+    return [...prev, next];
   };
 
   useEffect(() => {
@@ -152,12 +228,25 @@ export function ChatView() {
     resetTypingState();
 
     let assistantContent = '';
+    let currentActivities: StreamActivity[] = [];
 
     try {
-      const result = await sendMessage(userMessage.content, currentSessionKey, (delta) => {
-        assistantContent += delta;
-        enqueueTyping(delta);
-      });
+      const result = await sendMessage(
+        userMessage.content,
+        currentSessionKey,
+        (delta) => {
+          assistantContent += delta;
+          enqueueTyping(delta);
+        },
+        (event) => {
+          const activity = toStreamActivity(event);
+          if (!activity) {
+            return;
+          }
+          currentActivities = mergeActivity(currentActivities, activity);
+          setStreamingActivities(currentActivities);
+        }
+      );
 
       if (result.sessionKey && result.sessionKey !== currentSessionKey) {
         dispatch(setCurrentSessionKey(result.sessionKey));
@@ -176,19 +265,21 @@ export function ChatView() {
           id: `${Date.now()}-assistant`,
           role: 'assistant',
           content: assistantContent,
-          timestamp: new Date()
+          timestamp: new Date(),
+          activities: currentActivities.length > 0 ? currentActivities : undefined
         }
       ]);
       resetTypingState();
-    } catch {
+    } catch (err) {
       resetTypingState();
       setMessages((prev) => [
         ...prev,
         {
           id: `${Date.now()}-error`,
           role: 'assistant',
-          content: '消息发送失败，请检查 Gateway 状态后重试。',
-          timestamp: new Date()
+          content: err instanceof Error ? `消息发送失败：${err.message}` : '消息发送失败，请检查 Gateway 状态后重试。',
+          timestamp: new Date(),
+          activities: currentActivities.length > 0 ? currentActivities : undefined
         }
       ]);
     }
@@ -208,6 +299,19 @@ export function ChatView() {
     setInput(prompt);
     inputRef.current?.focus();
   };
+
+  const renderActivityList = (items: StreamActivity[]) => (
+    <div className="mb-3 space-y-1.5 rounded-xl border border-border/80 bg-secondary/55 p-3 text-xs">
+      {items.map((activity) => (
+        <div key={activity.id} className="text-foreground/75">
+          <p className="font-medium">
+            {activity.type === 'error' ? 'Error' : activity.type === 'status' ? 'Status' : 'Tool'}: {activity.summary}
+          </p>
+          {activity.detail && <pre className="mt-1 whitespace-pre-wrap font-sans text-foreground/60">{activity.detail}</pre>}
+        </div>
+      ))}
+    </div>
+  );
 
   const renderComposer = (landing: boolean) => (
     <form
@@ -308,15 +412,17 @@ export function ChatView() {
                   : 'bg-background text-foreground border border-border'
               }`}
             >
+              {message.role === 'assistant' && message.activities && message.activities.length > 0 && renderActivityList(message.activities)}
               <pre className="whitespace-pre-wrap font-sans">{message.content}</pre>
             </div>
           </div>
         ))}
 
-        {streamingContent && (
+        {(streamingActivities.length > 0 || streamingContent) && (
           <div className="flex justify-start">
             <div className="max-w-3xl rounded-2xl border border-border bg-background px-4 py-3 text-sm leading-6 text-foreground">
-              <pre className="whitespace-pre-wrap font-sans">{streamingContent}</pre>
+              {streamingActivities.length > 0 && renderActivityList(streamingActivities)}
+              {streamingContent && <pre className="whitespace-pre-wrap font-sans">{streamingContent}</pre>}
               <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-primary" />
             </div>
           </div>

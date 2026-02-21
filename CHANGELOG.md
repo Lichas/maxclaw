@@ -4,6 +4,20 @@
 
 ### Bug 修复
 
+#### `/api/message` 升级为结构化流式事件，Electron 增强执行过程可视化（保持兼容）
+- **后端 SSE 事件从纯文本增量升级为结构化事件**（`internal/agent/loop.go`, `internal/webui/server.go`）
+  - 新增 `status/tool_start/tool_result/content_delta/final/error` 事件类型
+  - 非流式 JSON 返回路径保持不变，Telegram 与其他非 WebUI 调用链路不受影响
+- **Electron 聊天页消费结构化事件并展示执行轨迹**（`electron/src/renderer/hooks/useGateway.ts`, `electron/src/renderer/views/ChatView.tsx`）
+  - 网关 Hook 新增流式事件解析与错误处理，兼容旧的 `delta/response` 返回格式
+  - Chat UI 新增执行状态卡片（状态、工具开始、工具结果），并与打字机输出并行展示
+- **补充测试**（`internal/agent/loop_test.go`）
+  - 新增结构化事件流单测，覆盖工具调用与内容增量事件
+- **验证**
+  - `go test ./internal/agent ./internal/webui`
+  - `cd electron && npm run build`
+  - `make build`
+
 #### `/api/message` 新增可选流式返回（兼容 Telegram 与旧客户端）
 - **后端新增 SSE 分支，默认 JSON 行为保持不变**（`internal/webui/server.go`, `internal/agent/loop.go`）
   - 当 `stream=1` 或 `Accept: text/event-stream` 时，`/api/message` 按 `data: {"delta":"..."}` 增量返回

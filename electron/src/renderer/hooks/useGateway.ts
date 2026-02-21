@@ -5,6 +5,22 @@ interface SendMessageResult {
   sessionKey: string;
 }
 
+export interface GatewayStreamEvent {
+  type?: string;
+  iteration?: number;
+  message?: string;
+  delta?: string;
+  toolId?: string;
+  toolName?: string;
+  toolArgs?: string;
+  summary?: string;
+  toolResult?: string;
+  response?: string;
+  error?: string;
+  sessionKey?: string;
+  done?: boolean;
+}
+
 export interface SessionSummary {
   key: string;
   messageCount: number;
@@ -25,10 +41,62 @@ export function useGateway() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const parseStreamChunk = (
+    raw: string,
+    onDelta: (delta: string) => void,
+    onEvent: ((event: GatewayStreamEvent) => void) | undefined,
+    state: {
+      sawDelta: boolean;
+      fullResponse: string;
+      resolvedSessionKey: string;
+    }
+  ) => {
+    if (!raw || raw === '[DONE]') {
+      return;
+    }
+
+    let parsed: GatewayStreamEvent;
+    try {
+      parsed = JSON.parse(raw) as GatewayStreamEvent;
+    } catch {
+      state.fullResponse += raw;
+      onDelta(raw);
+      return;
+    }
+
+    if (parsed.sessionKey) {
+      state.resolvedSessionKey = parsed.sessionKey;
+    }
+
+    if (parsed.type) {
+      onEvent?.(parsed);
+    }
+
+    if (parsed.type === 'error' || (parsed.error && !parsed.type)) {
+      throw new Error(parsed.error || 'Gateway stream error');
+    }
+
+    if (parsed.delta) {
+      state.sawDelta = true;
+      state.fullResponse += parsed.delta;
+      onDelta(parsed.delta);
+    }
+
+    if (parsed.response) {
+      if (!state.sawDelta) {
+        state.fullResponse += parsed.response;
+        onDelta(parsed.response);
+      } else if (parsed.response.length >= state.fullResponse.length) {
+        state.fullResponse = parsed.response;
+      }
+    }
+  };
+
   const sendMessage = useCallback(async (
     content: string,
     sessionKey: string,
-    onDelta: (delta: string) => void
+    onDelta: (delta: string) => void,
+    onEvent?: (event: GatewayStreamEvent) => void
   ): Promise<SendMessageResult> => {
     setIsLoading(true);
     setError(null);
@@ -73,9 +141,11 @@ export function useGateway() {
 
       const decoder = new TextDecoder();
       let buffer = '';
-      let fullResponse = '';
-      let sawDelta = false;
-      let resolvedSessionKey = sessionKey;
+      const state = {
+        fullResponse: '',
+        sawDelta: false,
+        resolvedSessionKey: sessionKey
+      };
 
       while (true) {
         const { done, value } = await reader.read();
@@ -87,40 +157,20 @@ export function useGateway() {
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') {
-              continue;
-            }
-
-            try {
-              const parsed = JSON.parse(data) as { delta?: string; response?: string; sessionKey?: string };
-              if (parsed.delta) {
-                sawDelta = true;
-                fullResponse += parsed.delta;
-                onDelta(parsed.delta);
-              } else if (parsed.response && !sawDelta) {
-                fullResponse += parsed.response;
-                onDelta(parsed.response);
-              }
-
-              if (parsed.sessionKey) {
-                resolvedSessionKey = parsed.sessionKey;
-              }
-            } catch {
-              // Handle plain text deltas
-              fullResponse += data;
-              onDelta(data);
-            }
+            parseStreamChunk(line.slice(6), onDelta, onEvent, state);
           } else if (line.trim() !== '') {
-            fullResponse += line;
-            onDelta(line);
+            parseStreamChunk(line, onDelta, onEvent, state);
           }
         }
       }
 
+      if (buffer.trim() !== '') {
+        parseStreamChunk(buffer.trim(), onDelta, onEvent, state);
+      }
+
       return {
-        response: fullResponse,
-        sessionKey: resolvedSessionKey
+        response: state.fullResponse,
+        sessionKey: state.resolvedSessionKey
       };
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');

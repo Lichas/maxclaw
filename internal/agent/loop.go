@@ -47,6 +47,21 @@ type AgentLoop struct {
 	mcpConnectOnce sync.Once
 }
 
+// StreamEvent is a structured event for UI streaming consumers.
+type StreamEvent struct {
+	Type       string `json:"type"`
+	Iteration  int    `json:"iteration,omitempty"`
+	Message    string `json:"message,omitempty"`
+	Delta      string `json:"delta,omitempty"`
+	ToolID     string `json:"toolId,omitempty"`
+	ToolName   string `json:"toolName,omitempty"`
+	ToolArgs   string `json:"toolArgs,omitempty"`
+	Summary    string `json:"summary,omitempty"`
+	ToolResult string `json:"toolResult,omitempty"`
+	Response   string `json:"response,omitempty"`
+	Done       bool   `json:"done,omitempty"`
+}
+
 // NewAgentLoop 创建 Agent 循环
 func NewAgentLoop(
 	bus *bus.MessageBus,
@@ -202,9 +217,6 @@ func (h *streamHandler) OnToolCallStart(id, name string) {
 		Type:     "function",
 		Function: providers.ToolCallFunction{Name: name, Arguments: ""},
 	}
-	if h.onDelta != nil {
-		h.onDelta(fmt.Sprintf("\n[Tool: %s]\n", name))
-	}
 }
 
 func (h *streamHandler) OnToolCallDelta(id, delta string) {
@@ -236,10 +248,19 @@ func (h *streamHandler) GetToolCalls() []providers.ToolCall {
 
 // ProcessMessage 处理单个消息（流式版本）
 func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage) (*bus.OutboundMessage, error) {
-	return a.processMessageWithDelta(ctx, msg, nil)
+	return a.processMessageWithCallbacks(ctx, msg, nil, nil)
 }
 
 func (a *AgentLoop) processMessageWithDelta(ctx context.Context, msg *bus.InboundMessage, onDelta func(string)) (*bus.OutboundMessage, error) {
+	return a.processMessageWithCallbacks(ctx, msg, onDelta, nil)
+}
+
+func (a *AgentLoop) processMessageWithCallbacks(
+	ctx context.Context,
+	msg *bus.InboundMessage,
+	onDelta func(string),
+	onEvent func(StreamEvent),
+) (*bus.OutboundMessage, error) {
 	a.ensureMCPConnected(ctx)
 
 	if lg := logging.Get(); lg != nil && lg.Session != nil {
@@ -281,15 +302,36 @@ func (a *AgentLoop) processMessageWithDelta(ctx context.Context, msg *bus.Inboun
 	toolDefs := a.tools.GetDefinitions()
 
 	for i := 0; i < a.MaxIterations; i++ {
+		iteration := i + 1
+		if onEvent != nil {
+			onEvent(StreamEvent{
+				Type:      "status",
+				Iteration: iteration,
+				Message:   fmt.Sprintf("Iteration %d", iteration),
+			})
+		}
+
 		deltaCallback := onDelta
 		if deltaCallback == nil && msg.Channel == "cli" {
 			deltaCallback = func(delta string) {
 				fmt.Print(delta)
 			}
 		}
+		streamCallback := func(delta string) {
+			if deltaCallback != nil {
+				deltaCallback(delta)
+			}
+			if onEvent != nil {
+				onEvent(StreamEvent{
+					Type:      "content_delta",
+					Delta:     delta,
+					Iteration: iteration,
+				})
+			}
+		}
 
 		// 流式调用 LLM
-		handler := newStreamHandler(msg.Channel, msg.ChatID, a.Bus, deltaCallback)
+		handler := newStreamHandler(msg.Channel, msg.ChatID, a.Bus, streamCallback)
 
 		err := a.Provider.ChatStream(ctx, messages, toolDefs, a.Model, handler)
 		if err != nil {
@@ -297,7 +339,7 @@ func (a *AgentLoop) processMessageWithDelta(ctx context.Context, msg *bus.Inboun
 		}
 
 		// CLI 换行
-		if msg.Channel == "cli" && onDelta == nil {
+		if msg.Channel == "cli" && onDelta == nil && onEvent == nil {
 			fmt.Println()
 		}
 
@@ -306,20 +348,39 @@ func (a *AgentLoop) processMessageWithDelta(ctx context.Context, msg *bus.Inboun
 
 		// 处理工具调用
 		if len(toolCalls) > 0 {
+			if onEvent != nil {
+				onEvent(StreamEvent{
+					Type:      "status",
+					Iteration: iteration,
+					Message:   "Executing tools",
+				})
+			}
+
 			// 添加助手消息（带工具调用）
 			messages = a.context.AddAssistantMessage(messages, content, toolCalls)
 
 			// 执行工具调用并显示结果
 			for _, tc := range toolCalls {
+				if onEvent != nil {
+					onEvent(StreamEvent{
+						Type:      "tool_start",
+						Iteration: iteration,
+						ToolID:    tc.ID,
+						ToolName:  tc.Function.Name,
+						ToolArgs:  truncateEventText(tc.Function.Arguments, 600),
+						Summary:   summarizeToolStart(tc.Function.Name, tc.Function.Arguments),
+					})
+				}
+
 				var args map[string]interface{}
 				if err := json.Unmarshal([]byte(tc.Function.Arguments), &args); err != nil {
 					args = map[string]interface{}{}
 				}
 
 				toolCtx := tools.WithRuntimeContext(ctx, msg.Channel, msg.ChatID)
-				result, err := a.tools.Execute(toolCtx, tc.Function.Name, args)
-				if err != nil {
-					result = fmt.Sprintf("Error: %v", err)
+				result, execErr := a.tools.Execute(toolCtx, tc.Function.Name, args)
+				if execErr != nil {
+					result = fmt.Sprintf("Error: %v", execErr)
 				}
 
 				if lg := logging.Get(); lg != nil && lg.Tools != nil {
@@ -331,12 +392,30 @@ func (a *AgentLoop) processMessageWithDelta(ctx context.Context, msg *bus.Inboun
 					fmt.Printf("[Result: %s]\n%s\n\n", tc.Function.Name, result)
 				}
 
+				if onEvent != nil {
+					onEvent(StreamEvent{
+						Type:       "tool_result",
+						Iteration:  iteration,
+						ToolID:     tc.ID,
+						ToolName:   tc.Function.Name,
+						ToolResult: truncateEventText(result, 2000),
+						Summary:    summarizeToolResult(tc.Function.Name, result, execErr),
+					})
+				}
+
 				messages = a.context.AddToolResult(messages, tc.ID, tc.Function.Name, result)
 			}
 		} else {
 			// 没有工具调用，结束循环
 			finalContent = content
 			maxIterationReached = false
+			if onEvent != nil {
+				onEvent(StreamEvent{
+					Type:      "status",
+					Iteration: iteration,
+					Message:   "Preparing final response",
+				})
+			}
 			break
 		}
 	}
@@ -408,6 +487,54 @@ func (a *AgentLoop) ProcessDirectStream(
 		return "", nil
 	}
 	return resp.Content, nil
+}
+
+// ProcessDirectEventStream streams structured events for UI clients.
+func (a *AgentLoop) ProcessDirectEventStream(
+	ctx context.Context,
+	content, sessionKey, channel, chatID string,
+	onEvent func(StreamEvent),
+) (string, error) {
+	msg := bus.NewInboundMessage(channel, "user", chatID, content)
+	if sessionKey != "" {
+		msg.SessionKey = sessionKey
+	}
+
+	resp, err := a.processMessageWithCallbacks(ctx, msg, nil, onEvent)
+	if err != nil {
+		return "", err
+	}
+	if resp == nil {
+		return "", nil
+	}
+	return resp.Content, nil
+}
+
+func summarizeToolStart(name, args string) string {
+	argPreview := strings.TrimSpace(args)
+	if argPreview == "" {
+		return fmt.Sprintf("%s started", name)
+	}
+	return fmt.Sprintf("%s %s", name, truncateEventText(argPreview, 100))
+}
+
+func summarizeToolResult(name, result string, err error) string {
+	if err != nil {
+		return fmt.Sprintf("%s failed: %v", name, err)
+	}
+	trimmed := strings.TrimSpace(result)
+	if trimmed == "" {
+		return fmt.Sprintf("%s completed", name)
+	}
+	firstLine := strings.SplitN(trimmed, "\n", 2)[0]
+	return fmt.Sprintf("%s -> %s", name, truncateEventText(firstLine, 140))
+}
+
+func truncateEventText(input string, max int) string {
+	if max <= 0 || len(input) <= max {
+		return input
+	}
+	return input[:max] + "..."
 }
 
 // convertSessionMessages 转换会话消息

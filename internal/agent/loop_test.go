@@ -78,6 +78,34 @@ func (p *endlessToolProvider) GetDefaultModel() string {
 	return "test-model"
 }
 
+type streamEventProvider struct {
+	callCount int
+}
+
+func (p *streamEventProvider) Chat(ctx context.Context, messages []providers.Message, defs []map[string]interface{}, model string) (*providers.Response, error) {
+	return nil, nil
+}
+
+func (p *streamEventProvider) ChatStream(ctx context.Context, messages []providers.Message, defs []map[string]interface{}, model string, handler providers.StreamHandler) error {
+	if p.callCount == 0 {
+		handler.OnToolCallStart("tool_1", "list_dir")
+		handler.OnToolCallDelta("tool_1", `{"path":"."}`)
+		handler.OnToolCallEnd("tool_1")
+		handler.OnComplete()
+		p.callCount++
+		return nil
+	}
+
+	handler.OnContent("event stream ok")
+	handler.OnComplete()
+	p.callCount++
+	return nil
+}
+
+func (p *streamEventProvider) GetDefaultModel() string {
+	return "test-model"
+}
+
 func TestAgentLoopProcessMessageInjectsRuntimeContextForCron(t *testing.T) {
 	workspace := t.TempDir()
 	messageBus := bus.NewMessageBus(10)
@@ -310,4 +338,61 @@ func TestAgentLoopProcessMessageAutoConsolidatesWhenSessionLarge(t *testing.T) {
 	body, readErr := os.ReadFile(historyPath)
 	require.NoError(t, readErr)
 	assert.Contains(t, string(body), "session: telegram:chat-42")
+}
+
+func TestAgentLoopProcessDirectEventStreamEmitsStructuredEvents(t *testing.T) {
+	workspace := t.TempDir()
+	messageBus := bus.NewMessageBus(10)
+	provider := &streamEventProvider{}
+
+	loop := NewAgentLoop(
+		messageBus,
+		provider,
+		workspace,
+		"test-model",
+		3,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		nil,
+		nil,
+	)
+
+	var events []StreamEvent
+	resp, err := loop.ProcessDirectEventStream(
+		context.Background(),
+		"hello",
+		"desktop:test",
+		"desktop",
+		"chat-1",
+		func(event StreamEvent) {
+			events = append(events, event)
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "event stream ok", resp)
+	require.NotEmpty(t, events)
+
+	var hasStatus bool
+	var hasToolStart bool
+	var hasToolResult bool
+	var hasDelta bool
+	for _, event := range events {
+		switch event.Type {
+		case "status":
+			hasStatus = true
+		case "tool_start":
+			hasToolStart = true
+		case "tool_result":
+			hasToolResult = true
+		case "content_delta":
+			hasDelta = true
+		}
+	}
+
+	assert.True(t, hasStatus)
+	assert.True(t, hasToolStart)
+	assert.True(t, hasToolResult)
+	assert.True(t, hasDelta)
 }
