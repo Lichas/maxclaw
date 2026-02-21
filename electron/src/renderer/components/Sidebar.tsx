@@ -144,27 +144,23 @@ export function Sidebar() {
         {!sidebarCollapsed && (
           <div className="mt-4 px-2">
             <p className="text-xs font-semibold text-foreground/45 tracking-wide mb-2">任务记录</p>
-            <div className="mb-2 flex flex-wrap gap-1.5">
-              {channelOptions.map((channel) => {
-                const isActive = channelFilter === channel;
-                return (
-                  <button
-                    key={channel}
-                    onClick={() => setChannelFilter(channel)}
-                    className={`rounded-md border px-2 py-1 text-xs transition-colors ${
-                      isActive
-                        ? 'border-primary/40 bg-primary/15 text-primary'
-                        : 'border-border bg-background/70 text-foreground/60 hover:bg-background'
-                    }`}
-                  >
-                    {getChannelLabel(channel)}
-                  </button>
-                );
-              })}
+            <div className="mb-2 relative">
+              <select
+                value={channelFilter}
+                onChange={(event) => setChannelFilter(event.target.value)}
+                className="w-full appearance-none rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground/75 focus:border-primary/40 focus:outline-none"
+              >
+                {channelOptions.map((channel) => (
+                  <option key={channel} value={channel}>
+                    渠道: {getChannelLabel(channel)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/45" />
             </div>
             <div className="space-y-1">
               {sessionItems.length === 0 && (
-                <div className="text-xs text-foreground/45 px-2 py-1">暂无 {getChannelLabel(channelFilter)} 任务记录</div>
+                <div className="text-sm text-foreground/45 px-2 py-1">暂无 {getChannelLabel(channelFilter)} 任务记录</div>
               )}
 
               {sessionItems.map((session) => {
@@ -180,10 +176,10 @@ export function Sidebar() {
                       isCurrent ? 'bg-background text-foreground' : 'hover:bg-background/60'
                     }`}
                   >
-                    <p className="text-sm font-medium truncate">
+                    <p className="text-sm font-medium leading-5 truncate">
                       {session.lastMessage || session.key.replace(/^desktop:/, '新任务')}
                     </p>
-                    <p className="text-xs text-foreground/45 mt-1">
+                    <p className="text-sm text-foreground/50 leading-5 mt-0.5">
                       {formatRelativeTime(session.lastMessageAt)}
                     </p>
                   </button>
@@ -280,6 +276,14 @@ function EditIcon({ className }: { className?: string }) {
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 20h9" />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.5 3.5a2.1 2.1 0 113 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
     </svg>
   );
 }

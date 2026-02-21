@@ -4,6 +4,16 @@
 
 ### Bug 修复
 
+#### 任务记录渠道筛选改为下拉，文字样式对齐侧边栏菜单
+- **筛选控件从多按钮改为下拉选择器**（`electron/src/renderer/components/Sidebar.tsx`）
+  - 默认筛选 `desktop`，支持切换 `telegram`、`webui` 及动态渠道
+  - 交互更紧凑，避免按钮过多挤占任务记录区域
+- **任务记录字体与“定时任务”等侧边栏菜单风格统一**（`electron/src/renderer/components/Sidebar.tsx`）
+  - 标题、时间与空状态文本统一为 `text-sm` 字号体系
+- **验证**
+  - `cd electron && npm run build`
+  - `make build`
+
 #### 任务记录新增按渠道筛选（默认桌面）
 - **侧边栏任务记录支持渠道按钮筛选**（`electron/src/renderer/components/Sidebar.tsx`）
   - 新增渠道筛选按钮，默认 `desktop`，可切换 `telegram`、`webui`，并自动兼容其他已出现渠道
