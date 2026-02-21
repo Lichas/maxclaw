@@ -10,10 +10,16 @@ log.initialize();
 
 let mainWindow: BrowserWindow | null = null;
 let gatewayManager: GatewayManager | null = null;
+let openingMainWindow: Promise<void> | null = null;
 
 const isDev = !app.isPackaged;
 
 async function openMainWindow(): Promise<void> {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    return;
+  }
+
   mainWindow = createWindow();
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -26,13 +32,27 @@ async function openMainWindow(): Promise<void> {
     await mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
 
-  if (isDev) {
+  if (isDev && !mainWindow.webContents.isDevToolsOpened()) {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
 
   if (gatewayManager) {
     createIPCHandlers(mainWindow, gatewayManager);
   }
+}
+
+async function ensureMainWindow(): Promise<void> {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    return;
+  }
+  if (openingMainWindow) {
+    return openingMainWindow;
+  }
+
+  openingMainWindow = openMainWindow().finally(() => {
+    openingMainWindow = null;
+  });
+  return openingMainWindow;
 }
 
 async function initializeApp(): Promise<void> {
@@ -50,7 +70,7 @@ async function initializeApp(): Promise<void> {
     // Continue anyway - will show error in UI
   }
 
-  await openMainWindow();
+  await ensureMainWindow();
 
   // Initialize tray
   initializeTray(mainWindow);
@@ -72,13 +92,14 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  if (mainWindow === null) {
-    void openMainWindow().catch((error) => {
-      log.error('Failed to reopen main window:', error);
-    });
-  } else {
+  if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.show();
+    return;
   }
+
+  void ensureMainWindow().catch((error) => {
+    log.error('Failed to reopen main window:', error);
+  });
 });
 
 app.on('before-quit', async () => {

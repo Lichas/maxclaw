@@ -4,6 +4,14 @@
 
 ### Bug 修复
 
+#### 修复启动阶段窗口并发创建导致的双闪与重复 DevTools
+- **主进程窗口创建增加并发去重锁**（`electron/src/main/index.ts`）
+  - 在 `initializeApp` 与 `app.on('activate')` 同时触发时，统一走 `ensureMainWindow()`，避免并发创建多个窗口
+  - Dev 模式仅在当前窗口未打开 DevTools 时调用 `openDevTools`
+- **验证**
+  - `cd electron && npm run build`
+  - `make build`
+
 #### 任务记录渠道筛选改为下拉，文字样式对齐侧边栏菜单
 - **筛选控件从多按钮改为下拉选择器**（`electron/src/renderer/components/Sidebar.tsx`）
   - 默认筛选 `desktop`，支持切换 `telegram`、`webui` 及动态渠道
