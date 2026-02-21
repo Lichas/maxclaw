@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcess, spawnSync } from 'child_process';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
@@ -110,6 +110,13 @@ export class GatewayManager {
     });
   }
 
+  async startFresh(): Promise<void> {
+    log.info('Starting Gateway with fresh restart...');
+    await this.stop();
+    await this.terminateExistingGatewayProcesses();
+    await this.start();
+  }
+
   async stop(): Promise<void> {
     if (!this.process) {
       return;
@@ -212,5 +219,57 @@ export class GatewayManager {
         log.error('Restart failed:', error);
       });
     }, delay);
+  }
+
+  private async terminateExistingGatewayProcesses(): Promise<void> {
+    if (process.platform === 'win32') {
+      log.info('Skip external gateway cleanup on Windows');
+      return;
+    }
+
+    const pgrepResult = spawnSync('pgrep', ['-f', 'nanobot-go gateway -p 18890'], {
+      encoding: 'utf8'
+    });
+
+    if (pgrepResult.status !== 0 || !pgrepResult.stdout.trim()) {
+      return;
+    }
+
+    const pids = pgrepResult.stdout
+      .split('\n')
+      .map((pid) => pid.trim())
+      .filter(Boolean)
+      .map((pid) => Number(pid))
+      .filter((pid) => Number.isFinite(pid) && pid > 0 && pid !== process.pid && pid !== this.process?.pid);
+
+    if (pids.length === 0) {
+      return;
+    }
+
+    log.warn(`Terminating existing gateway processes on startup: ${pids.join(', ')}`);
+
+    for (const pid of pids) {
+      try {
+        process.kill(pid, 'SIGTERM');
+      } catch (error) {
+        log.warn(`Failed to SIGTERM process ${pid}:`, error);
+      }
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    for (const pid of pids) {
+      try {
+        process.kill(pid, 0);
+      } catch {
+        continue;
+      }
+
+      try {
+        process.kill(pid, 'SIGKILL');
+      } catch (error) {
+        log.warn(`Failed to SIGKILL process ${pid}:`, error);
+      }
+    }
   }
 }

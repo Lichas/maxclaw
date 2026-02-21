@@ -4,6 +4,15 @@
 
 ### Bug 修复
 
+#### 启动 Electron 时自动重启 Gateway（清理旧进程）
+- **新增 Gateway 启动前清理逻辑**（`electron/src/main/gateway.ts`, `electron/src/main/index.ts`）
+  - 启动主进程时改为 `startFresh()`：先停止已托管进程，再清理历史残留的 `nanobot-go gateway -p 18890` 进程，然后启动新 Gateway
+  - 降低端口占用导致的“连接到旧 Gateway/状态不一致”概率
+- **验证**
+  - `cd electron && npm run build`
+  - `cd electron && npm run dev`（冒烟，确认启动时执行 fresh restart）
+  - `make build`
+
 #### 重构 Electron 新任务界面并接入桌面会话切换
 - **重构 Chat 空态为“新任务启动页”**（`electron/src/renderer/views/ChatView.tsx`）
   - 增加欢迎区、大输入面板、任务模板卡片，贴近你给的参考布局

@@ -43,7 +43,7 @@ async function initializeApp(): Promise<void> {
 
   // Start Gateway before creating window
   try {
-    await gatewayManager.start();
+    await gatewayManager.startFresh();
     log.info('Gateway started successfully');
   } catch (error) {
     log.error('Failed to start Gateway:', error);
