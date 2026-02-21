@@ -1,15 +1,8 @@
 import { useState, useCallback } from 'react';
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
-
-interface StreamResponse {
-  content: string;
-  done: boolean;
+interface SendMessageResult {
+  response: string;
+  sessionKey: string;
 }
 
 export function useGateway() {
@@ -20,7 +13,7 @@ export function useGateway() {
     content: string,
     sessionKey: string,
     onDelta: (delta: string) => void
-  ): Promise<void> => {
+  ): Promise<SendMessageResult> => {
     setIsLoading(true);
     setError(null);
 
@@ -30,14 +23,27 @@ export function useGateway() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content,
-          session_key: sessionKey,
+          sessionKey,
           channel: 'desktop',
-          chat_id: sessionKey
+          chatId: sessionKey
         })
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await response.json() as { response?: string; sessionKey?: string };
+        const fullResponse = data.response || '';
+        if (fullResponse) {
+          onDelta(fullResponse);
+        }
+        return {
+          response: fullResponse,
+          sessionKey: data.sessionKey || sessionKey
+        };
       }
 
       const reader = response.body?.getReader();
@@ -47,6 +53,7 @@ export function useGateway() {
 
       const decoder = new TextDecoder();
       let buffer = '';
+      let fullResponse = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -59,20 +66,35 @@ export function useGateway() {
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
-            if (data === '[DONE]') continue;
+            if (data === '[DONE]') {
+              continue;
+            }
 
             try {
-              const parsed = JSON.parse(data);
+              const parsed = JSON.parse(data) as { delta?: string; response?: string };
               if (parsed.delta) {
+                fullResponse += parsed.delta;
                 onDelta(parsed.delta);
+              } else if (parsed.response) {
+                fullResponse += parsed.response;
+                onDelta(parsed.response);
               }
             } catch {
               // Handle plain text deltas
+              fullResponse += data;
               onDelta(data);
             }
+          } else if (line.trim() !== '') {
+            fullResponse += line;
+            onDelta(line);
           }
         }
       }
+
+      return {
+        response: fullResponse,
+        sessionKey
+      };
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       throw err;

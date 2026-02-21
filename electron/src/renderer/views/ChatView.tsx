@@ -12,10 +12,9 @@ export function ChatView() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [streamingContent, setStreamingContent] = useState('');
+  const [sessionKey, setSessionKey] = useState('desktop:default');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { sendMessage, isLoading } = useGateway();
-
-  const sessionKey = 'desktop:default';
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -40,10 +39,15 @@ export function ChatView() {
     let assistantContent = '';
 
     try {
-      await sendMessage(userMessage.content, sessionKey, (delta) => {
+      const result = await sendMessage(userMessage.content, sessionKey, (delta) => {
         assistantContent += delta;
         setStreamingContent(assistantContent);
       });
+      setSessionKey(result.sessionKey || sessionKey);
+
+      if (!assistantContent && result.response) {
+        assistantContent = result.response;
+      }
 
       // Add complete assistant message
       const assistantMessage: Message = {
@@ -57,6 +61,13 @@ export function ChatView() {
       setStreamingContent('');
     } catch (error) {
       console.error('Failed to send message:', error);
+      setStreamingContent('');
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Message failed. Please check gateway status and try again.',
+        timestamp: new Date()
+      }]);
     }
   };
 

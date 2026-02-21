@@ -4,6 +4,17 @@
 
 ### Bug 修复
 
+#### 修复 Electron Chat 回复未渲染与会话键回退为 `webui:default`
+- **修复消息请求字段命名不匹配**（`electron/src/renderer/hooks/useGateway.ts`）
+  - `/api/message` 请求参数改为后端可识别的 `sessionKey/chatId`（此前使用 `session_key/chat_id` 会被服务端回退到 `webui:default`）
+- **修复 Chat 对普通 JSON 响应的解析与渲染**（`electron/src/renderer/hooks/useGateway.ts`, `electron/src/renderer/views/ChatView.tsx`）
+  - 兼容后端当前 `application/json` 返回，非 SSE 场景也会将 assistant 回复写入消息列表
+  - 增加失败提示消息，避免发送后界面无反馈
+- **验证**
+  - `cd electron && npm run build`
+  - `cd electron && npm run dev`（冒烟，确认主进程与渲染进程可启动）
+  - `make build`
+
 #### 修复 Electron 启动时重复注册窗口 IPC 导致报错与白屏
 - **修复窗口 IPC 重复注册**（`electron/src/main/window.ts`）
   - 在注册 `window:minimize/maximize/close/isMaximized` 前先 `removeHandler`，避免二次创建窗口时报 `Attempted to register a second handler`
