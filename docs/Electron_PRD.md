@@ -313,90 +313,91 @@ interface AppConfig {
 #### 5.1 主界面模块 (Main Workspace)
 
 ##### 5.1.1 聊天界面
-- [ ] 消息列表（支持 Markdown、代码高亮、Mermaid 图表）
-- [ ] 输入框（富文本、@提及、快捷命令 `/new`, `/help`）
-- [ ] 技能选择器（下拉菜单，支持搜索过滤）
-- [ ] 文件附件（拖拽上传、工作目录绑定）
-- [ ] 快捷操作栏（可配置的快捷指令按钮）
-- [ ] 模型切换下拉框（调用 Gateway API 获取可用模型）
-- [ ] 流式响应显示（SSE 实时渲染）
+- [x] 消息列表（支持 Markdown、代码高亮）
+- [x] 输入框（富文本、@提及、快捷命令 `/new`, `/help`）
+- [x] 技能选择器（下拉菜单，支持搜索过滤）
+- [ ] 文件附件（拖拽上传、工作目录绑定）⚠️ UI占位，功能未接入
+- [x] 快捷操作栏（4个任务模板卡片）
+- [x] 模型切换下拉框（调用 Gateway API 获取可用模型）
+- [x] 流式响应显示（SSE 实时渲染）
+- [ ] Mermaid 图表渲染
 
 ##### 5.1.2 侧边栏
-- [ ] 新建任务按钮
-- [ ] 搜索任务入口（全局搜索，调用 Gateway API）
-- [ ] 菜单导航（定时任务、技能、设置）
-- [ ] 任务历史列表（从 Gateway 获取会话列表）
+- [x] 新建任务按钮
+- [x] 搜索任务入口（全局搜索，调用 Gateway API）
+- [x] 菜单导航（定时任务、技能、设置）
+- [x] 任务历史列表（从 Gateway 获取会话列表）
+- [x] 会话删除/重命名
 
 #### 5.2 任务系统模块
 
 ##### 5.2.1 普通任务（复用 Gateway Session）
-- [ ] 创建/删除/重命名对话（调用 `/api/sessions`）
-- [ ] 对话历史展示（从 Gateway 获取）
-- [ ] 消息搜索（Gateway 提供全文检索接口）
+- [x] 创建/删除/重命名对话（调用 `/api/sessions`）
+- [x] 对话历史展示（从 Gateway 获取）
+- [x] 消息搜索（Gateway 提供全文检索接口）
 
 ##### 5.2.2 定时任务（复用 Gateway Cron Service）
-- [ ] 任务创建表单
-  - 标题输入
-  - 提示词编辑器
-  - 计划设置：Cron 表达式生成器（可视化选择器）
-  - 工作目录选择（文件浏览器对话框）
-  - 到期时间（可选）
-  - 通知渠道选择（多选）
-- [ ] 任务列表管理（调用 Gateway Cron API）
-- [ ] 执行历史日志（从 Gateway 获取）
+- [x] 任务创建表单
+  - [x] 标题输入
+  - [x] 提示词编辑器
+  - [ ] Cron 表达式生成器（可视化选择器）⚠️ 文本输入已实现
+  - [x] 工作目录选择（文件浏览器对话框）
+  - [ ] 到期时间（可选）❌ 未实现
+  - [ ] 通知渠道选择（多选）❌ 未实现
+- [x] 任务列表管理（调用 Gateway Cron API）
+- [x] 执行历史日志（从 Gateway 获取）⚠️ 仅显示上次执行时间
 
 #### 5.3 技能系统模块
 
 ##### 5.3.1 技能管理（复用 Gateway Skills Loader）
-- [ ] 技能网格展示（读取 `<workspace>/skills` 目录）
-- [ ] 技能安装
-  - .zip 文件导入 → 解压到 skills 目录
-  - 文件夹导入
-  - GitHub URL 导入（git clone 到 skills 目录）
-- [ ] 技能开关（通过 Gateway API 启用/禁用）
-- [ ] 技能配置文件解析（`SKILL.md`）
+- [x] 技能网格展示（读取 `<workspace>/skills` 目录）
+- [x] 技能安装
+  - [x] .zip 文件导入 → 解压到 skills 目录
+  - [x] 文件夹导入
+  - [x] GitHub URL 导入（支持子目录 sparse checkout）
+- [x] 技能开关（通过 Gateway API 启用/禁用）
+- [x] 技能配置文件解析（`SKILL.md` YAML frontmatter）
 
 #### 5.4 模型配置模块
 
 ##### 5.4.1 提供商管理（复用 Gateway Provider 配置）
-- [ ] 预设提供商列表（DeepSeek、OpenAI、Anthropic 等）
-- [ ] 添加自定义提供商
-- [ ] 启用/禁用切换
-- [ ] 配置字段：API Key、Base URL、API 格式、可用模型列表
-- [ ] **关键**：配置修改后调用 Gateway `/api/config` 更新并重启 Gateway
+- [ ] 预设提供商列表（DeepSeek、OpenAI、Anthropic 等）❌ 未实现
+- [ ] 添加自定义提供商❌ 未实现
+- [ ] 启用/禁用切换❌ 未实现
+- [x] 配置字段编辑⚠️ Settings 页仅展示当前模型/工作区
+- [x] **关键**：配置修改后调用 Gateway `/api/config` 更新并重启 Gateway
 
 ##### 5.4.2 连接测试
-- [ ] 一键测试 API 连通性（通过 Gateway 代理）
-- [ ] 显示延迟和状态
+- [ ] 一键测试 API 连通性（通过 Gateway 代理）❌ 未实现
+- [ ] 显示延迟和状态❌ 未实现
 
 #### 5.5 集成设置模块
 
 ##### 5.5.1 邮箱配置（复用 Gateway Email Channel）
-- [ ] 服务商预设（Gmail、Outlook、QQ邮箱、自定义）
-- [ ] IMAP/SMTP 配置
-- [ ] 连接测试
+- [ ] 服务商预设（Gmail、Outlook、QQ邮箱、自定义）❌ 未实现
+- [ ] IMAP/SMTP 配置❌ 未实现
+- [ ] 连接测试❌ 未实现
 
 ##### 5.5.2 IM Bot 配置（复用 Gateway Channels）
-- [ ] 多平台支持：Telegram、Discord、WhatsApp、飞书、钉钉、Slack、QQ
-- [ ] 每个平台独立配置面板
-- [ ] 连接状态显示（从 Gateway `/api/status` 获取）
-- [ ] 二维码登录（WhatsApp、Telegram）
+- [ ] 多平台配置面板：Telegram、Discord、WhatsApp、飞书、钉钉、Slack、QQ❌ 未实现
+- [x] 连接状态显示（从 Gateway `/api/status` 获取）✅ Gateway 状态指示器
+- [ ] 二维码登录（WhatsApp、Telegram）❌ 未实现
 
 #### 5.6 系统设置模块
 
 ##### 5.6.1 通用设置
-- [ ] 语言切换（i18n 框架）
-- [ ] 开机自启动（electron-auto-launch）
-- [ ] 主题切换（Light/Dark/System）
-- [ ] 最小化到托盘
+- [x] 语言切换（i18n 框架，完整中英文支持）
+- [x] 开机自启动（electron-auto-launch）
+- [x] 主题切换（Light/Dark/System，深色主题柔和色调）
+- [x] 最小化到托盘
 
 ##### 5.6.2 快捷键
-- [ ] 全局快捷键注册（呼出/隐藏窗口）
-- [ ] 应用内快捷键自定义
+- [ ] 全局快捷键注册（呼出/隐藏窗口）❌ 未实现
+- [ ] 应用内快捷键自定义❌ 未实现
 
 ##### 5.6.3 数据管理
-- [ ] Gateway 配置导入/导出
-- [ ] 本地缓存清理
+- [ ] Gateway 配置导入/导出❌ 未实现
+- [ ] 本地缓存清理❌ 未实现
 
 ### 6. 开发里程碑
 
