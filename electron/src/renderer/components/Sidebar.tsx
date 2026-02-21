@@ -9,12 +9,32 @@ const menuItems = [
   { id: 'skills', label: '技能', icon: PuzzleIcon },
 ] as const;
 
+const baseChannelOptions = ['desktop', 'telegram', 'webui'] as const;
+const channelLabelMap: Record<string, string> = {
+  desktop: '桌面',
+  telegram: 'Telegram',
+  webui: 'WebUI'
+};
+
+function extractSessionChannel(sessionKey: string): string {
+  const prefix = sessionKey.split(':', 2)[0];
+  if (!prefix) {
+    return 'unknown';
+  }
+  return prefix.toLowerCase();
+}
+
+function getChannelLabel(channel: string): string {
+  return channelLabelMap[channel] || channel;
+}
+
 export function Sidebar() {
   const dispatch = useDispatch();
   const { activeTab, sidebarCollapsed, currentSessionKey } = useSelector((state: RootState) => state.ui);
   const { status } = useSelector((state: RootState) => state.gateway);
   const { getSessions } = useGateway();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [channelFilter, setChannelFilter] = useState<string>('desktop');
 
   const buildDraftSession = (key: string): SessionSummary => ({
     key,
@@ -48,20 +68,36 @@ export function Sidebar() {
     };
   }, [getSessions]);
 
+  const mergedSessions = useMemo(() => {
+    const currentChannel = extractSessionChannel(currentSessionKey);
+    if (!sessions.some((session) => session.key === currentSessionKey) && currentChannel === 'desktop') {
+      return [buildDraftSession(currentSessionKey), ...sessions];
+    }
+    return sessions;
+  }, [sessions, currentSessionKey]);
+
+  const channelOptions = useMemo(() => {
+    const dynamicChannels = mergedSessions
+      .map((session) => extractSessionChannel(session.key))
+      .filter((channel) => !baseChannelOptions.includes(channel as (typeof baseChannelOptions)[number]))
+      .filter((channel, index, arr) => arr.indexOf(channel) === index)
+      .sort((a, b) => a.localeCompare(b));
+
+    return [...baseChannelOptions, ...dynamicChannels];
+  }, [mergedSessions]);
+
   const sessionItems = useMemo(
-    () => {
-      const desktopSessions = sessions.filter((session) => session.key.startsWith('desktop:'));
-      if (currentSessionKey.startsWith('desktop:') && !desktopSessions.some((session) => session.key === currentSessionKey)) {
-        return [buildDraftSession(currentSessionKey), ...desktopSessions].slice(0, 8);
-      }
-      return desktopSessions.slice(0, 8);
-    },
-    [sessions, currentSessionKey]
+    () =>
+      mergedSessions
+        .filter((session) => extractSessionChannel(session.key) === channelFilter)
+        .slice(0, 8),
+    [mergedSessions, channelFilter]
   );
 
   const handleNewTask = () => {
     const newSessionKey = `desktop:${Date.now()}`;
     setSessions((prev) => [buildDraftSession(newSessionKey), ...prev.filter((session) => session.key !== newSessionKey)]);
+    setChannelFilter('desktop');
     dispatch(setCurrentSessionKey(newSessionKey));
     dispatch(setActiveTab('chat'));
   };
@@ -108,9 +144,27 @@ export function Sidebar() {
         {!sidebarCollapsed && (
           <div className="mt-4 px-2">
             <p className="text-xs font-semibold text-foreground/45 tracking-wide mb-2">任务记录</p>
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {channelOptions.map((channel) => {
+                const isActive = channelFilter === channel;
+                return (
+                  <button
+                    key={channel}
+                    onClick={() => setChannelFilter(channel)}
+                    className={`rounded-md border px-2 py-1 text-xs transition-colors ${
+                      isActive
+                        ? 'border-primary/40 bg-primary/15 text-primary'
+                        : 'border-border bg-background/70 text-foreground/60 hover:bg-background'
+                    }`}
+                  >
+                    {getChannelLabel(channel)}
+                  </button>
+                );
+              })}
+            </div>
             <div className="space-y-1">
               {sessionItems.length === 0 && (
-                <div className="text-xs text-foreground/45 px-2 py-1">暂无桌面任务记录</div>
+                <div className="text-xs text-foreground/45 px-2 py-1">暂无 {getChannelLabel(channelFilter)} 任务记录</div>
               )}
 
               {sessionItems.map((session) => {

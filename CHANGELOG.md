@@ -4,6 +4,15 @@
 
 ### Bug 修复
 
+#### 任务记录新增按渠道筛选（默认桌面）
+- **侧边栏任务记录支持渠道按钮筛选**（`electron/src/renderer/components/Sidebar.tsx`）
+  - 新增渠道筛选按钮，默认 `desktop`，可切换 `telegram`、`webui`，并自动兼容其他已出现渠道
+  - “新建任务”会自动切回 `desktop` 过滤，确保桌面会话创建后可立即看到
+  - 空列表提示按当前渠道动态显示
+- **验证**
+  - `cd electron && npm run build`
+  - `make build`
+
 #### 新建任务后左侧任务记录支持即时显示
 - **修复任务记录列表仅依赖后端轮询导致的新建延迟**（`electron/src/renderer/components/Sidebar.tsx`）
   - 新建任务时本地立即插入草稿会话项（`desktop:<timestamp>`）
