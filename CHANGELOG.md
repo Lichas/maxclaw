@@ -72,6 +72,28 @@
   - `internal/cron/service.go` - 任务完成通知（修改）
   - `internal/cli/gateway.go` - 连接通知处理器（修改）
 
+#### WebSocket 实时推送（`internal/webui/websocket.go`, `electron/src/renderer/services/websocket.ts`）
+- **功能**：实现 WebSocket 实时消息推送，替代 HTTP 轮询
+- **实现**：
+  - 后端：`internal/webui/websocket.go` - WebSocket Hub
+    - 使用 gorilla/websocket 库
+    - 管理客户端连接，支持广播消息
+    - `/ws` 端点处理 WebSocket 连接升级
+  - 前端：`electron/src/renderer/services/websocket.ts` - WebSocketClient
+    - 单例模式 WebSocket 客户端
+    - 自动重连机制（指数退避，最多5次）
+    - 事件订阅/取消订阅接口
+    - 连接状态管理
+  - 集成到 `App.tsx`，应用启动时自动连接
+- **验证**
+  - `cd electron && npm run build` 成功
+  - `make build` 成功
+- **文件**
+  - `internal/webui/websocket.go` - WebSocket Hub（新增）
+  - `internal/webui/server.go` - 集成 WebSocket 路由（修改）
+  - `electron/src/renderer/services/websocket.ts` - WebSocket 客户端（新增）
+  - `electron/src/renderer/App.tsx` - 集成 WebSocket 连接（修改）
+
 ### Bug 修复
 
 #### 修复深色主题样式（`electron/src/renderer/styles/globals.css`, 各视图组件）
