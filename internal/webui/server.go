@@ -32,6 +32,7 @@ type Server struct {
 	uiDir             string
 	skillsStateMgr    *workspaceSkills.StateManager
 	notificationStore *NotificationStore
+	wsHub             *WebSocketHub
 }
 
 type messagePayload struct {
@@ -44,7 +45,7 @@ type messagePayload struct {
 }
 
 func NewServer(cfg *config.Config, agentLoop *agent.AgentLoop, cronService *cron.Service, registry *channels.Registry) *Server {
-	return &Server{
+	s := &Server{
 		cfg:               cfg,
 		agentLoop:         agentLoop,
 		cronService:       cronService,
@@ -52,7 +53,13 @@ func NewServer(cfg *config.Config, agentLoop *agent.AgentLoop, cronService *cron
 		uiDir:             findUIDir(),
 		skillsStateMgr:    workspaceSkills.NewStateManager(filepath.Join(cfg.Agents.Defaults.Workspace, ".skills_state.json")),
 		notificationStore: NewNotificationStore(),
+		wsHub:             NewWebSocketHub(),
 	}
+
+	// Start WebSocket hub
+	go s.wsHub.Run()
+
+	return s
 }
 
 func (s *Server) Start(ctx context.Context, host string, port int) error {
@@ -74,6 +81,7 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	mux.HandleFunc("/api/uploads/", s.handleGetUpload)
 	mux.HandleFunc("/api/notifications/pending", s.handleGetPendingNotifications)
 	mux.HandleFunc("/api/notifications/", s.handleMarkNotificationDelivered)
+	mux.HandleFunc("/ws", s.handleWebSocket)
 
 	mux.Handle("/", spaHandler(s.uiDir))
 
