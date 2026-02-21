@@ -30,6 +30,7 @@
     "electron-store": "^8.1.0",
     "electron-updater": "^6.1.7",
     "mermaid": "^10.9.5",
+    "react-dropzone": "^15.0.0",
     "react-markdown": "^10.1.0",
     "react-syntax-highlighter": "^16.1.0",
     "remark-gfm": "^4.0.1"

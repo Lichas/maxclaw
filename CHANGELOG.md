@@ -20,6 +20,30 @@
   - `electron/src/renderer/components/MarkdownRenderer.tsx` - 集成 mermaid
   - `electron/src/renderer/styles/globals.css` - 添加 mermaid 样式
 
+#### 文件附件支持（`electron/src/renderer/components/FileAttachment.tsx`, `internal/webui/upload.go`）
+- **功能**：聊天界面支持文件拖拽上传和附件发送
+- **实现**：
+  - 后端：`internal/webui/upload.go` - 新增 `/api/upload` 和 `/api/uploads/` 接口
+    - 支持 multipart/form-data 文件上传
+    - 文件存储到 `workspace/.uploads/`，使用 UUID 生成唯一文件名
+    - 安全校验：防止路径遍历攻击
+  - 前端：`electron/src/renderer/components/FileAttachment.tsx` - 新组件
+    - 集成 react-dropzone 支持拖拽上传
+    - 支持点击选择文件（使用 Electron 原生文件对话框）
+    - 显示已上传文件列表，支持删除
+    - 上传中显示 loading 状态
+  - 集成到 `ChatView`，消息发送时携带附件信息
+  - 用户消息显示附件列表
+- **验证**
+  - `cd electron && npm run build` 成功
+  - `make build` 成功
+  - 后端上传 API 测试：`curl -F "file=@test.txt" http://localhost:18890/api/upload`
+- **文件**
+  - `internal/webui/upload.go` - 后端上传处理（新增）
+  - `internal/webui/server.go` - 添加路由（修改）
+  - `electron/src/renderer/components/FileAttachment.tsx` - 附件组件（新增）
+  - `electron/src/renderer/views/ChatView.tsx` - 集成附件功能（修改）
+
 ### Bug 修复
 
 #### 修复深色主题样式（`electron/src/renderer/styles/globals.css`, 各视图组件）

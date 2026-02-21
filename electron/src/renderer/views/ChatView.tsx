@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState, setCurrentSessionKey } from '../store';
 import { GatewayStreamEvent, SkillSummary, useGateway } from '../hooks/useGateway';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
+import { FileAttachment, UploadedFile } from '../components/FileAttachment';
 
 interface Message {
   id: string;
@@ -10,6 +11,7 @@ interface Message {
   content: string;
   timestamp: Date;
   timeline?: TimelineEntry[];
+  attachments?: UploadedFile[];
 }
 
 interface StreamActivity {
@@ -75,6 +77,9 @@ export function ChatView() {
   const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string; provider: string }>>([]);
   const [currentModel, setCurrentModel] = useState<string>('');
   const [modelsLoading, setModelsLoading] = useState(false);
+
+  // File attachments state
+  const [attachedFiles, setAttachedFiles] = useState<UploadedFile[]>([]);
 
   // @mention skills state
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -632,11 +637,13 @@ export function ChatView() {
       id: `${Date.now()}`,
       role: 'user',
       content: input.trim(),
-      timestamp: new Date()
+      timestamp: new Date(),
+      attachments: attachedFiles.length > 0 ? [...attachedFiles] : undefined
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
+    setAttachedFiles([]);
     setSkillsPickerOpen(false);
     resetTypingState();
 
@@ -853,10 +860,12 @@ export function ChatView() {
             <FolderIcon className="h-3.5 w-3.5" />
             project
           </span>
-          <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1">
-            <PaperClipIcon className="h-3.5 w-3.5" />
-            附件
-          </span>
+          <FileAttachment
+            attachedFiles={attachedFiles}
+            onFilesUploaded={(files) => setAttachedFiles((prev) => [...prev, ...files])}
+            onRemoveFile={(id) => setAttachedFiles((prev) => prev.filter((f) => f.id !== id))}
+            disabled={isLoading}
+          />
           <button
             type="button"
             onClick={() => setSkillsPickerOpen((prev) => !prev)}
@@ -978,8 +987,23 @@ export function ChatView() {
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {message.role === 'user' ? (
-              <div className="max-w-3xl rounded-2xl bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground">
-                <pre className="whitespace-pre-wrap break-all font-sans">{message.content}</pre>
+              <div className="max-w-3xl space-y-2">
+                {message.attachments && message.attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {message.attachments.map((file) => (
+                      <div
+                        key={file.id}
+                        className="flex items-center gap-1.5 rounded-lg bg-secondary px-2.5 py-1.5 text-xs text-foreground"
+                      >
+                        <DocumentIcon className="h-3.5 w-3.5 text-foreground/60" />
+                        <span className="max-w-[150px] truncate">{file.filename}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="rounded-2xl bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground">
+                  <pre className="whitespace-pre-wrap break-all font-sans">{message.content}</pre>
+                </div>
               </div>
             ) : (
               <div className="w-full px-1 py-1 text-foreground">
@@ -1026,10 +1050,10 @@ function FolderIcon({ className }: { className?: string }) {
   );
 }
 
-function PaperClipIcon({ className }: { className?: string }) {
+function DocumentIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828L18 9.828a4 4 0 00-5.657-5.657L5.757 10.757a6 6 0 108.486 8.486L20 13.486" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     </svg>
   );
 }
