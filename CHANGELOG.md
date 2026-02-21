@@ -2,13 +2,81 @@
 
 ## [Unreleased]
 
+### Bug 修复
+
+#### 修复 GitHub 技能安装子目录支持（`internal/webui/server.go`）
+- **问题**：`installSkillFromGitHub` 无法处理子目录 URL，如 `https://github.com/obra/superpowers/tree/main/skills`
+- **原因**：原实现直接使用 `git clone` 整个仓库，不支持稀疏检出
+- **修复**：
+  - 新增 `parseGitHubURL` 函数解析 GitHub URL，支持提取仓库、分支和子目录路径
+  - 新增 `moveDirContents`、`copyDir`、`copyFile` 辅助函数
+  - 修改 `installSkillFromGitHub` 使用 git sparse checkout 只检出指定子目录
+  - 支持格式：
+    - `https://github.com/user/repo` - 完整仓库
+    - `https://github.com/user/repo/tree/branch/subdir` - 指定子目录
+    - `https://github.com/user/repo/blob/branch/path/file` - 自动提取目录
+- **验证**
+  - `make build`
+  - URL 解析测试通过
+
+#### 修复技能安装 API 404 错误（`internal/webui/server.go`）
+- **问题**：`POST /api/skills/install` 返回 404 Not Found
+- **原因**：后端没有实现技能安装接口
+- **修复**：
+  - 新增 `handleSkillsInstall` 处理三种安装方式：
+    - `github` - 使用 `git clone` 克隆仓库
+    - `zip` - 使用 `unzip` 解压文件
+    - `folder` - 使用 `cp -r` 复制文件夹
+  - 新增 `extractRepoName` 从 GitHub URL 提取仓库名
+- **验证**
+  - `go build ./...`
+  - `make build`
+
+#### 修复技能开关 API 404/405 错误（`internal/webui/server.go`, `internal/skills/state.go`, `internal/agent/skills.go`）
+- **问题**：`/api/skills/{name}/enable` POST 请求返回 404 Not Found
+- **原因**：后端没有实现技能启用/禁用状态管理
+- **修复**：
+  - 新增 `internal/skills/state.go` - 技能状态管理器（启用/禁用状态持久化到 `.skills_state.json`）
+  - 修改 `handleSkills` 返回技能时包含 `enabled` 字段
+  - 新增 `handleSkillsByName` 处理 `enable`/`disable` POST 请求
+  - 修改 `buildSkillsSection` 过滤掉禁用的技能，确保禁用的技能不会进入 LLM 上下文
+- **验证**
+  - `go build ./...`
+  - `make build`
+
+#### 修复会话重命名和删除 API 405 错误（`internal/webui/server.go`, `internal/session/manager.go`）
+- **问题**：`/api/sessions/{key}/rename` POST 请求返回 405 Method Not Allowed
+- **原因**：`handleSessionByKey` 只处理了 GET 请求
+- **修复**：
+  - 添加 POST 处理（rename）和 DELETE 处理（delete session）
+  - 在 `session.Manager` 中添加 `Delete` 方法
+- **验证**
+  - `go build ./...`
+  - `make build`
+
 ### 新增功能
 
+#### 实现定时任务 REST API（`internal/webui/server.go`）
+- **添加缺失的 `/api/cron` 接口**
+  - `GET /api/cron` - 列出所有定时任务
+  - `POST /api/cron` - 创建任务（支持 cron/every/at 三种调度类型）
+  - `POST /api/cron/{id}/enable` - 启用任务
+  - `POST /api/cron/{id}/disable` - 禁用任务
+  - `DELETE /api/cron/{id}` - 删除任务
+- **数据格式转换** - 前端格式（title/prompt/cron/every/at/workDir）与内部 cron.Job 格式互转
+- **验证**
+  - `go build ./...`
+  - `make build`
+
+#### 重构会话搜索到独立视图（`electron/src/renderer/views/SessionsView.tsx`, `electron/src/renderer/components/Sidebar.tsx`）
+- **移除侧边栏搜索框**，保留渠道筛选下拉框
+- **新建独立「搜索任务」页面**
+  - 搜索框 + 渠道筛选组合查询
+  - 会话卡片列表展示（标题、渠道、消息数、时间）
+  - 支持重命名、删除操作
+  - 点击会话进入聊天
+
 #### Electron 功能增强（消息搜索、会话管理、@提及、快捷命令）
-- **实现消息搜索功能**（`electron/src/renderer/components/Sidebar.tsx`）
-  - 侧边栏任务记录区域添加搜索输入框
-  - 支持按最后消息内容或会话 key 搜索
-  - 实时过滤会话列表，最多显示 20 条匹配结果
 - **实现会话删除与重命名**（`electron/src/renderer/components/Sidebar.tsx`, `electron/src/renderer/hooks/useGateway.ts`）
   - 每个会话项显示更多操作菜单（三点图标）
   - 删除会话：确认后调用 `/api/sessions/{key}` DELETE 接口
