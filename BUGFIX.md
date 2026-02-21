@@ -352,3 +352,28 @@ tail -f /Users/lua/.nanobot/logs/channels.log
 - `go test ./internal/cli ./pkg/tools` 通过。
 - `go test ./internal/cli` 通过。
 - `make build` 通过。
+
+## 2026-02-20 - Electron 安装后无法启动（`Electron failed to install correctly`）
+
+**问题**：`cd electron && npm run dev` / `npm run start` 可完成前置构建，但 Electron 主进程启动时直接报错：
+`Electron failed to install correctly, please delete node_modules/electron and try installing again`。  
+同时在进入主进程后，Gateway 子进程也可能因为二进制路径错误报 `ENOENT`。
+
+**根因**：
+1. `electron` npm 包已安装，但 `node_modules/electron/path.txt` 与 `dist/` 不存在，说明 Electron 二进制下载未完成或中断；`npm install` 在 lock 不变时不会自动修复这个损坏状态。  
+2. 主进程使用 `process.env.NODE_ENV === 'development'` 判断开发态，在当前 Vite build + `electron .` 链路下并不稳定，导致路径分支选错。  
+3. `GatewayManager.getBinaryPath()` 的开发态相对路径层级错误，实际指向了不存在的位置，触发 `spawn ... ENOENT`。  
+
+**修复措施**：
+- 新增 `electron/scripts/ensure-electron.cjs`，在启动前检查 Electron 二进制是否完整，缺失时自动执行 `node node_modules/electron/install.js` 自愈。
+- 将自愈流程接入 `electron/package.json`：`postinstall`、`electron:start`、`start` 均先执行 `npm run ensure:electron`。
+- 新增 `electron/.npmrc` 的 Electron 镜像配置，降低二进制下载失败概率。
+- `electron/src/main/index.ts` 改为 `app.isPackaged` 判断开发态，并支持 `ELECTRON_RENDERER_URL` / `VITE_DEV_SERVER_URL` 优先加载。
+- `electron/src/main/gateway.ts` 重写 Gateway 二进制定位逻辑（开发态/打包态分离，支持候选路径与 `NANOBOT_BINARY_PATH` 覆盖），并在缺失时给出明确错误信息。  
+
+**验证**：
+- `cd electron && npm install --foreground-scripts`（确认可自动补齐 Electron 二进制）
+- `cd electron && npm run dev`（不再出现 `Electron failed to install correctly`）
+- `cd electron && npm run start`（可启动主进程）
+- `cd electron && npm run build`
+- `make build`

@@ -10,6 +10,8 @@
 - **修复主进程开发态判断与 Gateway 可执行文件定位**（`electron/src/main/index.ts`, `electron/src/main/gateway.ts`）
   - 开发态改为基于 `app.isPackaged` 判断；支持 `ELECTRON_RENDERER_URL`/`VITE_DEV_SERVER_URL`，否则回退加载构建产物
   - Gateway 二进制路径按开发态/打包态分别解析，并在缺失时给出明确错误
+- **补充故障根因文档**（`BUGFIX.md`）
+  - 增加本次 `Electron failed to install correctly` 与 Gateway `ENOENT` 的证据、根因和修复链路总结
 - **验证**
   - `cd electron && npm install --foreground-scripts`
   - `cd electron && npm run dev`（冒烟，确认不再报 `Electron failed to install correctly`）
