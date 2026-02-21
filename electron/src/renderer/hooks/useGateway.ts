@@ -5,6 +5,22 @@ interface SendMessageResult {
   sessionKey: string;
 }
 
+export interface SessionSummary {
+  key: string;
+  messageCount: number;
+  lastMessageAt?: string;
+  lastMessage?: string;
+}
+
+export interface SessionDetail {
+  key: string;
+  messages: Array<{
+    role: string;
+    content: string;
+    timestamp: string;
+  }>;
+}
+
 export function useGateway() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +122,14 @@ export function useGateway() {
   const getSessions = useCallback(async () => {
     const response = await fetch('http://localhost:18890/api/sessions');
     if (!response.ok) throw new Error('Failed to fetch sessions');
-    return response.json();
+    const data = await response.json() as { sessions?: SessionSummary[] };
+    return data.sessions || [];
+  }, []);
+
+  const getSession = useCallback(async (sessionKey: string) => {
+    const response = await fetch(`http://localhost:18890/api/sessions/${encodeURIComponent(sessionKey)}`);
+    if (!response.ok) throw new Error('Failed to fetch session');
+    return response.json() as Promise<SessionDetail>;
   }, []);
 
   const getConfig = useCallback(async () => {
@@ -115,5 +138,5 @@ export function useGateway() {
     return response.json();
   }, []);
 
-  return { sendMessage, getSessions, getConfig, isLoading, error };
+  return { sendMessage, getSessions, getSession, getConfig, isLoading, error };
 }

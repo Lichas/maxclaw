@@ -1,34 +1,71 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, setActiveTab } from '../store';
+import { RootState, setActiveTab, setCurrentSessionKey } from '../store';
+import { SessionSummary, useGateway } from '../hooks/useGateway';
 
 const menuItems = [
-  { id: 'chat', label: 'Chat', icon: ChatIcon },
-  { id: 'sessions', label: 'History', icon: HistoryIcon },
-  { id: 'scheduled', label: 'Scheduled', icon: ClockIcon },
-  { id: 'skills', label: 'Skills', icon: PuzzleIcon },
-  { id: 'settings', label: 'Settings', icon: SettingsIcon },
+  { id: 'sessions', label: '搜索任务', icon: SearchIcon },
+  { id: 'scheduled', label: '定时任务', icon: ClockIcon },
+  { id: 'skills', label: '技能', icon: PuzzleIcon },
 ] as const;
 
 export function Sidebar() {
   const dispatch = useDispatch();
-  const { activeTab, sidebarCollapsed } = useSelector((state: RootState) => state.ui);
+  const { activeTab, sidebarCollapsed, currentSessionKey } = useSelector((state: RootState) => state.ui);
   const { status } = useSelector((state: RootState) => state.gateway);
+  const { getSessions } = useGateway();
+  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSessions = async () => {
+      try {
+        const list = await getSessions();
+        if (!cancelled) {
+          setSessions(list);
+        }
+      } catch {
+        if (!cancelled) {
+          setSessions([]);
+        }
+      }
+    };
+
+    void loadSessions();
+    const timer = setInterval(() => void loadSessions(), 15000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [getSessions]);
+
+  const sessionItems = useMemo(
+    () => sessions.filter((session) => session.key.startsWith('desktop:')).slice(0, 8),
+    [sessions]
+  );
+
+  const handleNewTask = () => {
+    const newSessionKey = `desktop:${Date.now()}`;
+    dispatch(setCurrentSessionKey(newSessionKey));
+    dispatch(setActiveTab('chat'));
+  };
 
   return (
     <aside
-      className={`bg-secondary border-r border-border flex flex-col transition-all duration-200 ${
+      className={`bg-secondary/90 border-r border-border flex flex-col transition-all duration-200 ${
         sidebarCollapsed ? 'w-16' : 'w-64'
       }`}
     >
       {/* New Chat Button */}
       <div className="p-3">
         <button
-          onClick={() => dispatch(setActiveTab('chat'))}
-          className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2.5 px-4 hover:bg-primary/90 transition-colors"
+          onClick={handleNewTask}
+          className="w-full flex items-center justify-center gap-2 bg-primary/15 text-primary border border-primary/30 rounded-lg py-2.5 px-4 hover:bg-primary/20 transition-colors"
         >
-          <PlusIcon className="w-5 h-5" />
-          {!sidebarCollapsed && <span className="font-medium">New Chat</span>}
+          <EditIcon className="w-5 h-5" />
+          {!sidebarCollapsed && <span className="font-medium">新建任务</span>}
         </button>
       </div>
 
@@ -44,8 +81,8 @@ export function Sidebar() {
               onClick={() => dispatch(setActiveTab(item.id))}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${
                 isActive
-                  ? 'bg-background text-foreground'
-                  : 'text-foreground/60 hover:bg-background/50 hover:text-foreground'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-foreground/60 hover:bg-background/60 hover:text-foreground'
               }`}
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
@@ -53,10 +90,54 @@ export function Sidebar() {
             </button>
           );
         })}
+
+        {!sidebarCollapsed && (
+          <div className="mt-4 px-2">
+            <p className="text-xs font-semibold text-foreground/45 tracking-wide mb-2">任务记录</p>
+            <div className="space-y-1">
+              {sessionItems.length === 0 && (
+                <div className="text-xs text-foreground/45 px-2 py-1">暂无桌面任务记录</div>
+              )}
+
+              {sessionItems.map((session) => {
+                const isCurrent = session.key === currentSessionKey;
+                return (
+                  <button
+                    key={session.key}
+                    onClick={() => {
+                      dispatch(setCurrentSessionKey(session.key));
+                      dispatch(setActiveTab('chat'));
+                    }}
+                    className={`w-full text-left px-2 py-2 rounded-lg transition-colors ${
+                      isCurrent ? 'bg-background text-foreground' : 'hover:bg-background/60'
+                    }`}
+                  >
+                    <p className="text-sm font-medium truncate">
+                      {session.lastMessage || session.key.replace(/^desktop:/, '新任务')}
+                    </p>
+                    <p className="text-xs text-foreground/45 mt-1">
+                      {formatRelativeTime(session.lastMessageAt)}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Gateway Status */}
-      <div className="p-3 border-t border-border">
+      <button
+        onClick={() => dispatch(setActiveTab('settings'))}
+        className={`mx-3 mb-2 mt-1 flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/65 hover:bg-background/60 transition-colors ${
+          sidebarCollapsed ? 'justify-center' : ''
+        }`}
+      >
+        <SettingsIcon className="w-4 h-4 flex-shrink-0" />
+        {!sidebarCollapsed && <span className="text-sm">设置</span>}
+      </button>
+
+      <div className="p-3 border-t border-border/70">
         <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${sidebarCollapsed ? 'justify-center' : ''}`}>
           <div
             className={`w-2 h-2 rounded-full flex-shrink-0 ${
@@ -93,6 +174,14 @@ function HistoryIcon({ className }: { className?: string }) {
   );
 }
 
+function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35m1.35-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  );
+}
+
 function ClockIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,10 +207,30 @@ function SettingsIcon({ className }: { className?: string }) {
   );
 }
 
-function PlusIcon({ className }: { className?: string }) {
+function EditIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 20h9" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.5 3.5a2.1 2.1 0 113 3L7 19l-4 1 1-4 12.5-12.5z" />
     </svg>
   );
+}
+
+function formatRelativeTime(time?: string): string {
+  if (!time) return '刚刚';
+
+  const date = new Date(time);
+  if (Number.isNaN(date.getTime())) {
+    return '刚刚';
+  }
+
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.max(1, Math.floor(diffMs / 60000));
+  if (minutes < 60) return `${minutes}m`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
 }

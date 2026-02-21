@@ -4,6 +4,19 @@
 
 ### Bug 修复
 
+#### 重构 Electron 新任务界面并接入桌面会话切换
+- **重构 Chat 空态为“新任务启动页”**（`electron/src/renderer/views/ChatView.tsx`）
+  - 增加欢迎区、大输入面板、任务模板卡片，贴近你给的参考布局
+  - 保留已有对话流；进入会话后切换为消息流 + 底部输入框
+- **接入会话选择与新建任务会话**（`electron/src/renderer/components/Sidebar.tsx`, `electron/src/renderer/store/index.ts`, `electron/src/renderer/hooks/useGateway.ts`）
+  - 左侧新增“任务记录”列表并轮询 `/api/sessions`
+  - 点击记录可切换 `currentSessionKey` 并加载对应历史
+  - “新建任务”按钮会创建新的 `desktop:<timestamp>` 会话键
+- **验证**
+  - `cd electron && npm run build`
+  - `cd electron && npm run dev`（冒烟，确认界面与会话切换链路可启动）
+  - `make build`
+
 #### 修复拼音输入法（IME）回车上屏时误触发发送
 - **修复 Chat 输入框 Enter 逻辑**（`electron/src/renderer/views/ChatView.tsx`）
   - 增加 `compositionstart/compositionend` 状态跟踪
