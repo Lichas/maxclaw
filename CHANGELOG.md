@@ -11,9 +11,12 @@
   - 抽取窗口打开流程，`activate` 重新开窗时会加载内容并更新窗口引用
   - IPC 主处理器改为幂等注册，并在窗口切换后向当前窗口推送状态
   - `app.whenReady()` 初始化链路增加显式 `catch`，避免 unhandled rejection
+- **修复 `file://` 加载下 renderer 资源绝对路径导致白屏**（`electron/index.html`, `electron/vite.renderer.config.ts`）
+  - renderer 构建改为相对资源路径（`./assets/...`），避免 `loadFile` 时脚本/CSS 指向无效的 `/assets/...`
 - **验证**
   - `cd electron && npm run build`
   - `cd electron && npm run dev`（冒烟，确认不再出现 `Attempted to register a second handler for 'window:minimize'`）
+  - `cd electron && npm run dev`（冒烟，确认 Gateway 启动后窗口不再空白）
   - `make build`
 
 #### 修复 Electron 安装后无法启动（二进制缺失与 Gateway 路径错误）
