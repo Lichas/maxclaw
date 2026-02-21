@@ -254,5 +254,23 @@ export function useGateway() {
     return response.json();
   }, []);
 
-  return { sendMessage, getSessions, getSession, getConfig, getSkills, getModels, updateConfig, isLoading, error };
+  const deleteSession = useCallback(async (sessionKey: string) => {
+    const response = await fetch(`http://localhost:18890/api/sessions/${encodeURIComponent(sessionKey)}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Failed to delete session');
+    return response.json();
+  }, []);
+
+  const renameSession = useCallback(async (sessionKey: string, newTitle: string) => {
+    const response = await fetch(`http://localhost:18890/api/sessions/${encodeURIComponent(sessionKey)}/rename`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: newTitle })
+    });
+    if (!response.ok) throw new Error('Failed to rename session');
+    return response.json();
+  }, []);
+
+  return { sendMessage, getSessions, getSession, getConfig, getSkills, getModels, updateConfig, deleteSession, renameSession, isLoading, error };
 }

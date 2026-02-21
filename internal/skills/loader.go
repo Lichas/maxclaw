@@ -19,6 +19,7 @@ var (
 type Entry struct {
 	Name        string
 	DisplayName string
+	Description string
 	Path        string
 	Body        string
 }
@@ -72,7 +73,7 @@ func Discover(skillsDir string) ([]Entry, error) {
 		}
 
 		skillName := inferSkillName(path)
-		title, body := extractTitleAndBody(string(content))
+		title, description, body := extractSkillMetadata(string(content))
 		if title == "" {
 			title = skillName
 		}
@@ -85,6 +86,7 @@ func Discover(skillsDir string) ([]Entry, error) {
 		entries = append(entries, Entry{
 			Name:        strings.ToLower(skillName),
 			DisplayName: title,
+			Description: description,
 			Path:        path,
 			Body:        body,
 		})
@@ -181,6 +183,53 @@ func extractTitleAndBody(content string) (string, string) {
 		break
 	}
 	return "", content
+}
+
+// extractSkillMetadata parses skill file with YAML frontmatter support
+// Returns: title, description, body
+func extractSkillMetadata(content string) (string, string, string) {
+	content = strings.TrimSpace(content)
+	lines := strings.Split(content, "\n")
+
+	// Check for YAML frontmatter
+	if len(lines) >= 3 && strings.TrimSpace(lines[0]) == "---" {
+		var frontMatterEnd int
+		for i := 1; i < len(lines); i++ {
+			if strings.TrimSpace(lines[i]) == "---" {
+				frontMatterEnd = i
+				break
+			}
+		}
+
+		if frontMatterEnd > 0 {
+			// Parse frontmatter
+			var title, description string
+			for i := 1; i < frontMatterEnd; i++ {
+				trimmed := strings.TrimSpace(lines[i])
+				if strings.HasPrefix(trimmed, "name:") {
+					title = strings.TrimSpace(strings.TrimPrefix(trimmed, "name:"))
+				} else if strings.HasPrefix(trimmed, "description:") {
+					description = strings.TrimSpace(strings.TrimPrefix(trimmed, "description:"))
+				}
+			}
+
+			// Get body after frontmatter
+			bodyStart := frontMatterEnd + 1
+			if bodyStart < len(lines) {
+				body := strings.Join(lines[bodyStart:], "\n")
+				// Also try to extract H1 as display name if frontmatter name is missing
+				if title == "" {
+					title, _ = extractTitleAndBody(body)
+				}
+				return title, description, body
+			}
+			return title, description, ""
+		}
+	}
+
+	// Fall back to standard markdown parsing
+	title, body := extractTitleAndBody(content)
+	return title, "", body
 }
 
 // extractRefs 从用户消息中提取技能引用。

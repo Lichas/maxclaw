@@ -76,6 +76,73 @@ export function ChatView() {
   const [currentModel, setCurrentModel] = useState<string>('');
   const [modelsLoading, setModelsLoading] = useState(false);
 
+  // @mention skills state
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const mentionRef = useRef<HTMLDivElement>(null);
+
+  // Slash commands state
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashQuery, setSlashQuery] = useState('');
+  const [slashIndex, setSlashIndex] = useState(0);
+  const slashRef = useRef<HTMLDivElement>(null);
+
+  const slashCommands = useMemo(
+    () => [
+      {
+        id: 'new',
+        label: '/new',
+        description: '新建会话',
+        action: () => {
+          const newSessionKey = `desktop:${Date.now()}`;
+          dispatch(setCurrentSessionKey(newSessionKey));
+          setMessages([]);
+          resetTypingState();
+        }
+      },
+      {
+        id: 'clear',
+        label: '/clear',
+        description: '清空当前会话消息',
+        action: () => {
+          setMessages([]);
+          resetTypingState();
+        }
+      },
+      {
+        id: 'help',
+        label: '/help',
+        description: '显示帮助信息',
+        action: () => {
+          const helpMessage: Message = {
+            id: `${Date.now()}-help`,
+            role: 'assistant',
+            content:
+              '**可用命令：**\n\n' +
+              '- `/new` - 创建新会话\n' +
+              '- `/clear` - 清空当前会话\n' +
+              '- `/help` - 显示帮助信息\n\n' +
+              '**快捷操作：**\n' +
+              '- `@技能名` - 在消息中引用技能\n' +
+              '- `Shift+Enter` - 换行\n' +
+              '- `Enter` - 发送消息',
+            timestamp: new Date()
+          };
+          setMessages((prev) => [...prev, helpMessage]);
+        }
+      }
+    ],
+    [dispatch]
+  );
+
+  const filteredSlashCommands = useMemo(() => {
+    const query = slashQuery.toLowerCase();
+    return slashCommands.filter(
+      (cmd) => cmd.label.toLowerCase().includes(query) || cmd.description.toLowerCase().includes(query)
+    );
+  }, [slashCommands, slashQuery]);
+
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const skillsPickerRef = useRef<HTMLDivElement>(null);
   const isComposingRef = useRef(false);
@@ -244,6 +311,132 @@ export function ChatView() {
         .includes(query)
     );
   }, [availableSkills, skillsQuery]);
+
+  const mentionSkills = useMemo(() => {
+    const query = mentionQuery.toLowerCase();
+    return availableSkills
+      .filter((skill) =>
+        [skill.displayName, skill.name, skill.description || '']
+          .join(' ')
+          .toLowerCase()
+          .includes(query)
+      )
+      .slice(0, 8);
+  }, [availableSkills, mentionQuery]);
+
+  const insertMention = (skillName: string) => {
+    const beforeCursor = input.slice(0, input.lastIndexOf('@' + mentionQuery));
+    const afterCursor = input.slice(input.lastIndexOf('@' + mentionQuery) + 1 + mentionQuery.length);
+    setInput(beforeCursor + '@' + skillName + ' ' + afterCursor);
+    setMentionOpen(false);
+    setMentionQuery('');
+    setMentionIndex(0);
+    inputRef.current?.focus();
+  };
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = event.target.value;
+    const cursorPosition = event.target.selectionStart || 0;
+
+    // Check for @mention
+    const textBeforeCursor = value.slice(0, cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+    const lastSlashIndex = textBeforeCursor.lastIndexOf('/');
+
+    // Handle @mention
+    if (lastAtIndex !== -1 && (lastSlashIndex === -1 || lastAtIndex > lastSlashIndex)) {
+      const textAfterAt = textBeforeCursor.slice(lastAtIndex + 1);
+      const hasSpaceAfterAt = textAfterAt.includes(' ');
+      const isNewAt = textAfterAt === '' || (!hasSpaceAfterAt && textAfterAt.length < 20);
+
+      if (isNewAt && (lastAtIndex === 0 || /\s/.test(textBeforeCursor[lastAtIndex - 1]))) {
+        setMentionQuery(textAfterAt);
+        setMentionOpen(true);
+        setMentionIndex(0);
+        setSlashOpen(false);
+        return;
+      }
+    }
+
+    // Handle /slash commands (only at start)
+    if (lastSlashIndex !== -1 && lastSlashIndex === 0 && textBeforeCursor.length > 0) {
+      const textAfterSlash = textBeforeCursor.slice(1);
+      const hasSpace = textAfterSlash.includes(' ');
+
+      if (!hasSpace && textAfterSlash.length < 20) {
+        setSlashQuery(textAfterSlash);
+        setSlashOpen(true);
+        setSlashIndex(0);
+        setMentionOpen(false);
+        return;
+      }
+    }
+
+    setMentionOpen(false);
+    setSlashOpen(false);
+    setInput(value);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle mention navigation
+    if (mentionOpen && mentionSkills.length > 0) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setMentionIndex((prev) => (prev + 1) % mentionSkills.length);
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setMentionIndex((prev) => (prev - 1 + mentionSkills.length) % mentionSkills.length);
+        return;
+      }
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+        insertMention(mentionSkills[mentionIndex].name);
+        return;
+      }
+      if (event.key === 'Escape') {
+        setMentionOpen(false);
+        return;
+      }
+    }
+
+    // Handle slash command navigation
+    if (slashOpen && filteredSlashCommands.length > 0) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setSlashIndex((prev) => (prev + 1) % filteredSlashCommands.length);
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setSlashIndex((prev) => (prev - 1 + filteredSlashCommands.length) % filteredSlashCommands.length);
+        return;
+      }
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+        const cmd = filteredSlashCommands[slashIndex];
+        if (cmd) {
+          cmd.action();
+          setInput('');
+        }
+        setSlashOpen(false);
+        return;
+      }
+      if (event.key === 'Escape') {
+        setSlashOpen(false);
+        return;
+      }
+    }
+
+    const nativeEvent = event.nativeEvent as KeyboardEvent & { isComposing?: boolean; keyCode?: number };
+    const isComposing = isComposingRef.current || nativeEvent.isComposing === true || nativeEvent.keyCode === 229;
+
+    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
+      event.preventDefault();
+      void handleSubmit(event);
+    }
+  };
 
   const toggleSkill = (name: string) => {
     setSelectedSkills((prev) =>
@@ -505,16 +698,6 @@ export function ChatView() {
     }
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const nativeEvent = event.nativeEvent as KeyboardEvent & { isComposing?: boolean; keyCode?: number };
-    const isComposing = isComposingRef.current || nativeEvent.isComposing === true || nativeEvent.keyCode === 229;
-
-    if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
-      event.preventDefault();
-      void handleSubmit(event);
-    }
-  };
-
   const applyTemplate = (prompt: string) => {
     setInput(prompt);
     inputRef.current?.focus();
@@ -589,7 +772,7 @@ export function ChatView() {
       <textarea
         ref={inputRef}
         value={input}
-        onChange={(event) => setInput(event.target.value)}
+        onChange={handleInputChange}
         onCompositionStart={() => {
           isComposingRef.current = true;
         }}
@@ -601,6 +784,68 @@ export function ChatView() {
         rows={landing ? 8 : 4}
         className="w-full resize-none border-none bg-transparent px-2 py-1 text-sm leading-6 text-foreground placeholder:text-foreground/35 focus:outline-none"
       />
+
+      {/* @mention dropdown */}
+      {mentionOpen && mentionSkills.length > 0 && (
+        <div
+          ref={mentionRef}
+          className="absolute left-4 bottom-24 z-40 w-64 rounded-xl border border-border bg-background p-2 shadow-xl"
+        >
+          <div className="mb-1 px-2 py-1 text-xs text-foreground/50">选择技能</div>
+          <div className="max-h-48 overflow-y-auto">
+            {mentionSkills.map((skill, index) => (
+              <button
+                key={skill.name}
+                type="button"
+                onClick={() => insertMention(skill.name)}
+                className={`w-full rounded-lg px-2 py-2 text-left text-xs transition-colors ${
+                  index === mentionIndex ? 'bg-primary/15 text-primary' : 'hover:bg-secondary'
+                }`}
+              >
+                <div className="font-medium">@{skill.displayName || skill.name}</div>
+                {skill.description && (
+                  <div className="truncate text-foreground/50">{skill.description}</div>
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="mt-1 border-t border-border/50 px-2 pt-1 text-[10px] text-foreground/40">
+            ↑↓ 选择 · Enter/Tab 确认 · Esc 关闭
+          </div>
+        </div>
+      )}
+
+      {/* /slash command dropdown */}
+      {slashOpen && filteredSlashCommands.length > 0 && (
+        <div
+          ref={slashRef}
+          className="absolute left-4 bottom-24 z-40 w-56 rounded-xl border border-border bg-background p-2 shadow-xl"
+        >
+          <div className="mb-1 px-2 py-1 text-xs text-foreground/50">快捷命令</div>
+          <div className="max-h-48 overflow-y-auto">
+            {filteredSlashCommands.map((cmd, index) => (
+              <button
+                key={cmd.id}
+                type="button"
+                onClick={() => {
+                  cmd.action();
+                  setInput('');
+                  setSlashOpen(false);
+                }}
+                className={`w-full rounded-lg px-2 py-2 text-left transition-colors ${
+                  index === slashIndex ? 'bg-primary/15 text-primary' : 'hover:bg-secondary'
+                }`}
+              >
+                <div className="font-medium text-sm">{cmd.label}</div>
+                <div className="text-xs text-foreground/50">{cmd.description}</div>
+              </button>
+            ))}
+          </div>
+          <div className="mt-1 border-t border-border/50 px-2 pt-1 text-[10px] text-foreground/40">
+            ↑↓ 选择 · Enter/Tab 确认 · Esc 关闭
+          </div>
+        </div>
+      )}
 
       <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/70 pt-3">
         <div ref={skillsPickerRef} className="relative flex items-center gap-2 text-xs text-foreground/55">

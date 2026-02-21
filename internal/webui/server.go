@@ -406,10 +406,14 @@ func (s *Server) handleSkills(w http.ResponseWriter, r *http.Request) {
 
 	results := make([]skillSummary, 0, len(entries))
 	for _, entry := range entries {
+		desc := entry.Description
+		if desc == "" {
+			desc = summarizeSkillBody(entry.Body, 120)
+		}
 		results = append(results, skillSummary{
 			Name:        entry.Name,
 			DisplayName: entry.DisplayName,
-			Description: summarizeSkillBody(entry.Body, 120),
+			Description: desc,
 			Enabled:     s.skillsStateMgr.IsEnabled(entry.Name),
 		})
 	}

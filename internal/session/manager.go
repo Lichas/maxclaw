@@ -142,6 +142,23 @@ func (m *Manager) loadFromFile(key string) *Session {
 	return &session
 }
 
+// Delete 删除会话
+func (m *Manager) Delete(key string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Remove from memory
+	delete(m.sessions, key)
+
+	// Remove from disk
+	filePath := m.getSessionFilePath(key)
+	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to delete session file: %w", err)
+	}
+
+	return nil
+}
+
 // saveToFile 保存会话到文件
 func (m *Manager) saveToFile(session *Session) error {
 	filePath := m.getSessionFilePath(session.Key)

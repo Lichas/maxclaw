@@ -35,6 +35,13 @@ func (b *ContextBuilder) buildSkillsSection(currentMessage string, explicitSkill
 		return ""
 	}
 
+	// Filter out disabled skills
+	stateMgr := skills.NewStateManager(filepath.Join(b.workspace, ".skills_state.json"))
+	entries = stateMgr.FilterEnabled(entries)
+	if len(entries) == 0 {
+		return ""
+	}
+
 	selected := entries
 	if len(explicitSkillRefs) > 0 {
 		selectorMessage := strings.TrimSpace(strings.Join(skillRefsToSelectors(explicitSkillRefs), " "))

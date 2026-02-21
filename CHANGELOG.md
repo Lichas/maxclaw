@@ -4,6 +4,17 @@
 
 ### Bug 修复
 
+#### 修复技能描述显示（`internal/skills/loader.go`, `internal/webui/server.go`）
+- **问题**：技能市场界面中技能卡片显示 "---" 而非实际描述
+- **原因**：技能文件使用 YAML frontmatter 存储描述，但 `Entry` 结构体没有 `Description` 字段，`extractTitleAndBody` 也未解析 frontmatter
+- **修复**：
+  - 在 `Entry` 结构体中添加 `Description` 字段
+  - 新增 `extractSkillMetadata` 函数解析 YAML frontmatter，提取 `name` 和 `description`
+  - 修改 API 优先使用 `entry.Description`，回退到从 body 生成摘要
+- **验证**
+  - `make build`
+  - `curl http://localhost:18890/api/skills` 返回正确描述
+
 #### 修复 GitHub 技能安装子目录支持（`internal/webui/server.go`）
 - **问题**：`installSkillFromGitHub` 无法处理子目录 URL，如 `https://github.com/obra/superpowers/tree/main/skills`
 - **原因**：原实现直接使用 `git clone` 整个仓库，不支持稀疏检出

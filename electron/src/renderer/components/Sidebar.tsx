@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, setActiveTab, setCurrentSessionKey } from '../store';
 import { SessionSummary, useGateway } from '../hooks/useGateway';
@@ -32,9 +32,15 @@ export function Sidebar() {
   const dispatch = useDispatch();
   const { activeTab, sidebarCollapsed, currentSessionKey } = useSelector((state: RootState) => state.ui);
   const { status } = useSelector((state: RootState) => state.gateway);
-  const { getSessions } = useGateway();
+  const { getSessions, deleteSession, renameSession } = useGateway();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [channelFilter, setChannelFilter] = useState<string>('desktop');
+
+  // Delete/Rename state
+  const [editingSession, setEditingSession] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const buildDraftSession = (key: string): SessionSummary => ({
     key,
@@ -42,6 +48,56 @@ export function Sidebar() {
     lastMessage: '新任务',
     lastMessageAt: new Date().toISOString()
   });
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenMenuKey(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleDelete = async (sessionKey: string) => {
+    if (!confirm('确定要删除这个会话吗？此操作不可恢复。')) return;
+    try {
+      await deleteSession(sessionKey);
+      setSessions((prev) => prev.filter((s) => s.key !== sessionKey));
+      if (currentSessionKey === sessionKey) {
+        dispatch(setCurrentSessionKey(''));
+      }
+    } catch {
+      alert('删除会话失败');
+    }
+    setOpenMenuKey(null);
+  };
+
+  const handleStartRename = (session: SessionSummary) => {
+    setEditingSession(session.key);
+    setEditTitle(session.lastMessage || session.key);
+    setOpenMenuKey(null);
+  };
+
+  const handleRename = async () => {
+    if (!editingSession || !editTitle.trim()) {
+      setEditingSession(null);
+      return;
+    }
+    try {
+      await renameSession(editingSession, editTitle.trim());
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.key === editingSession ? { ...s, lastMessage: editTitle.trim() } : s
+        )
+      );
+    } catch {
+      alert('重命名失败');
+    }
+    setEditingSession(null);
+    setEditTitle('');
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -90,7 +146,7 @@ export function Sidebar() {
     () =>
       mergedSessions
         .filter((session) => extractSessionChannel(session.key) === channelFilter)
-        .slice(0, 8),
+        .slice(0, 20),
     [mergedSessions, channelFilter]
   );
 
@@ -158,31 +214,96 @@ export function Sidebar() {
               </select>
               <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/45" />
             </div>
-            <div className="space-y-1">
+
+            <div className="space-y-1 mt-2">
               {sessionItems.length === 0 && (
-                <div className="text-sm text-foreground/45 px-2 py-1">暂无 {getChannelLabel(channelFilter)} 任务记录</div>
+                <div className="text-sm text-foreground/45 px-2 py-1">
+                  暂无 {getChannelLabel(channelFilter)} 任务记录
+                </div>
               )}
 
               {sessionItems.map((session) => {
                 const isCurrent = session.key === currentSessionKey;
+                const isEditing = editingSession === session.key;
+                const isMenuOpen = openMenuKey === session.key;
+
+                if (isEditing) {
+                  return (
+                    <div key={session.key} className="px-2 py-2 rounded-lg bg-background">
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRename();
+                          if (e.key === 'Escape') setEditingSession(null);
+                        }}
+                        onBlur={handleRename}
+                        autoFocus
+                        className="w-full text-sm font-medium bg-transparent border-b border-primary/50 focus:outline-none focus:border-primary text-foreground"
+                      />
+                      <p className="text-xs text-foreground/40 mt-1">
+                        按 Enter 确认，Esc 取消
+                      </p>
+                    </div>
+                  );
+                }
+
                 return (
-                  <button
+                  <div
                     key={session.key}
-                    onClick={() => {
-                      dispatch(setCurrentSessionKey(session.key));
-                      dispatch(setActiveTab('chat'));
-                    }}
-                    className={`w-full text-left px-2 py-2 rounded-lg transition-colors ${
+                    className={`group relative flex items-center gap-1 px-2 py-2 rounded-lg transition-colors ${
                       isCurrent ? 'bg-background text-foreground' : 'hover:bg-background/60'
                     }`}
                   >
-                    <p className="text-sm font-medium leading-5 truncate">
-                      {session.lastMessage || session.key.replace(/^desktop:/, '新任务')}
-                    </p>
-                    <p className="text-sm text-foreground/50 leading-5 mt-0.5">
-                      {formatRelativeTime(session.lastMessageAt)}
-                    </p>
-                  </button>
+                    <button
+                      onClick={() => {
+                        dispatch(setCurrentSessionKey(session.key));
+                        dispatch(setActiveTab('chat'));
+                      }}
+                      className="flex-1 text-left min-w-0"
+                    >
+                      <p className="text-sm font-medium leading-5 truncate">
+                        {session.lastMessage || session.key.replace(/^desktop:/, '新任务')}
+                      </p>
+                      <p className="text-sm text-foreground/50 leading-5 mt-0.5">
+                        {formatRelativeTime(session.lastMessageAt)}
+                      </p>
+                    </button>
+
+                    {/* Menu Button */}
+                    <div className="relative" ref={isMenuOpen ? menuRef : undefined}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuKey(isMenuOpen ? null : session.key);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-foreground/10 transition-opacity"
+                      >
+                        <DotsIcon className="w-4 h-4 text-foreground/50" />
+                      </button>
+
+                      {/* Dropdown Menu */}
+                      {isMenuOpen && (
+                        <div className="absolute right-0 top-full mt-1 w-32 rounded-lg border border-border bg-background shadow-lg z-50 py-1">
+                          <button
+                            onClick={() => handleStartRename(session)}
+                            className="w-full px-3 py-2 text-sm text-left hover:bg-secondary flex items-center gap-2"
+                          >
+                            <EditIcon className="w-3.5 h-3.5" />
+                            重命名
+                          </button>
+                          <button
+                            onClick={() => handleDelete(session.key)}
+                            className="w-full px-3 py-2 text-sm text-left hover:bg-red-50 text-red-600 flex items-center gap-2"
+                          >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                            删除
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -190,32 +311,28 @@ export function Sidebar() {
         )}
       </nav>
 
-      {/* Gateway Status */}
-      <button
-        onClick={() => dispatch(setActiveTab('settings'))}
-        className={`mx-3 mb-2 mt-1 flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/65 hover:bg-background/60 transition-colors ${
-          sidebarCollapsed ? 'justify-center' : ''
-        }`}
-      >
-        <SettingsIcon className="w-4 h-4 flex-shrink-0" />
-        {!sidebarCollapsed && <span className="text-sm">设置</span>}
-      </button>
-
+      {/* Settings Button with Gateway Status */}
       <div className="p-3 border-t border-border/70">
-        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${sidebarCollapsed ? 'justify-center' : ''}`}>
-          <div
-            className={`w-2 h-2 rounded-full flex-shrink-0 ${
-              status === 'running'
-                ? 'bg-green-500'
-                : status === 'error'
-                ? 'bg-red-500'
-                : 'bg-yellow-500'
-            }`}
-          />
-          {!sidebarCollapsed && (
-            <span className="text-sm text-foreground/60 capitalize">{status}</span>
-          )}
-        </div>
+        <button
+          onClick={() => dispatch(setActiveTab('settings'))}
+          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/65 hover:bg-background/60 transition-colors ${
+            sidebarCollapsed ? 'justify-center' : ''
+          }`}
+        >
+          <div className="relative">
+            <SettingsIcon className="w-4 h-4 flex-shrink-0" />
+            <div
+              className={`absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${
+                status === 'running'
+                  ? 'bg-green-500'
+                  : status === 'error'
+                  ? 'bg-red-500'
+                  : 'bg-yellow-500'
+              }`}
+            />
+          </div>
+          {!sidebarCollapsed && <span className="text-sm">设置</span>}
+        </button>
       </div>
     </aside>
   );
@@ -284,6 +401,22 @@ function ChevronDownIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+}
+
+function DotsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 20 20">
+      <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+    </svg>
+  );
+}
+
+function TrashIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
   );
 }
