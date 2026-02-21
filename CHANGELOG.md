@@ -4,6 +4,14 @@
 
 ### Bug 修复
 
+#### 新建任务后左侧任务记录支持即时显示
+- **修复任务记录列表仅依赖后端轮询导致的新建延迟**（`electron/src/renderer/components/Sidebar.tsx`）
+  - 新建任务时本地立即插入草稿会话项（`desktop:<timestamp>`）
+  - 列表渲染时自动合并当前会话键，避免在会话尚未落盘前“看不到新任务”
+- **验证**
+  - `cd electron && npm run build`
+  - `make build`
+
 #### Electron 历史会话支持时序 timeline 回放
 - **后端将执行时序持久化到会话消息**（`internal/session/manager.go`, `internal/agent/loop.go`）
   - 会话消息新增 `timeline` 字段（活动步骤 + 文本增量）

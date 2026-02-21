@@ -16,6 +16,13 @@ export function Sidebar() {
   const { getSessions } = useGateway();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
 
+  const buildDraftSession = (key: string): SessionSummary => ({
+    key,
+    messageCount: 0,
+    lastMessage: '新任务',
+    lastMessageAt: new Date().toISOString()
+  });
+
   useEffect(() => {
     let cancelled = false;
 
@@ -42,12 +49,19 @@ export function Sidebar() {
   }, [getSessions]);
 
   const sessionItems = useMemo(
-    () => sessions.filter((session) => session.key.startsWith('desktop:')).slice(0, 8),
-    [sessions]
+    () => {
+      const desktopSessions = sessions.filter((session) => session.key.startsWith('desktop:'));
+      if (currentSessionKey.startsWith('desktop:') && !desktopSessions.some((session) => session.key === currentSessionKey)) {
+        return [buildDraftSession(currentSessionKey), ...desktopSessions].slice(0, 8);
+      }
+      return desktopSessions.slice(0, 8);
+    },
+    [sessions, currentSessionKey]
   );
 
   const handleNewTask = () => {
     const newSessionKey = `desktop:${Date.now()}`;
+    setSessions((prev) => [buildDraftSession(newSessionKey), ...prev.filter((session) => session.key !== newSessionKey)]);
     dispatch(setCurrentSessionKey(newSessionKey));
     dispatch(setActiveTab('chat'));
   };
