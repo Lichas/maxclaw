@@ -1,8 +1,9 @@
-appId: com.maxclaw.desktop
-productName: maxclaw
+appId: com.lichas.maxclaw
+productName: Maxclaw
 directories:
   output: release
   buildResources: build
+copyright: Copyright © 2026
 files:
   - dist/**/*
   - assets/**/*
@@ -31,3 +32,4 @@ publish:
   provider: github
   owner: Lichas
   repo: maxclaw
+  releaseType: release

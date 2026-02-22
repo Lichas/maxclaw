@@ -64,6 +64,13 @@ const zh: Translations = {
   'settings.dataManagement': '数据管理',
   'settings.export': '导出备份',
   'settings.import': '导入备份',
+  'settings.updates': '自动更新',
+  'settings.checkUpdate': '检查更新',
+  'settings.checking': '正在检查...',
+  'settings.downloadUpdate': '下载更新',
+  'settings.downloading': '正在下载...',
+  'settings.updateReady': '更新已下载，准备安装',
+  'settings.installAndRestart': '安装并重启',
 
   // Skills
   'skills.title': '技能市场',
@@ -164,6 +171,13 @@ const en: Translations = {
   'settings.dataManagement': 'Data Management',
   'settings.export': 'Export Backup',
   'settings.import': 'Import Backup',
+  'settings.updates': 'Auto Update',
+  'settings.checkUpdate': 'Check for Updates',
+  'settings.checking': 'Checking...',
+  'settings.downloadUpdate': 'Download Update',
+  'settings.downloading': 'Downloading...',
+  'settings.updateReady': 'Update ready to install',
+  'settings.installAndRestart': 'Install and Restart',
 
   // Skills
   'skills.title': 'Skills Marketplace',

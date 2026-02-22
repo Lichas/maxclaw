@@ -8,6 +8,7 @@ import { NotificationManager } from './notifications';
 import { ShortcutManager, DEFAULT_SHORTCUTS } from './shortcuts';
 import log from 'electron-log';
 import Store from 'electron-store';
+import { autoUpdater } from 'electron-updater';
 
 // Avoid crashing on detached stdio (EPIPE) in desktop runtime.
 const swallowBrokenPipe = (error: NodeJS.ErrnoException) => {
@@ -109,6 +110,57 @@ async function ensureMainWindow(): Promise<void> {
   return openingMainWindow;
 }
 
+function setupAutoUpdater(): void {
+  // Skip in development
+  if (isDev) {
+    log.info('Auto-updater disabled in development');
+    return;
+  }
+
+  autoUpdater.logger = log;
+  autoUpdater.autoDownload = false; // Manual download
+
+  autoUpdater.on('checking-for-update', () => {
+    log.info('Checking for update...');
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    log.info('Update available:', info);
+    mainWindow?.webContents.send('update:available', info);
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    log.info('Update not available');
+  });
+
+  autoUpdater.on('error', (err) => {
+    log.error('Update error:', err);
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    mainWindow?.webContents.send('update:progress', progress);
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    log.info('Update downloaded:', info);
+    mainWindow?.webContents.send('update:downloaded', info);
+  });
+
+  // Check on startup (after 5 seconds)
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(err => {
+      log.error('Failed to check for updates:', err);
+    });
+  }, 5000);
+
+  // Check every hour
+  setInterval(() => {
+    autoUpdater.checkForUpdates().catch(err => {
+      log.error('Failed to check for updates:', err);
+    });
+  }, 60 * 60 * 1000);
+}
+
 async function initializeApp(): Promise<void> {
   log.info('Initializing Maxclaw Desktop App');
 
@@ -128,6 +180,9 @@ async function initializeApp(): Promise<void> {
 
   // Initialize tray
   initializeTray(mainWindow);
+
+  // Setup auto-updater
+  setupAutoUpdater();
 }
 
 // App event handlers

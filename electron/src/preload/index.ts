@@ -95,6 +95,25 @@ const electronAPI = {
     import: () => ipcRenderer.invoke('data:import'),
   },
 
+  // Auto-updater
+  update: {
+    check: () => ipcRenderer.invoke('update:check'),
+    download: () => ipcRenderer.invoke('update:download'),
+    install: () => ipcRenderer.invoke('update:install'),
+    onAvailable: (callback: (info: unknown) => void) => {
+      ipcRenderer.on('update:available', (_, info) => callback(info));
+      return () => ipcRenderer.removeAllListeners('update:available');
+    },
+    onProgress: (callback: (progress: unknown) => void) => {
+      ipcRenderer.on('update:progress', (_, progress) => callback(progress));
+      return () => ipcRenderer.removeAllListeners('update:progress');
+    },
+    onDownloaded: (callback: () => void) => {
+      ipcRenderer.on('update:downloaded', callback);
+      return () => ipcRenderer.removeAllListeners('update:downloaded');
+    },
+  },
+
   terminal: {
     start: (sessionKey: string, options?: { cols?: number; rows?: number }) =>
       ipcRenderer.invoke('terminal:start', sessionKey, options),

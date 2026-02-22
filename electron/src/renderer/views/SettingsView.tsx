@@ -59,6 +59,10 @@ export function SettingsView() {
     feishu: { enabled: false, appId: '', appSecret: '', verificationToken: '', listenAddr: '0.0.0.0:18792', webhookPath: '/feishu/events', allowFrom: [] },
   });
 
+  // Update states
+  const [updateStatus, setUpdateStatus] = useState<'checking' | 'available' | 'downloading' | 'downloaded' | 'none'>('none');
+  const [updateInfo, setUpdateInfo] = useState<{ version: string; releaseDate?: string } | null>(null);
+
   useEffect(() => {
     // Load app settings
     window.electronAPI.config.get().then((config) => {
@@ -114,6 +118,21 @@ export function SettingsView() {
     window.electronAPI.shortcuts?.get?.().then((current: Record<string, string>) => {
       setShortcuts(prev => ({ ...prev, ...current }));
     }).catch(console.error);
+
+    // Setup update listeners
+    const unsubscribeAvailable = window.electronAPI.update?.onAvailable?.((info: { version: string; releaseDate?: string }) => {
+      setUpdateStatus('available');
+      setUpdateInfo(info);
+    });
+
+    const unsubscribeDownloaded = window.electronAPI.update?.onDownloaded?.(() => {
+      setUpdateStatus('downloaded');
+    });
+
+    return () => {
+      unsubscribeAvailable?.();
+      unsubscribeDownloaded?.();
+    };
   }, []);
 
   // Sync with store changes
@@ -168,6 +187,24 @@ export function SettingsView() {
     } else if (result?.error) {
       alert(`导入失败: ${result.error}`);
     }
+  };
+
+  const handleCheckUpdate = async () => {
+    setUpdateStatus('checking');
+    const result = await window.electronAPI.update?.check?.();
+    if (!result?.updateInfo) {
+      setUpdateStatus('none');
+      alert(t('settings.noUpdate') || '当前已是最新版本');
+    }
+  };
+
+  const handleDownload = async () => {
+    setUpdateStatus('downloading');
+    await window.electronAPI.update?.download?.();
+  };
+
+  const handleInstall = () => {
+    window.electronAPI.update?.install?.();
   };
 
   const handleAddProvider = (preset: typeof PRESET_PROVIDERS[0]) => {
@@ -530,6 +567,52 @@ export function SettingsView() {
                     <p className="text-xs text-foreground/50">
                       导出包含配置和会话数据，导入将覆盖当前配置
                     </p>
+                  </div>
+                </section>
+
+                <section className="rounded-xl border border-border bg-card">
+                  <div className="border-b border-border px-4 py-3">
+                    <h3 className="text-base font-semibold">{t('settings.updates')}</h3>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    {updateStatus === 'none' && (
+                      <button
+                        onClick={handleCheckUpdate}
+                        className="px-4 py-2 bg-secondary rounded-lg text-sm font-medium hover:bg-border transition-colors"
+                      >
+                        {t('settings.checkUpdate')}
+                      </button>
+                    )}
+                    {updateStatus === 'checking' && (
+                      <p className="text-sm text-foreground/60">{t('settings.checking')}</p>
+                    )}
+                    {updateStatus === 'available' && updateInfo && (
+                      <div className="space-y-3">
+                        <p className="text-sm">
+                          新版本可用: <span className="font-semibold">{updateInfo.version}</span>
+                        </p>
+                        <button
+                          onClick={handleDownload}
+                          className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          {t('settings.downloadUpdate')}
+                        </button>
+                      </div>
+                    )}
+                    {updateStatus === 'downloading' && (
+                      <p className="text-sm text-foreground/60">{t('settings.downloading')}</p>
+                    )}
+                    {updateStatus === 'downloaded' && (
+                      <div className="space-y-3">
+                        <p className="text-sm text-green-600">{t('settings.updateReady')}</p>
+                        <button
+                          onClick={handleInstall}
+                          className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          {t('settings.installAndRestart')}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </section>
               </div>

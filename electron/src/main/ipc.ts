@@ -10,6 +10,7 @@ import Store from 'electron-store';
 import AutoLaunch from 'auto-launch';
 import log from 'electron-log';
 import JSZip from 'jszip';
+import { autoUpdater } from 'electron-updater';
 import { GatewayManager } from './gateway';
 import { NotificationManager } from './notifications';
 import { ShortcutManager } from './shortcuts';
@@ -829,6 +830,29 @@ export function createIPCHandlers(
 
   // Keep Node process from being blocked by this timer on shutdown.
   gatewayStatusTimer.unref();
+
+  // Update IPC handlers
+  ipcMain.handle('update:check', async () => {
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      return { success: true, updateInfo: result?.updateInfo };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  });
+
+  ipcMain.handle('update:download', async () => {
+    try {
+      await autoUpdater.downloadUpdate();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  });
+
+  ipcMain.handle('update:install', () => {
+    autoUpdater.quitAndInstall();
+  });
 
   // Data export/import IPC
   ipcMain.handle('data:export', async () => {
