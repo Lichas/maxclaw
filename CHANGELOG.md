@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 修复 Electron 主进程偶发 `write EPIPE` 崩溃（日志输出到断开管道）
+- **变更**：主进程对 `stdout/stderr` 的 `EPIPE` 错误做安全吞掉处理，并禁用 `electron-log` 的 console transport（保留文件日志），避免日志写入断开管道导致进程异常退出。
+- **位置**：`electron/src/main/index.ts`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 终端实现升级为 VS Code/Codex 同类方案（node-pty + xterm）
 - **变更**：聊天页右上角 `Terminal` toggle 保留，但底部终端面板从简化 shell 输出升级为 `node-pty` 伪终端 + `@xterm/xterm` 终端仿真，支持真实终端输入、ANSI 控制序列、窗口自适应 resize；新增 `terminal:resize` IPC 与专用 `TerminalPanel` 组件。
 - **位置**：`electron/src/renderer/components/TerminalPanel.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/main/ipc.ts`、`electron/src/preload/index.ts`、`electron/src/renderer/types/electron.d.ts`、`electron/vite.main.config.ts`、`electron/package.json`。

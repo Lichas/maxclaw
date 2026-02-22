@@ -7,6 +7,18 @@ import { createIPCHandlers } from './ipc';
 import { NotificationManager } from './notifications';
 import log from 'electron-log';
 
+// Avoid crashing on detached stdio (EPIPE) in desktop runtime.
+const swallowBrokenPipe = (error: NodeJS.ErrnoException) => {
+  if (error?.code === 'EPIPE') {
+    return;
+  }
+};
+
+process.stdout?.on('error', swallowBrokenPipe);
+process.stderr?.on('error', swallowBrokenPipe);
+
+// Keep file logging, but disable console transport to avoid writing to broken pipes.
+log.transports.console.level = false;
 log.initialize();
 
 let mainWindow: BrowserWindow | null = null;
