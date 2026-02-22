@@ -5,6 +5,14 @@ interface SendMessageResult {
   sessionKey: string;
 }
 
+interface MessageAttachmentPayload {
+  id: string;
+  filename: string;
+  size: number;
+  url: string;
+  path?: string;
+}
+
 export interface SkillSummary {
   name: string;
   displayName: string;
@@ -171,7 +179,8 @@ export function useGateway() {
     sessionKey: string,
     onDelta: (delta: string) => void,
     onEvent?: (event: GatewayStreamEvent) => void,
-    selectedSkills?: string[]
+    selectedSkills?: string[],
+    attachments?: MessageAttachmentPayload[]
   ): Promise<SendMessageResult> => {
     setIsLoading(true);
     setError(null);
@@ -189,6 +198,13 @@ export function useGateway() {
           channel: 'desktop',
           chatId: sessionKey,
           selectedSkills: (selectedSkills || []).filter(Boolean),
+          attachments: (attachments || []).map((item) => ({
+            id: item.id,
+            filename: item.filename,
+            size: item.size,
+            url: item.url,
+            path: item.path || ''
+          })),
           stream: true
         })
       });

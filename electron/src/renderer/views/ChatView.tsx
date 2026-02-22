@@ -829,7 +829,8 @@ export function ChatView() {
           }
           appendActivityToTimeline(activity);
         },
-        selectedSkills
+        selectedSkills,
+        userMessage.attachments
       );
 
       if (result.sessionKey && result.sessionKey !== currentSessionKey) {

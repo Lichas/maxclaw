@@ -38,12 +38,21 @@ type Server struct {
 }
 
 type messagePayload struct {
-	SessionKey     string   `json:"sessionKey"`
-	Content        string   `json:"content"`
-	Channel        string   `json:"channel"`
-	ChatID         string   `json:"chatId"`
-	SelectedSkills []string `json:"selectedSkills,omitempty"`
-	Stream         bool     `json:"stream,omitempty"`
+	SessionKey     string              `json:"sessionKey"`
+	Content        string              `json:"content"`
+	Channel        string              `json:"channel"`
+	ChatID         string              `json:"chatId"`
+	SelectedSkills []string            `json:"selectedSkills,omitempty"`
+	Attachments    []messageAttachment `json:"attachments,omitempty"`
+	Stream         bool                `json:"stream,omitempty"`
+}
+
+type messageAttachment struct {
+	ID       string `json:"id,omitempty"`
+	Filename string `json:"filename,omitempty"`
+	Size     int64  `json:"size,omitempty"`
+	URL      string `json:"url,omitempty"`
+	Path     string `json:"path,omitempty"`
 }
 
 func NewServer(cfg *config.Config, agentLoop *agent.AgentLoop, cronService *cron.Service, registry *channels.Registry) *Server {
@@ -301,7 +310,8 @@ func (s *Server) handleMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := s.agentLoop.ProcessDirectWithSkills(r.Context(), payload.Content, payload.SessionKey, payload.Channel, payload.ChatID, payload.SelectedSkills)
+	enrichedContent := s.enrichContentWithAttachments(payload.Content, payload.Attachments)
+	resp, err := s.agentLoop.ProcessDirectWithSkills(r.Context(), enrichedContent, payload.SessionKey, payload.Channel, payload.ChatID, payload.SelectedSkills)
 	if err != nil {
 		writeError(w, err)
 		if lg := logging.Get(); lg != nil && lg.Web != nil {
@@ -352,7 +362,7 @@ func (s *Server) handleMessageStream(w http.ResponseWriter, r *http.Request, pay
 	var streamWriteErr error
 	resp, err := s.agentLoop.ProcessDirectEventStreamWithSkills(
 		ctx,
-		payload.Content,
+		s.enrichContentWithAttachments(payload.Content, payload.Attachments),
 		payload.SessionKey,
 		payload.Channel,
 		payload.ChatID,
@@ -406,6 +416,64 @@ func (s *Server) handleMessageStream(w http.ResponseWriter, r *http.Request, pay
 	if lg := logging.Get(); lg != nil && lg.Web != nil {
 		lg.Web.Printf("message stream session=%s channel=%s content=%q", payload.SessionKey, payload.Channel, logging.Truncate(payload.Content, 300))
 	}
+}
+
+func (s *Server) enrichContentWithAttachments(content string, attachments []messageAttachment) string {
+	if len(attachments) == 0 {
+		return content
+	}
+
+	type attachmentInfo struct {
+		name string
+		path string
+	}
+
+	items := make([]attachmentInfo, 0, len(attachments))
+	seen := make(map[string]struct{}, len(attachments))
+	uploadsDir := filepath.Join(s.cfg.Agents.Defaults.Workspace, ".uploads")
+
+	for _, att := range attachments {
+		p := strings.TrimSpace(att.Path)
+		if p == "" {
+			if rawURL := strings.TrimSpace(att.URL); rawURL != "" {
+				p = filepath.Join(uploadsDir, filepath.Base(rawURL))
+			}
+		}
+		if p == "" {
+			continue
+		}
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(s.cfg.Agents.Defaults.Workspace, p)
+		}
+		p = filepath.Clean(p)
+		if _, ok := seen[p]; ok {
+			continue
+		}
+		seen[p] = struct{}{}
+
+		name := strings.TrimSpace(att.Filename)
+		if name == "" {
+			name = filepath.Base(p)
+		}
+		items = append(items, attachmentInfo{name: name, path: p})
+	}
+
+	if len(items) == 0 {
+		return content
+	}
+
+	var b strings.Builder
+	b.WriteString(content)
+	b.WriteString("\n\nAttached files (local paths):\n")
+	for _, item := range items {
+		b.WriteString("- ")
+		b.WriteString(item.name)
+		b.WriteString(": `")
+		b.WriteString(item.path)
+		b.WriteString("`\n")
+	}
+	b.WriteString("If the user asks about an attached file, read it from the path above before answering.")
+	return b.String()
 }
 
 func (s *Server) handleSkills(w http.ResponseWriter, r *http.Request) {

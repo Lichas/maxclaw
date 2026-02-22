@@ -18,6 +18,7 @@ type UploadResponse struct {
 	Filename string `json:"filename"`
 	Size     int64  `json:"size"`
 	URL      string `json:"url"`
+	Path     string `json:"path"`
 }
 
 func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +80,7 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		Filename: header.Filename,
 		Size:     size,
 		URL:      fmt.Sprintf("/api/uploads/%s", safeName),
+		Path:     targetPath,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

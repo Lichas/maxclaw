@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 修复附件上下文丢失：上传文件后 Agent 不能感知“这个文件”
+- **变更**：聊天发送链路补齐附件字段透传（Renderer `attachments` -> `/api/message`）；后端在处理消息时将附件本地路径注入到同轮用户输入中（含 URL 回退到 `<workspace>/.uploads/...`），确保 Agent 可直接 `read_file` 读取并总结附件；上传接口返回 `path` 字段供前端透传。
+- **位置**：`electron/src/renderer/components/FileAttachment.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`electron/src/renderer/views/ChatView.tsx`、`internal/webui/upload.go`、`internal/webui/server.go`、`internal/webui/server_test.go`。
+- **验证**：`go test ./internal/webui ./internal/agent ./pkg/tools`、`cd electron && npm run build`、`make build`。
+
 #### 文件“打开”改为打开所在目录 + 右侧预览栏支持拖拽宽度（默认加宽）
 - **变更**：聊天中的文件操作按钮与右侧预览栏操作统一改为“打开所在目录”（不再直接打开文件）；新增预览栏左侧拖拽手柄，可实时调整宽度，并将默认宽度由固定窄栏提升为更宽展示。
 - **位置**：`electron/src/main/ipc.ts`、`electron/src/preload/index.ts`、`electron/src/renderer/types/electron.d.ts`、`electron/src/renderer/components/FilePreviewSidebar.tsx`、`electron/src/renderer/views/ChatView.tsx`。
