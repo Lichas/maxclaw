@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 新建任务模型选择器移至输入框左下并支持默认/记忆选择
+- **变更**：聊天输入区的模型选择器移到左下角工具栏；首次无历史选择时默认使用第一个 provider 的第一个模型；记住上次模型选择并在下次进入时恢复；修复前端更新模型配置时仅提交 `model` 字段导致后端无法落盘的问题，改为写入 `agents.defaults.model`。
+- **位置**：`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 设置页模型配置新增智谱 GLM（编码套餐端点）
 - **变更**：新增 `Zhipu` 预置提供商（默认 `https://open.bigmodel.cn/api/coding/paas/v4`，预置 `glm-4.5 / glm-4.5-air / zai/glm-5`）；后端新增 `zhipu` provider 路由与默认 API Base，支持按 `glm`/`zai` 模型名自动匹配 API Key 与 API Base；补充 provider 连接测试默认端点与文档示例。
 - **位置**：`electron/src/renderer/types/providers.ts`、`internal/providers/registry.go`、`internal/config/schema.go`、`internal/webui/server.go`、`internal/config/config_test.go`、`internal/providers/registry_test.go`、`README.md`、`internal/providers/README.md`。

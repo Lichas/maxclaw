@@ -245,14 +245,34 @@ export function useGateway() {
   }, [getConfig]);
 
   const updateConfig = useCallback(async (updates: { model?: string }) => {
+    const payload: Record<string, unknown> = {};
+
+    if (updates.model) {
+      const config = await getConfig() as { agents?: Record<string, unknown> };
+      const agents = (config.agents || {}) as Record<string, unknown>;
+      const defaults = (agents.defaults as Record<string, unknown> | undefined) || {};
+
+      payload.agents = {
+        ...agents,
+        defaults: {
+          ...defaults,
+          model: updates.model
+        }
+      };
+    }
+
+    if (Object.keys(payload).length === 0) {
+      return getConfig();
+    }
+
     const response = await fetch('http://localhost:18890/api/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
+      body: JSON.stringify(payload)
     });
     if (!response.ok) throw new Error('Failed to update config');
     return response.json();
-  }, []);
+  }, [getConfig]);
 
   const deleteSession = useCallback(async (sessionKey: string) => {
     const response = await fetch(`http://localhost:18890/api/sessions/${encodeURIComponent(sessionKey)}`, {

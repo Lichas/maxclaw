@@ -34,9 +34,26 @@ type TimelineEntry =
     };
 
 const iterationStatusPattern = /^Iteration\s+\d+$/i;
+const MODEL_PREFERENCE_KEY = 'nanobot.chat.preferredModel';
 
 function isIterationStatus(summary: string): boolean {
   return iterationStatusPattern.test(summary.trim());
+}
+
+function loadPreferredModel(): string {
+  try {
+    return window.localStorage.getItem(MODEL_PREFERENCE_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function savePreferredModel(modelId: string): void {
+  try {
+    window.localStorage.setItem(MODEL_PREFERENCE_KEY, modelId);
+  } catch {
+    // Ignore persistence failures (e.g. storage unavailable).
+  }
 }
 
 const starterCards = [
@@ -208,8 +225,24 @@ export function ChatView() {
         const models = await getModels();
         if (cancelled) return;
         setAvailableModels(models);
+        if (models.length === 0) {
+          setCurrentModel('');
+          return;
+        }
+
+        const preferredModel = loadPreferredModel();
+        const preferredExists = preferredModel !== '' && models.some((model) => model.id === preferredModel);
+        const resolvedModel = preferredExists ? preferredModel : models[0].id;
+
+        setCurrentModel(resolvedModel);
+        if (!preferredExists) {
+          savePreferredModel(resolvedModel);
+        }
       } catch {
-        if (!cancelled) setAvailableModels([]);
+        if (!cancelled) {
+          setAvailableModels([]);
+          setCurrentModel('');
+        }
       } finally {
         if (!cancelled) setModelsLoading(false);
       }
@@ -755,9 +788,15 @@ export function ChatView() {
   };
 
   const handleModelChange = async (modelId: string) => {
+    if (!modelId || modelId === currentModel) {
+      return;
+    }
+
+    setCurrentModel(modelId);
+    savePreferredModel(modelId);
+
     try {
       await updateConfig({ model: modelId });
-      setCurrentModel(modelId);
     } catch (err) {
       console.error('Failed to switch model:', err);
     }
@@ -770,21 +809,6 @@ export function ChatView() {
         landing ? 'p-4' : 'p-3'
       }`}
     >
-      {/* Model Selector */}
-      <div className="mb-3 flex items-center gap-2">
-        <CustomSelect
-          value={currentModel}
-          onChange={handleModelChange}
-          options={modelOptions}
-          placeholder="选择模型..."
-          disabled={modelsLoading || isLoading}
-          size="sm"
-          className="min-w-[220px]"
-          triggerClassName="bg-secondary"
-        />
-        {modelsLoading && <span className="text-xs text-foreground/50">加载中...</span>}
-      </div>
-
       <textarea
         ref={inputRef}
         value={input}
@@ -864,82 +888,95 @@ export function ChatView() {
       )}
 
       <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/70 pt-3">
-        <div ref={skillsPickerRef} className="relative flex items-center gap-2 text-xs text-foreground/55">
-          <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1">
-            <FolderIcon className="h-3.5 w-3.5" />
-            project
-          </span>
-          <FileAttachment
-            attachedFiles={attachedFiles}
-            onFilesUploaded={(files) => setAttachedFiles((prev) => [...prev, ...files])}
-            onRemoveFile={(id) => setAttachedFiles((prev) => prev.filter((f) => f.id !== id))}
-            disabled={isLoading}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <CustomSelect
+            value={currentModel}
+            onChange={handleModelChange}
+            options={modelOptions}
+            placeholder="选择模型..."
+            disabled={modelsLoading || isLoading || modelOptions.length === 0}
+            size="sm"
+            className="w-[220px] max-w-full"
+            triggerClassName="bg-secondary"
           />
-          <button
-            type="button"
-            onClick={() => setSkillsPickerOpen((prev) => !prev)}
-            className={`inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors ${
-              selectedSkills.length > 0 || skillsPickerOpen
-                ? 'bg-primary/15 text-primary'
-                : 'bg-secondary text-foreground/70 hover:bg-secondary/80'
-            }`}
-          >
-            <PuzzleIcon className="h-3.5 w-3.5" />
-            skills{selectedSkills.length > 0 ? `(${selectedSkills.length})` : ''}
-          </button>
-          {selectedSkills.length > 0 && (
+          {modelsLoading && <span className="text-xs text-foreground/50">加载中...</span>}
+          <div ref={skillsPickerRef} className="relative flex items-center gap-2 text-xs text-foreground/55">
+            <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1">
+              <FolderIcon className="h-3.5 w-3.5" />
+              project
+            </span>
+            <FileAttachment
+              attachedFiles={attachedFiles}
+              onFilesUploaded={(files) => setAttachedFiles((prev) => [...prev, ...files])}
+              onRemoveFile={(id) => setAttachedFiles((prev) => prev.filter((f) => f.id !== id))}
+              disabled={isLoading}
+            />
             <button
               type="button"
-              onClick={() => setSelectedSkills([])}
-              className="rounded-md border border-border px-1.5 py-1 text-[11px] text-foreground/55 hover:bg-secondary"
+              onClick={() => setSkillsPickerOpen((prev) => !prev)}
+              className={`inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors ${
+                selectedSkills.length > 0 || skillsPickerOpen
+                  ? 'bg-primary/15 text-primary'
+                  : 'bg-secondary text-foreground/70 hover:bg-secondary/80'
+              }`}
             >
-              清空
+              <PuzzleIcon className="h-3.5 w-3.5" />
+              skills{selectedSkills.length > 0 ? `(${selectedSkills.length})` : ''}
             </button>
-          )}
+            {selectedSkills.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelectedSkills([])}
+                className="rounded-md border border-border px-1.5 py-1 text-[11px] text-foreground/55 hover:bg-secondary"
+              >
+                清空
+              </button>
+            )}
 
-          {skillsPickerOpen && (
-            <div className="absolute bottom-10 left-0 z-30 w-80 rounded-xl border border-border bg-background p-3 shadow-xl">
-              <input
-                value={skillsQuery}
-                onChange={(event) => setSkillsQuery(event.target.value)}
-                placeholder="搜索技能"
-                className="mb-2 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
-              />
-              <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
-                {filteredSkills.map((skill) => {
-                  const checked = selectedSkills.includes(skill.name);
-                  return (
-                    <label
-                      key={skill.name}
-                      className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-secondary/70"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleSkill(skill.name)}
-                        className="mt-0.5 h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary/30"
-                      />
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium text-foreground">{skill.displayName || skill.name}</span>
-                        {skill.description && (
-                          <span className="block truncate text-foreground/55">{skill.description}</span>
-                        )}
-                      </span>
-                    </label>
-                  );
-                })}
-                {filteredSkills.length === 0 && (
-                  <div className="px-2 py-1 text-xs text-foreground/45">没有匹配的技能</div>
+            {skillsPickerOpen && (
+              <div className="absolute bottom-10 left-0 z-30 w-80 rounded-xl border border-border bg-background p-3 shadow-xl">
+                <input
+                  value={skillsQuery}
+                  onChange={(event) => setSkillsQuery(event.target.value)}
+                  placeholder="搜索技能"
+                  className="mb-2 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                />
+                <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+                  {filteredSkills.map((skill) => {
+                    const checked = selectedSkills.includes(skill.name);
+                    return (
+                      <label
+                        key={skill.name}
+                        className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-secondary/70"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleSkill(skill.name)}
+                          className="mt-0.5 h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary/30"
+                        />
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium text-foreground">{skill.displayName || skill.name}</span>
+                          {skill.description && (
+                            <span className="block truncate text-foreground/55">{skill.description}</span>
+                          )}
+                        </span>
+                      </label>
+                    );
+                  })}
+                  {filteredSkills.length === 0 && (
+                    <div className="px-2 py-1 text-xs text-foreground/45">没有匹配的技能</div>
+                  )}
+                </div>
+                {skillsLoadError && (
+                  <p className="mt-2 text-xs text-red-500">技能加载失败: {skillsLoadError}</p>
                 )}
+                <p className="mt-2 text-[11px] text-foreground/45">
+                  已选择 {selectedSkills.length} 个技能。未选择时按系统默认策略加载。
+                </p>
               </div>
-              {skillsLoadError && (
-                <p className="mt-2 text-xs text-red-500">技能加载失败: {skillsLoadError}</p>
-              )}
-              <p className="mt-2 text-[11px] text-foreground/45">
-                已选择 {selectedSkills.length} 个技能。未选择时按系统默认策略加载。
-              </p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <button
