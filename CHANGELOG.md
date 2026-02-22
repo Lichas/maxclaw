@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 文件预览栏默认展开优化（新建/历史/回复场景）
+- **变更**：在新建任务、切换历史会话、发送消息并收到回复时，文件预览栏自动恢复展开；启动页（无消息）也接入右侧预览栏，避免进入会话时出现“默认关闭”的体感。
+- **位置**：`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 修复附件上下文丢失：上传文件后 Agent 不能感知“这个文件”
 - **变更**：聊天发送链路补齐附件字段透传（Renderer `attachments` -> `/api/message`）；后端在处理消息时将附件本地路径注入到同轮用户输入中（含 URL 回退到 `<workspace>/.uploads/...`），确保 Agent 可直接 `read_file` 读取并总结附件；上传接口返回 `path` 字段供前端透传。
 - **位置**：`electron/src/renderer/components/FileAttachment.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`electron/src/renderer/views/ChatView.tsx`、`internal/webui/upload.go`、`internal/webui/server.go`、`internal/webui/server_test.go`。

@@ -173,6 +173,7 @@ export function ChatView() {
           dispatch(setCurrentSessionKey(newSessionKey));
           setMessages([]);
           setSessionTitle('New thread');
+          setPreviewSidebarCollapsed(false);
           resetTypingState();
         }
       },
@@ -182,6 +183,7 @@ export function ChatView() {
         description: '清空当前会话消息',
         action: () => {
           setMessages([]);
+          setPreviewSidebarCollapsed(false);
           resetTypingState();
         }
       },
@@ -728,6 +730,7 @@ export function ChatView() {
 
   useEffect(() => {
     let cancelled = false;
+    setPreviewSidebarCollapsed(false);
     setSelectedFileRef(null);
     setPreviewData(null);
     setPreviewLoading(false);
@@ -752,6 +755,7 @@ export function ChatView() {
         setMessages(restored);
         const fallbackTitle = resolveTitleFromMessages(restored);
         setSessionTitle(fallbackTitle);
+        setPreviewSidebarCollapsed(false);
 
         try {
           const sessions = await getSessions();
@@ -775,6 +779,7 @@ export function ChatView() {
         if (!cancelled) {
           setMessages([]);
           setSessionTitle('New thread');
+          setPreviewSidebarCollapsed(false);
           resetTypingState();
         }
       }
@@ -793,6 +798,7 @@ export function ChatView() {
     if (!input.trim() || isLoading) {
       return;
     }
+    setPreviewSidebarCollapsed(false);
 
     const userMessage: Message = {
       id: `${Date.now()}`,
@@ -854,6 +860,7 @@ export function ChatView() {
           timeline: streamingTimelineRef.current.length > 0 ? [...streamingTimelineRef.current] : undefined
         }
       ]);
+      setPreviewSidebarCollapsed(false);
       resetTypingState();
     } catch (err) {
       const errorTimeline = streamingTimelineRef.current.length > 0 ? [...streamingTimelineRef.current] : undefined;
@@ -868,6 +875,7 @@ export function ChatView() {
           timeline: errorTimeline
         }
       ]);
+      setPreviewSidebarCollapsed(false);
     }
   };
 
@@ -1302,42 +1310,60 @@ export function ChatView() {
     </div>
   );
 
+  const renderPreviewSidebar = () => (
+    <FilePreviewSidebar
+      collapsed={previewSidebarCollapsed}
+      width={previewSidebarWidth}
+      selected={selectedFileRef}
+      preview={previewData}
+      loading={previewLoading}
+      onToggle={() => setPreviewSidebarCollapsed((prev) => !prev)}
+      onResize={setPreviewSidebarWidth}
+      onOpenFile={() => {
+        void handleOpenSelectedFile();
+      }}
+    />
+  );
+
   if (isStarterMode) {
     return (
       <div className="h-full flex flex-col bg-card">
         {renderThreadHeader()}
-        <div className="flex-1 overflow-y-auto px-8 py-10">
-          <div className="mx-auto max-w-4xl">
-            <div className="mb-8 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary p-1 shadow-md">
-                <img
-                  src="./icon.png"
-                  alt="maxclaw"
-                  className="h-full w-full rounded-xl object-cover"
-                />
+        <div className="min-h-0 flex flex-1">
+          <div className="flex-1 overflow-y-auto px-8 py-10">
+            <div className="mx-auto max-w-4xl">
+              <div className="mb-8 text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary p-1 shadow-md">
+                  <img
+                    src="./icon.png"
+                    alt="maxclaw"
+                    className="h-full w-full rounded-xl object-cover"
+                  />
+                </div>
+                <h1 className="text-4xl font-semibold text-foreground">开始协作</h1>
+                <p className="mt-3 text-base text-foreground/55">7x24 小时帮你干活的全场景个人助理 Agent</p>
               </div>
-              <h1 className="text-4xl font-semibold text-foreground">开始协作</h1>
-              <p className="mt-3 text-base text-foreground/55">7x24 小时帮你干活的全场景个人助理 Agent</p>
+
+              {renderComposer(true)}
+
+              <section className="mt-10">
+                <p className="mb-3 text-sm font-medium text-foreground/65">任务模板</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {starterCards.map((card) => (
+                    <button
+                      key={card.title}
+                      onClick={() => applyTemplate(card.prompt)}
+                      className="rounded-xl border border-border bg-background px-4 py-4 text-left transition-colors hover:border-primary/45 hover:bg-primary/5"
+                    >
+                      <p className="text-base font-semibold text-foreground">{card.title}</p>
+                      <p className="mt-1 text-sm text-foreground/55">{card.description}</p>
+                    </button>
+                  ))}
+                </div>
+              </section>
             </div>
-
-            {renderComposer(true)}
-
-            <section className="mt-10">
-              <p className="mb-3 text-sm font-medium text-foreground/65">任务模板</p>
-              <div className="grid grid-cols-2 gap-3">
-                {starterCards.map((card) => (
-                  <button
-                    key={card.title}
-                    onClick={() => applyTemplate(card.prompt)}
-                    className="rounded-xl border border-border bg-background px-4 py-4 text-left transition-colors hover:border-primary/45 hover:bg-primary/5"
-                  >
-                    <p className="text-base font-semibold text-foreground">{card.title}</p>
-                    <p className="mt-1 text-sm text-foreground/55">{card.description}</p>
-                  </button>
-                ))}
-              </div>
-            </section>
           </div>
+          {renderPreviewSidebar()}
         </div>
       </div>
     );
@@ -1413,18 +1439,7 @@ export function ChatView() {
           </div>
         </div>
 
-        <FilePreviewSidebar
-          collapsed={previewSidebarCollapsed}
-          width={previewSidebarWidth}
-          selected={selectedFileRef}
-          preview={previewData}
-          loading={previewLoading}
-          onToggle={() => setPreviewSidebarCollapsed((prev) => !prev)}
-          onResize={setPreviewSidebarWidth}
-          onOpenFile={() => {
-            void handleOpenSelectedFile();
-          }}
-        />
+        {renderPreviewSidebar()}
       </div>
     </div>
   );
