@@ -28,15 +28,17 @@ export function SkillsView() {
       setSkills(data.skills || []);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'));
+      setError(err instanceof Error ? err.message : 'Failed to load skills');
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     void fetchSkills();
-  }, [fetchSkills]);
+    // Only fetch on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleSkill = async (name: string, enabled: boolean) => {
     try {
