@@ -5,7 +5,7 @@
       "Bash(go build:*)",
       "mcp__web-search-prime__webSearchPrime",
       "Bash(make build:*)",
-      "Bash(./build/nanobot-go agent:*)",
+      "Bash(./build/maxclaw agent:*)",
       "Bash(chmod +x:*)",
       "Bash(go doc:*)",
       "Bash(go test:*)"

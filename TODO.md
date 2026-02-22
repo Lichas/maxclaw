@@ -13,4 +13,4 @@
 - [x] write restart dameon scipt, 优雅、安全重启 daemon 服务，确保 whatsapp  telegram 重启后可以正常工作
 - [x] 总结项目最新特性、架构，书写 中文 英文友好的 git 项目 readme ，可以鼠标点击切换
 - [x] homepage 官网 和 webUI 支持国际化
-- [ ] 将仓库推送到 https://github.com/Lichas/nanobot-go （已初始化并提交，但当前环境缺少 GitHub 凭据，push 失败）
+- [x] 将仓库推送到 https://github.com/Lichas/nanobot-go （已初始化并提交，但当前环境缺少 GitHub 凭据，push 失败）
