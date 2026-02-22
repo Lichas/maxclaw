@@ -312,6 +312,20 @@
   - `cd electron && npm run build`
   - `make build`
 
+#### 修复聊天历史标签与图标显示（`electron/src/renderer/views/ChatView.tsx`, `electron/src/renderer/components/Sidebar.tsx`）
+- **变更**：
+  - 历史会话 timeline 的状态步骤不再显示 `Thinking:` 前缀标签，仅显示步骤摘要。
+  - 对话正文支持流式 Markdown 渲染，增量输出阶段也使用 `MarkdownRenderer`。
+  - 左侧栏“新建任务”按钮图标恢复为素色铅笔样式（`EditIcon`），移除渐变图片图标。
+  - 新建任务后聊天页顶部图标由 🦞 改为 `icon.png`。
+- **位置**：
+  - `renderTimeline` 状态与文本分支渲染逻辑。
+  - `isStarterMode` 顶部图标区块。
+  - `Sidebar` 新建任务按钮样式与图标。
+- **验证**：
+  - `cd electron && npm run build`
+  - `make build`
+
 ### 新增功能
 
 #### 实现定时任务 REST API（`internal/webui/server.go`）

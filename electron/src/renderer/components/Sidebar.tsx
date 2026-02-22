@@ -163,34 +163,12 @@ export function Sidebar() {
       <div className="p-3">
         <button
           onClick={handleNewTask}
-          className={`w-full flex items-center justify-center gap-3 py-3 px-4 rounded-2xl font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] group ${
-            sidebarCollapsed ? 'flex-col' : ''
+          className={`w-full flex items-center justify-center gap-2 bg-primary/15 text-primary border border-primary/30 rounded-lg py-2.5 px-4 hover:bg-primary/20 transition-colors ${
+            sidebarCollapsed ? 'px-2' : ''
           }`}
-          style={{
-            background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
-            color: 'var(--primary-foreground)',
-            boxShadow: '0 4px 12px rgba(107, 144, 128, 0.3)'
-          }}
         >
-          {/* App Icon with gradient border */}
-          <div
-            className="flex-shrink-0 rounded-xl overflow-hidden transition-transform duration-200 group-hover:scale-110"
-            style={{
-              padding: '2px',
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%)'
-            }}
-          >
-            <img
-              src="./icon.png"
-              alt="Nanobot"
-              className="w-7 h-7 rounded-[10px] object-cover"
-              onError={(e) => {
-                // Fallback to default icon if image fails to load
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          </div>
-          {!sidebarCollapsed && <span>{t('sidebar.newTask')}</span>}
+          <EditIcon className="w-5 h-5 flex-shrink-0" />
+          {!sidebarCollapsed && <span className="font-medium">{t('sidebar.newTask')}</span>}
         </button>
       </div>
 

@@ -722,7 +722,9 @@ export function ChatView() {
               <div key={entry.id} className="rounded-lg border border-border/70 bg-background">
                 <details open={index === openIndex ? true : undefined}>
                   <summary className="cursor-pointer list-none px-3 py-2 font-medium text-foreground/75">
-                    {getActivityLabel(entry.activity.type)}: {entry.activity.summary}
+                    {entry.activity.type === 'status' && !streaming
+                      ? entry.activity.summary
+                      : `${getActivityLabel(entry.activity.type)}: ${entry.activity.summary}`}
                   </summary>
                   {entry.activity.detail && (
                     <pre className="border-t border-border/70 px-3 py-2 whitespace-pre-wrap break-all font-sans text-foreground/60">
@@ -731,10 +733,6 @@ export function ChatView() {
                   )}
                 </details>
               </div>
-            ) : streaming ? (
-              <pre key={entry.id} className="whitespace-pre-wrap break-all font-sans text-sm leading-7 text-foreground">
-                {entry.text}
-              </pre>
             ) : (
               <div key={entry.id} className="text-foreground">
                 <MarkdownRenderer content={entry.text} />
@@ -953,8 +951,12 @@ export function ChatView() {
       <div className="h-full overflow-y-auto bg-background px-8 py-10">
         <div className="mx-auto max-w-4xl">
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff6a4d] to-[#d92d20] text-2xl text-white shadow-md">
-              🦞
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary p-1 shadow-md">
+              <img
+                src="./icon.png"
+                alt="nanobot-go"
+                className="h-full w-full rounded-xl object-cover"
+              />
             </div>
             <h1 className="text-4xl font-semibold text-foreground">开始协作</h1>
             <p className="mt-3 text-base text-foreground/55">7x24 小时帮你干活的全场景个人助理 Agent</p>
