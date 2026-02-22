@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import Store from 'electron-store';
 import AutoLaunch from 'auto-launch';
 import log from 'electron-log';
+import JSZip from 'jszip';
 import { GatewayManager } from './gateway';
 import { NotificationManager } from './notifications';
 import { ShortcutManager } from './shortcuts';
@@ -828,4 +829,90 @@ export function createIPCHandlers(
 
   // Keep Node process from being blocked by this timer on shutdown.
   gatewayStatusTimer.unref();
+
+  // Data export/import IPC
+  ipcMain.handle('data:export', async () => {
+    try {
+      const result = await dialog.showSaveDialog({
+        defaultPath: `maxclaw-backup-${new Date().toISOString().split('T')[0]}.zip`,
+        filters: [{ name: 'ZIP Archive', extensions: ['zip'] }],
+      });
+
+      if (result.canceled || !result.filePath) {
+        return { cancelled: true };
+      }
+
+      // Fetch data from Gateway
+      const [configRes, sessionsRes] = await Promise.all([
+        fetch('http://localhost:18890/api/config'),
+        fetch('http://localhost:18890/api/sessions'),
+      ]);
+
+      const [config, sessions] = await Promise.all([
+        configRes.json(),
+        sessionsRes.json(),
+      ]);
+
+      // Create ZIP
+      const zip = new JSZip();
+      zip.file('config.json', JSON.stringify(config, null, 2));
+      zip.file('sessions.json', JSON.stringify(sessions, null, 2));
+      zip.file('metadata.json', JSON.stringify({
+        exportedAt: new Date().toISOString(),
+        version: app.getVersion(),
+      }, null, 2));
+
+      const buffer = await zip.generateAsync({ type: 'nodebuffer' });
+      await fs.promises.writeFile(result.filePath, buffer);
+
+      return { success: true, path: result.filePath };
+    } catch (error) {
+      log.error('Export failed:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  ipcMain.handle('data:import', async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        filters: [{ name: 'ZIP Archive', extensions: ['zip'] }],
+        properties: ['openFile'],
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { cancelled: true };
+      }
+
+      const filePath = result.filePaths[0];
+      const data = await fs.promises.readFile(filePath);
+      const zip = await JSZip.loadAsync(data);
+
+      // Read files from zip
+      const configFile = zip.file('config.json');
+      const sessionsFile = zip.file('sessions.json');
+
+      if (!configFile) {
+        return { success: false, error: 'Invalid backup file: config.json not found' };
+      }
+
+      const configText = await configFile.async('text');
+      const config = JSON.parse(configText);
+
+      // Import to Gateway
+      const response = await fetch('http://localhost:18890/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to import config: ${response.statusText}`);
+      }
+
+      return { success: true };
+    } catch (error) {
+      log.error('Import failed:', error);
+      return { success: false, error: String(error) };
+    }
+  });
 }

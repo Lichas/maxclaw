@@ -89,6 +89,12 @@ const electronAPI = {
     }
   },
 
+  // Data export/import
+  data: {
+    export: () => ipcRenderer.invoke('data:export'),
+    import: () => ipcRenderer.invoke('data:import'),
+  },
+
   terminal: {
     start: (sessionKey: string, options?: { cols?: number; rows?: number }) =>
       ipcRenderer.invoke('terminal:start', sessionKey, options),

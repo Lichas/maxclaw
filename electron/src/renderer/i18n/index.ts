@@ -61,6 +61,9 @@ const zh: Translations = {
   'settings.shortcuts': '全局快捷键',
   'settings.shortcuts.toggle': '显示/隐藏窗口',
   'settings.shortcuts.newChat': '新建对话',
+  'settings.dataManagement': '数据管理',
+  'settings.export': '导出备份',
+  'settings.import': '导入备份',
 
   // Skills
   'skills.title': '技能市场',
@@ -158,6 +161,9 @@ const en: Translations = {
   'settings.shortcuts': 'Global Shortcuts',
   'settings.shortcuts.toggle': 'Show/Hide Window',
   'settings.shortcuts.newChat': 'New Chat',
+  'settings.dataManagement': 'Data Management',
+  'settings.export': 'Export Backup',
+  'settings.import': 'Import Backup',
 
   // Skills
   'skills.title': 'Skills Marketplace',

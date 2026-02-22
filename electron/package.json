@@ -31,6 +31,7 @@
     "electron-log": "^5.0.1",
     "electron-store": "^8.1.0",
     "electron-updater": "^6.1.7",
+    "jszip": "^3.10.1",
     "mermaid": "^10.9.5",
     "node-pty": "^1.1.0",
     "react-dropzone": "^15.0.0",

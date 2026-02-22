@@ -4,6 +4,30 @@
 
 ### 新增功能
 
+#### 数据导入/导出功能（`electron/src/main/ipc.ts`, `electron/src/renderer/views/SettingsView.tsx`）
+- **功能**：支持导出和导入配置与会话数据，便于备份和迁移
+- **实现**：
+  - 后端 IPC：`data:export` 和 `data:import` 处理器
+    - 导出：从 Gateway 获取配置和会话数据，打包为 ZIP 文件（包含 config.json、sessions.json、metadata.json）
+    - 导入：读取 ZIP 文件，验证并恢复配置到 Gateway
+  - 前端 UI：设置页新增「数据管理」区块
+    - 导出备份按钮：选择保存路径，生成带日期的 ZIP 文件
+    - 导入备份按钮：选择 ZIP 文件，确认后覆盖当前配置并重启 Gateway
+  - 依赖：新增 `jszip` 库用于 ZIP 文件处理
+  - 国际化：新增翻译键 `settings.dataManagement`、`settings.export`、`settings.import`（中英双语）
+- **验证**
+  - `cd electron && npm install`（安装 jszip）
+  - `cd electron && npm run build` 成功
+  - `make build` 成功
+- **文件**
+  - `electron/src/main/ipc.ts` - 添加 IPC 处理器（修改）
+  - `electron/src/preload/index.ts` - 暴露 data API（修改）
+  - `electron/src/renderer/views/SettingsView.tsx` - 添加数据管理 UI（修改）
+  - `electron/src/renderer/i18n/index.ts` - 添加翻译键（修改）
+  - `electron/package*.json` - 添加 jszip 依赖（修改）
+
+### 新增功能
+
 #### 定时任务执行历史记录 (`internal/cron/`, `electron/src/renderer/`)
 - **功能**：为定时任务添加执行历史追踪，用户可查看每次执行的详细记录
 - **实现**：

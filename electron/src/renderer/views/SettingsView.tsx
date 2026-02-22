@@ -149,6 +149,27 @@ export function SettingsView() {
     await window.electronAPI.gateway.restart();
   };
 
+  const handleExport = async () => {
+    const result = await window.electronAPI.data?.export?.();
+    if (result?.success) {
+      alert(`备份已保存到: ${result.path}`);
+    } else if (result?.error) {
+      alert(`导出失败: ${result.error}`);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!confirm('导入将覆盖当前配置，确定继续吗？')) return;
+
+    const result = await window.electronAPI.data?.import?.();
+    if (result?.success) {
+      alert('导入成功，应用将重启');
+      window.electronAPI.gateway?.restart?.();
+    } else if (result?.error) {
+      alert(`导入失败: ${result.error}`);
+    }
+  };
+
   const handleAddProvider = (preset: typeof PRESET_PROVIDERS[0]) => {
     const newProvider: ProviderConfig = {
       ...preset,
@@ -483,6 +504,31 @@ export function SettingsView() {
                   <div className="border-t border-border px-4 py-2">
                     <p className="text-xs text-foreground/50">
                       Use "CommandOrControl" for cross-platform shortcuts
+                    </p>
+                  </div>
+                </section>
+
+                <section className="rounded-xl border border-border bg-card">
+                  <div className="border-b border-border px-4 py-3">
+                    <h3 className="text-base font-semibold">{t('settings.dataManagement')}</h3>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    <div className="flex gap-4">
+                      <button
+                        onClick={handleExport}
+                        className="px-4 py-2 bg-secondary rounded-lg text-sm font-medium hover:bg-border transition-colors"
+                      >
+                        {t('settings.export')}
+                      </button>
+                      <button
+                        onClick={handleImport}
+                        className="px-4 py-2 bg-secondary rounded-lg text-sm font-medium hover:bg-border transition-colors"
+                      >
+                        {t('settings.import')}
+                      </button>
+                    </div>
+                    <p className="text-xs text-foreground/50">
+                      导出包含配置和会话数据，导入将覆盖当前配置
                     </p>
                   </div>
                 </section>
