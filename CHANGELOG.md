@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 微调主面板与侧边栏：18px 圆角、隐藏式浅色滚动条、移除侧栏分割线
+- **变更**：聊天主面板圆角改为 `18px`；侧边栏滚动条改为默认隐藏、交互时显示的浅色细滚动条；移除侧边栏右侧分割线，避免与右侧圆角聊天面板产生视觉冲突。
+- **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/styles/globals.css`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 聊天主面板像素级微调：圆角半径、阴影强度与内层背景统一
 - **变更**：进一步微调聊天主容器的圆角半径、边框透明度和阴影强度；聊天页头部/内容区/输入区统一使用 `card` 背景层，减少层级割裂感，提升圆角矩形面板的精致度。
 - **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/views/ChatView.tsx`。

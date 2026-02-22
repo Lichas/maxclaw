@@ -167,7 +167,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`flex h-full w-72 flex-col border-r border-border/80 ${isMac ? 'pt-10' : 'pt-2'}`}
+      className={`flex h-full w-72 flex-col ${isMac ? 'pt-10' : 'pt-2'}`}
       style={{ background: 'var(--secondary)' }}
     >
       {/* New Chat Button */}
@@ -182,7 +182,7 @@ export function Sidebar() {
       </div>
 
       {/* Menu Items */}
-      <nav className="flex-1 px-2 overflow-y-auto pb-4">
+      <nav className="sidebar-scroll flex-1 px-2 overflow-y-auto pb-4">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;

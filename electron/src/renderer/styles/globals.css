@@ -84,6 +84,55 @@ body {
   background: rgba(107, 144, 128, 0.5);
 }
 
+/* Sidebar scrollbar: hidden when idle, subtle when active */
+.sidebar-scroll {
+  scrollbar-width: none;
+  scrollbar-color: rgba(107, 144, 128, 0.2) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.sidebar-scroll:hover,
+.sidebar-scroll:focus-within,
+.sidebar-scroll:active {
+  scrollbar-width: thin;
+}
+
+.sidebar-scroll:hover::-webkit-scrollbar,
+.sidebar-scroll:focus-within::-webkit-scrollbar,
+.sidebar-scroll:active::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(107, 144, 128, 0.18);
+  border-radius: 999px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 144, 128, 0.3);
+}
+
+.dark .sidebar-scroll {
+  scrollbar-color: rgba(132, 169, 140, 0.24) transparent;
+}
+
+.dark .sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(132, 169, 140, 0.22);
+}
+
+.dark .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(132, 169, 140, 0.34);
+}
+
 /* Draggable region for macOS */
 .draggable {
   -webkit-app-region: drag;
