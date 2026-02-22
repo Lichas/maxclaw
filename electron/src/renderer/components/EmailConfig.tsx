@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../i18n';
 import type { EmailConfig as EmailConfigType } from '../types/channels';
 import { EMAIL_PROVIDER_PRESETS } from '../types/channels';
+import { CustomSelect } from './CustomSelect';
 
 interface EmailConfigProps {
   config: EmailConfigType;
@@ -94,17 +95,12 @@ export function EmailConfig({ config, onChange, onTest }: EmailConfigProps) {
             <label className="block text-sm font-medium mb-2">
               {renderLabel('邮箱服务商', 'Email Provider')}
             </label>
-            <select
+            <CustomSelect
               value={selectedProvider}
-              onChange={(e) => handleProviderChange(e.target.value)}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm"
-            >
-              {EMAIL_PROVIDER_PRESETS.map((preset) => (
-                <option key={preset.key} value={preset.key}>
-                  {preset.name}
-                </option>
-              ))}
-            </select>
+              onChange={handleProviderChange}
+              options={EMAIL_PROVIDER_PRESETS.map((preset) => ({ value: preset.key, label: preset.name }))}
+              size="md"
+            />
           </div>
 
           {/* Consent Checkbox */}

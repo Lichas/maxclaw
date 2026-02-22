@@ -333,6 +333,13 @@
   - `cd electron && npm run build`
   - `make build`
 
+#### 统一下拉菜单风格并增加 hover 交互（`electron/src/renderer/components/CustomSelect.tsx`, 多个视图/组件）
+- **变更**：新增通用 `CustomSelect` 组件，替换渲染端全部原生 `select`，下拉项支持 hover 高亮、键盘导航、外部点击关闭，视觉与应用主题一致。
+- **位置**：`ChatView`、`Sidebar`、`SessionsView`、`ScheduledTasksView`、`SettingsView`、`EmailConfig`、`ProviderEditor`。
+- **验证**：
+  - `cd electron && npm run build`
+  - `make build`
+
 ### 新增功能
 
 #### 实现定时任务 REST API（`internal/webui/server.go`）

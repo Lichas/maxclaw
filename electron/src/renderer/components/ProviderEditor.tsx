@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ProviderConfig, ModelConfig } from '../types/providers';
 import { useTranslation } from '../i18n';
+import { CustomSelect } from './CustomSelect';
 
 interface ProviderEditorProps {
   provider: ProviderConfig;
@@ -80,14 +81,15 @@ export function ProviderEditor({ provider, onSave, onTest, onCancel }: ProviderE
 
         <div>
           <label className="mb-1 block text-sm font-medium">API Format</label>
-          <select
+          <CustomSelect
             value={config.apiFormat}
-            onChange={(e) => setConfig({ ...config, apiFormat: e.target.value as 'openai' | 'anthropic' })}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-          >
-            <option value="openai">OpenAI Compatible</option>
-            <option value="anthropic">Anthropic</option>
-          </select>
+            onChange={(value) => setConfig({ ...config, apiFormat: value as 'openai' | 'anthropic' })}
+            options={[
+              { value: 'openai', label: 'OpenAI Compatible' },
+              { value: 'anthropic', label: 'Anthropic' }
+            ]}
+            size="md"
+          />
         </div>
 
         <div>

@@ -4,6 +4,7 @@ import { RootState, setCurrentSessionKey } from '../store';
 import { GatewayStreamEvent, SkillSummary, useGateway } from '../hooks/useGateway';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import { FileAttachment, UploadedFile } from '../components/FileAttachment';
+import { CustomSelect } from '../components/CustomSelect';
 
 interface Message {
   id: string;
@@ -147,6 +148,15 @@ export function ChatView() {
       (cmd) => cmd.label.toLowerCase().includes(query) || cmd.description.toLowerCase().includes(query)
     );
   }, [slashCommands, slashQuery]);
+
+  const modelOptions = useMemo(
+    () =>
+      availableModels.map((model) => ({
+        value: model.id,
+        label: `${model.provider} / ${model.name}`
+      })),
+    [availableModels]
+  );
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const skillsPickerRef = useRef<HTMLDivElement>(null);
@@ -762,19 +772,16 @@ export function ChatView() {
     >
       {/* Model Selector */}
       <div className="mb-3 flex items-center gap-2">
-        <select
+        <CustomSelect
           value={currentModel}
-          onChange={(e) => handleModelChange(e.target.value)}
+          onChange={handleModelChange}
+          options={modelOptions}
+          placeholder="选择模型..."
           disabled={modelsLoading || isLoading}
-          className="rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs font-medium text-foreground focus:border-primary/40 focus:outline-none disabled:opacity-50"
-        >
-          <option value="">选择模型...</option>
-          {availableModels.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.provider} / {model.name}
-            </option>
-          ))}
-        </select>
+          size="sm"
+          className="min-w-[220px]"
+          triggerClassName="bg-secondary"
+        />
         {modelsLoading && <span className="text-xs text-foreground/50">加载中...</span>}
       </div>
 

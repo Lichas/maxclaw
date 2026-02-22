@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setActiveTab, setCurrentSessionKey } from '../store';
 import { SessionSummary, useGateway } from '../hooks/useGateway';
+import { CustomSelect } from '../components/CustomSelect';
 
 const baseChannelOptions = ['desktop', 'telegram', 'webui'] as const;
 const channelLabelMap: Record<string, string> = {
@@ -82,6 +83,16 @@ export function SessionsView() {
 
     return ['all', ...baseChannelOptions, ...dynamicChannels];
   }, [sessions]);
+
+  const channelFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: '所有渠道' },
+      ...channelOptions
+        .filter((channel) => channel !== 'all')
+        .map((channel) => ({ value: channel, label: getChannelLabel(channel) }))
+    ],
+    [channelOptions]
+  );
 
   // Filter and search sessions
   const filteredSessions = useMemo(() => {
@@ -180,21 +191,12 @@ export function SessionsView() {
 
           {/* Channel Filter */}
           <div className="relative sm:w-48">
-            <select
+            <CustomSelect
               value={channelFilter}
-              onChange={(e) => setChannelFilter(e.target.value)}
-              className="w-full appearance-none rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-medium text-foreground/75 focus:border-primary/40 focus:outline-none"
-            >
-              <option value="all">所有渠道</option>
-              {channelOptions
-                .filter((c) => c !== 'all')
-                .map((channel) => (
-                  <option key={channel} value={channel}>
-                    {getChannelLabel(channel)}
-                  </option>
-                ))}
-            </select>
-            <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/45" />
+              onChange={setChannelFilter}
+              options={channelFilterOptions}
+              size="md"
+            />
           </div>
         </div>
 
@@ -340,14 +342,6 @@ function CloseIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  );
-}
-
-function ChevronDownIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
     </svg>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { CustomSelect } from '../components/CustomSelect';
 
 interface CronJob {
   id: string;
@@ -167,22 +168,23 @@ export function ScheduledTasksView() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-foreground">调度类型</label>
-                  <select
+                  <CustomSelect
                     value={formData.scheduleType}
-                    onChange={(e) => {
-                      const type = e.target.value as JobFormData['scheduleType'];
+                    onChange={(value) => {
+                      const type = value as JobFormData['scheduleType'];
                       setFormData({
                         ...formData,
                         scheduleType: type,
                         scheduleValue: type === 'cron' ? '0 9 * * *' : type === 'every' ? '3600000' : ''
                       });
                     }}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary/40 focus:outline-none"
-                  >
-                    <option value="cron">Cron 表达式</option>
-                    <option value="every">周期执行</option>
-                    <option value="once">一次性</option>
-                  </select>
+                    options={[
+                      { value: 'cron', label: 'Cron 表达式' },
+                      { value: 'every', label: '周期执行' },
+                      { value: 'once', label: '一次性' }
+                    ]}
+                    size="md"
+                  />
                 </div>
 
                 <div>

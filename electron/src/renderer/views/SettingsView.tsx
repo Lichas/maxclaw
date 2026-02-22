@@ -6,6 +6,7 @@ import { ProviderConfig, PRESET_PROVIDERS } from '../types/providers';
 import { ProviderEditor } from '../components/ProviderEditor';
 import { EmailConfig } from '../components/EmailConfig';
 import { IMBotConfig } from '../components/IMBotConfig';
+import { CustomSelect } from '../components/CustomSelect';
 import type { ChannelsConfig, EmailConfig as EmailConfigType } from '../types/channels';
 
 interface Settings {
@@ -291,27 +292,33 @@ export function SettingsView() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium">{t('settings.theme')}</label>
-            <select
+            <CustomSelect
               value={settings.theme}
-              onChange={(e) => handleChange('theme', e.target.value as Settings['theme'])}
-              className="bg-secondary rounded-lg px-3 py-2 text-sm border border-border"
-            >
-              <option value="light">{t('settings.theme.light')}</option>
-              <option value="dark">{t('settings.theme.dark')}</option>
-              <option value="system">{t('settings.theme.system')}</option>
-            </select>
+              onChange={(value) => handleChange('theme', value as Settings['theme'])}
+              options={[
+                { value: 'light', label: t('settings.theme.light') },
+                { value: 'dark', label: t('settings.theme.dark') },
+                { value: 'system', label: t('settings.theme.system') }
+              ]}
+              size="md"
+              className="min-w-[140px]"
+              triggerClassName="bg-secondary"
+            />
           </div>
 
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium">{t('settings.language')}</label>
-            <select
+            <CustomSelect
               value={settings.language}
-              onChange={(e) => handleChange('language', e.target.value as Settings['language'])}
-              className="bg-secondary rounded-lg px-3 py-2 text-sm border border-border"
-            >
-              <option value="zh">{t('settings.language.zh')}</option>
-              <option value="en">{t('settings.language.en')}</option>
-            </select>
+              onChange={(value) => handleChange('language', value as Settings['language'])}
+              options={[
+                { value: 'zh', label: t('settings.language.zh') },
+                { value: 'en', label: t('settings.language.en') }
+              ]}
+              size="md"
+              className="min-w-[140px]"
+              triggerClassName="bg-secondary"
+            />
           </div>
         </div>
       </section>
