@@ -1,23 +1,16 @@
 import { Tray, Menu, BrowserWindow, nativeImage, app } from 'electron';
 import path from 'path';
 import log from 'electron-log';
+import fs from 'fs';
 
 let tray: Tray | null = null;
 
 export function initializeTray(mainWindow: BrowserWindow): void {
   try {
-    // Create tray icon (use nativeImage for proper scaling)
-    const iconPath = path.join(__dirname, '../../assets/tray-icon.png');
-    let trayIcon: nativeImage;
-
-    try {
-      const icon = nativeImage.createFromPath(iconPath);
-      // Resize for appropriate platforms
-      trayIcon = icon.resize({ width: 16, height: 16 });
-      trayIcon.setTemplateImage(true); // macOS template image
-    } catch {
-      // Fallback if icon doesn't exist
-      trayIcon = nativeImage.createEmpty();
+    const trayIcon = createTrayIcon();
+    if (!trayIcon) {
+      log.warn('Could not create tray icon, skipping tray initialization');
+      return;
     }
 
     tray = new Tray(trayIcon);
@@ -25,20 +18,49 @@ export function initializeTray(mainWindow: BrowserWindow): void {
 
     updateTrayMenu(mainWindow);
 
-    // Handle tray click (show window)
     tray.on('click', () => {
       showWindow(mainWindow);
     });
 
-    // Handle double-click
     tray.on('double-click', () => {
       showWindow(mainWindow);
     });
 
-    log.info('System tray initialized');
+    log.info('System tray initialized successfully');
   } catch (error) {
     log.error('Failed to initialize tray:', error);
   }
+}
+
+function createTrayIcon(): nativeImage | null {
+  const iconPaths = [
+    path.join(__dirname, '../../assets/tray-icon.png'),
+    path.join(__dirname, '../../assets/icon.png'),
+    path.join(process.resourcesPath, 'assets/tray-icon.png'),
+    path.join(process.resourcesPath, 'assets/icon.png'),
+  ];
+
+  for (const iconPath of iconPaths) {
+    try {
+      if (fs.existsSync(iconPath)) {
+        const icon = nativeImage.createFromPath(iconPath);
+        const size = process.platform === 'darwin' ? 16 : 16;
+        let trayIcon = icon.resize({ width: size, height: size });
+
+        if (process.platform === 'darwin') {
+          trayIcon.setTemplateImage(true);
+        }
+
+        log.info(`Created tray icon from: ${iconPath}`);
+        return trayIcon;
+      }
+    } catch (err) {
+      log.debug(`Failed to create icon from ${iconPath}:`, err);
+    }
+  }
+
+  log.error('No valid tray icon found in any location');
+  return null;
 }
 
 function updateTrayMenu(mainWindow: BrowserWindow): void {
