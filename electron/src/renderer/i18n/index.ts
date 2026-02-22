@@ -48,6 +48,16 @@ const zh: Translations = {
   'settings.providers': '模型提供商',
   'settings.providers.add': '添加提供商',
   'settings.providers.empty': '暂无配置的提供商',
+  'settings.category.general': '通用',
+  'settings.category.general.desc': '界面偏好、语言与系统行为',
+  'settings.category.providers': '模型配置',
+  'settings.category.providers.desc': '管理模型提供商与连接参数',
+  'settings.category.channels': '渠道配置',
+  'settings.category.channels.desc': '邮箱与 IM Bot 接入设置',
+  'settings.category.gateway': 'Gateway',
+  'settings.category.gateway.desc': '查看状态并执行重启',
+  'settings.email': '邮箱配置',
+  'settings.imbot': 'IM Bot 配置',
 
   // Skills
   'skills.title': '技能市场',
@@ -132,6 +142,16 @@ const en: Translations = {
   'settings.providers': 'Model Providers',
   'settings.providers.add': 'Add Provider',
   'settings.providers.empty': 'No providers configured',
+  'settings.category.general': 'General',
+  'settings.category.general.desc': 'Appearance, language, and system behavior',
+  'settings.category.providers': 'Model Config',
+  'settings.category.providers.desc': 'Manage providers and connection settings',
+  'settings.category.channels': 'Channels',
+  'settings.category.channels.desc': 'Email and IM bot integration settings',
+  'settings.category.gateway': 'Gateway',
+  'settings.category.gateway.desc': 'Status overview and restart controls',
+  'settings.email': 'Email Configuration',
+  'settings.imbot': 'IM Bot Configuration',
 
   // Skills
   'skills.title': 'Skills Marketplace',

@@ -354,6 +354,13 @@
   - `cd electron && npm run build`
   - `make build`
 
+#### 设置页重构为垂直一级分类布局（`electron/src/renderer/views/SettingsView.tsx`, `electron/src/renderer/i18n/index.ts`）
+- **变更**：设置页改为左侧分类导航 + 右侧内容区，一级分类包含 General、模型配置、渠道配置、Gateway；右侧按分类分组展示并保留原有配置能力。
+- **位置**：`SettingsView` 页面结构重排，新增分类图标与分类文案翻译键。
+- **验证**：
+  - `cd electron && npm run build`
+  - `make build`
+
 ### 新增功能
 
 #### 实现定时任务 REST API（`internal/webui/server.go`）

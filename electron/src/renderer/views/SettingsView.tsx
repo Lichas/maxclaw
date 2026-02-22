@@ -7,7 +7,7 @@ import { ProviderEditor } from '../components/ProviderEditor';
 import { EmailConfig } from '../components/EmailConfig';
 import { IMBotConfig } from '../components/IMBotConfig';
 import { CustomSelect } from '../components/CustomSelect';
-import type { ChannelsConfig, EmailConfig as EmailConfigType } from '../types/channels';
+import type { ChannelsConfig } from '../types/channels';
 
 interface Settings {
   theme: 'light' | 'dark' | 'system';
@@ -17,9 +17,11 @@ interface Settings {
   notificationsEnabled: boolean;
 }
 
+type SettingsCategory = 'general' | 'providers' | 'channels' | 'gateway';
+
 export function SettingsView() {
   const dispatch = useDispatch();
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
   const { theme: storeTheme, language: storeLanguage } = useSelector((state: RootState) => state.ui);
 
   const [settings, setSettings] = useState<Settings>({
@@ -33,6 +35,7 @@ export function SettingsView() {
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [editingProvider, setEditingProvider] = useState<ProviderConfig | null>(null);
   const [showAddProvider, setShowAddProvider] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('general');
 
   // Channel config states
   const [channels, setChannels] = useState<ChannelsConfig>({
@@ -282,231 +285,334 @@ export function SettingsView() {
     }
   };
 
+  const categoryItems: Array<{
+    id: SettingsCategory;
+    label: string;
+    description: string;
+    icon: ({ className }: { className?: string }) => JSX.Element;
+  }> = [
+    {
+      id: 'general',
+      label: t('settings.category.general'),
+      description: t('settings.category.general.desc'),
+      icon: GeneralIcon
+    },
+    {
+      id: 'providers',
+      label: t('settings.category.providers'),
+      description: t('settings.category.providers.desc'),
+      icon: ProvidersIcon
+    },
+    {
+      id: 'channels',
+      label: t('settings.category.channels'),
+      description: t('settings.category.channels.desc'),
+      icon: ChannelsIcon
+    },
+    {
+      id: 'gateway',
+      label: t('settings.category.gateway'),
+      description: t('settings.category.gateway.desc'),
+      icon: GatewayIcon
+    }
+  ];
+
+  const activeCategoryMeta = categoryItems.find((item) => item.id === activeCategory) ?? categoryItems[0];
+
   return (
-    <div className="h-full overflow-y-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">{t('settings.title')}</h1>
+    <div className="h-full overflow-y-auto bg-background p-6">
+      <div className="mx-auto max-w-6xl">
+        <h1 className="mb-6 text-2xl font-bold">{t('settings.title')}</h1>
 
-      {/* Appearance */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">{t('settings.appearance')}</h2>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">{t('settings.theme')}</label>
-            <CustomSelect
-              value={settings.theme}
-              onChange={(value) => handleChange('theme', value as Settings['theme'])}
-              options={[
-                { value: 'light', label: t('settings.theme.light') },
-                { value: 'dark', label: t('settings.theme.dark') },
-                { value: 'system', label: t('settings.theme.system') }
-              ]}
-              size="md"
-              className="min-w-[140px]"
-              triggerClassName="bg-secondary"
-            />
-          </div>
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <aside className="lg:sticky lg:top-0">
+            <div className="rounded-2xl border border-border bg-secondary/45 p-2">
+              {categoryItems.map((item) => {
+                const active = activeCategory === item.id;
+                const Icon = item.icon;
 
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium">{t('settings.language')}</label>
-            <CustomSelect
-              value={settings.language}
-              onChange={(value) => handleChange('language', value as Settings['language'])}
-              options={[
-                { value: 'zh', label: t('settings.language.zh') },
-                { value: 'en', label: t('settings.language.en') }
-              ]}
-              size="md"
-              className="min-w-[140px]"
-              triggerClassName="bg-secondary"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* System */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">{t('settings.system')}</h2>
-        <div className="space-y-4">
-          <label className="flex items-center justify-between cursor-pointer">
-            <span className="text-sm font-medium">{t('settings.autoLaunch')}</span>
-            <input
-              type="checkbox"
-              checked={settings.autoLaunch}
-              onChange={(e) => handleChange('autoLaunch', e.target.checked)}
-              className="w-4 h-4"
-            />
-          </label>
-
-          <label className="flex items-center justify-between cursor-pointer">
-            <span className="text-sm font-medium">{t('settings.minimizeToTray')}</span>
-            <input
-              type="checkbox"
-              checked={settings.minimizeToTray}
-              onChange={(e) => handleChange('minimizeToTray', e.target.checked)}
-              className="w-4 h-4"
-            />
-          </label>
-        </div>
-      </section>
-
-      {/* Notifications */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">{t('settings.notifications')}</h2>
-        <div className="space-y-4">
-          <label className="flex items-center justify-between cursor-pointer">
-            <span className="text-sm font-medium">{t('settings.notifications.enable')}</span>
-            <input
-              type="checkbox"
-              checked={settings.notificationsEnabled}
-              onChange={(e) => handleChange('notificationsEnabled', e.target.checked)}
-              className="w-4 h-4"
-            />
-          </label>
-        </div>
-      </section>
-
-      {/* Providers */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">{t('settings.providers') || 'Model Providers'}</h2>
-
-        {editingProvider ? (
-          <ProviderEditor
-            provider={editingProvider}
-            onSave={handleSaveProvider}
-            onTest={handleTestConnection}
-            onCancel={() => setEditingProvider(null)}
-          />
-        ) : showAddProvider ? (
-          <div className="rounded-lg border border-border bg-card p-4">
-            <h3 className="mb-3 text-sm font-medium">{t('settings.providers.add') || 'Select Provider'}</h3>
-            <div className="flex flex-wrap gap-2">
-              {PRESET_PROVIDERS.map((preset) => (
-                <button
-                  key={preset.name}
-                  onClick={() => handleAddProvider(preset)}
-                  className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-secondary"
-                >
-                  + {preset.name}
-                </button>
-              ))}
-              <button
-                onClick={() =>
-                  handleAddProvider({
-                    name: 'Custom',
-                    type: 'custom',
-                    apiFormat: 'openai',
-                    models: [],
-                    enabled: false,
-                  })
-                }
-                className="rounded-lg border border-dashed border-border px-3 py-2 text-sm hover:bg-secondary"
-              >
-                + Custom
-              </button>
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveCategory(item.id)}
+                    className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all ${
+                      active
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-foreground/70 hover:bg-background/70 hover:text-foreground'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 flex-shrink-0" />
+                    <span className="font-medium">{item.label}</span>
+                  </button>
+                );
+              })}
             </div>
-            <button
-              onClick={() => setShowAddProvider(false)}
-              className="mt-3 text-sm text-foreground/60 hover:text-foreground"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {providers.length === 0 ? (
-              <p className="text-sm text-foreground/50">{t('settings.providers.empty') || 'No providers configured.'}</p>
-            ) : (
-              providers.map((provider) => (
-                <div
-                  key={provider.id}
-                  className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
-                >
-                  <div>
-                    <h3 className="font-medium">{provider.name}</h3>
-                    <p className="text-xs text-foreground/60">
-                      {provider.baseURL || 'Default endpoint'}
-                    </p>
+          </aside>
+
+          <main className="min-w-0 space-y-6">
+            <header>
+              <h2 className="text-2xl font-semibold text-foreground">{activeCategoryMeta.label}</h2>
+              <p className="mt-1 text-sm text-foreground/55">{activeCategoryMeta.description}</p>
+            </header>
+
+            {activeCategory === 'general' && (
+              <div className="space-y-6">
+                <section className="rounded-xl border border-border bg-card">
+                  <div className="border-b border-border px-4 py-3">
+                    <h3 className="text-base font-semibold">{t('settings.appearance')}</h3>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setEditingProvider(provider)}
-                      className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-secondary"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteProvider(provider.id)}
-                      className="rounded-lg border border-border px-3 py-1.5 text-sm text-red-500 hover:bg-red-500/10"
-                    >
-                      Delete
-                    </button>
+                  <div className="divide-y divide-border">
+                    <div className="flex items-center justify-between gap-4 px-4 py-3">
+                      <label className="text-sm font-medium">{t('settings.theme')}</label>
+                      <CustomSelect
+                        value={settings.theme}
+                        onChange={(value) => handleChange('theme', value as Settings['theme'])}
+                        options={[
+                          { value: 'light', label: t('settings.theme.light') },
+                          { value: 'dark', label: t('settings.theme.dark') },
+                          { value: 'system', label: t('settings.theme.system') }
+                        ]}
+                        size="md"
+                        className="min-w-[140px]"
+                        triggerClassName="bg-secondary"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4 px-4 py-3">
+                      <label className="text-sm font-medium">{t('settings.language')}</label>
+                      <CustomSelect
+                        value={settings.language}
+                        onChange={(value) => handleChange('language', value as Settings['language'])}
+                        options={[
+                          { value: 'zh', label: t('settings.language.zh') },
+                          { value: 'en', label: t('settings.language.en') }
+                        ]}
+                        size="md"
+                        className="min-w-[140px]"
+                        triggerClassName="bg-secondary"
+                      />
+                    </div>
                   </div>
-                </div>
-              ))
+                </section>
+
+                <section className="rounded-xl border border-border bg-card">
+                  <div className="border-b border-border px-4 py-3">
+                    <h3 className="text-base font-semibold">{t('settings.system')}</h3>
+                  </div>
+                  <div className="divide-y divide-border">
+                    <label className="flex cursor-pointer items-center justify-between gap-4 px-4 py-3">
+                      <span className="text-sm font-medium">{t('settings.autoLaunch')}</span>
+                      <input
+                        type="checkbox"
+                        checked={settings.autoLaunch}
+                        onChange={(e) => handleChange('autoLaunch', e.target.checked)}
+                        className="h-4 w-4 rounded border-border"
+                      />
+                    </label>
+
+                    <label className="flex cursor-pointer items-center justify-between gap-4 px-4 py-3">
+                      <span className="text-sm font-medium">{t('settings.minimizeToTray')}</span>
+                      <input
+                        type="checkbox"
+                        checked={settings.minimizeToTray}
+                        onChange={(e) => handleChange('minimizeToTray', e.target.checked)}
+                        className="h-4 w-4 rounded border-border"
+                      />
+                    </label>
+
+                    <label className="flex cursor-pointer items-center justify-between gap-4 px-4 py-3">
+                      <span className="text-sm font-medium">{t('settings.notifications.enable')}</span>
+                      <input
+                        type="checkbox"
+                        checked={settings.notificationsEnabled}
+                        onChange={(e) => handleChange('notificationsEnabled', e.target.checked)}
+                        className="h-4 w-4 rounded border-border"
+                      />
+                    </label>
+                  </div>
+                </section>
+              </div>
             )}
-            <button
-              onClick={() => setShowAddProvider(true)}
-              className="w-full rounded-lg border border-dashed border-border py-2 text-sm text-foreground/60 hover:bg-secondary hover:text-foreground"
-            >
-              + {t('settings.providers.add') || 'Add Provider'}
-            </button>
-          </div>
-        )}
-      </section>
 
-      {/* Email Configuration */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">
-          {language === 'zh' ? '邮箱配置' : 'Email Configuration'}
-        </h2>
-        <EmailConfig
-          config={channels.email}
-          onChange={(emailConfig) => handleChannelsChange({ ...channels, email: emailConfig })}
-          onTest={handleTestEmail}
-        />
-      </section>
+            {activeCategory === 'providers' && (
+              <section className="space-y-4">
+                <h3 className="text-lg font-semibold">{t('settings.providers')}</h3>
 
-      {/* IM Bot Configuration */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">
-          {language === 'zh' ? 'IM Bot 配置' : 'IM Bot Configuration'}
-        </h2>
-        <IMBotConfig
-          config={channels}
-          onChange={handleChannelsChange}
-          onTestChannel={handleTestChannel}
-        />
-      </section>
+                {editingProvider ? (
+                  <ProviderEditor
+                    provider={editingProvider}
+                    onSave={handleSaveProvider}
+                    onTest={handleTestConnection}
+                    onCancel={() => setEditingProvider(null)}
+                  />
+                ) : showAddProvider ? (
+                  <div className="rounded-lg border border-border bg-card p-4">
+                    <h4 className="mb-3 text-sm font-medium">{t('settings.providers.add') || 'Select Provider'}</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {PRESET_PROVIDERS.map((preset) => (
+                        <button
+                          key={preset.name}
+                          onClick={() => handleAddProvider(preset)}
+                          className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-secondary"
+                        >
+                          + {preset.name}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() =>
+                          handleAddProvider({
+                            name: 'Custom',
+                            type: 'custom',
+                            apiFormat: 'openai',
+                            models: [],
+                            enabled: false,
+                          })
+                        }
+                        className="rounded-lg border border-dashed border-border px-3 py-2 text-sm hover:bg-secondary"
+                      >
+                        + Custom
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setShowAddProvider(false)}
+                      className="mt-3 text-sm text-foreground/60 hover:text-foreground"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {providers.length === 0 ? (
+                      <p className="text-sm text-foreground/50">{t('settings.providers.empty') || 'No providers configured.'}</p>
+                    ) : (
+                      providers.map((provider) => (
+                        <div
+                          key={provider.id}
+                          className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
+                        >
+                          <div>
+                            <h4 className="font-medium">{provider.name}</h4>
+                            <p className="text-xs text-foreground/60">
+                              {provider.baseURL || 'Default endpoint'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setEditingProvider(provider)}
+                              className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-secondary"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProvider(provider.id)}
+                              className="rounded-lg border border-border px-3 py-1.5 text-sm text-red-500 hover:bg-red-500/10"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    <button
+                      onClick={() => setShowAddProvider(true)}
+                      className="w-full rounded-lg border border-dashed border-border py-2 text-sm text-foreground/60 hover:bg-secondary hover:text-foreground"
+                    >
+                      + {t('settings.providers.add') || 'Add Provider'}
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
 
-      {/* Gateway */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold mb-4">{t('settings.gateway')}</h2>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">{t('settings.gateway.status')}</span>
-            <button
-              onClick={handleRestartGateway}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90"
-            >
-              {t('settings.gateway.restart')}
-            </button>
-          </div>
+            {activeCategory === 'channels' && (
+              <div className="space-y-6">
+                <section>
+                  <h3 className="mb-4 text-lg font-semibold">{t('settings.email')}</h3>
+                  <EmailConfig
+                    config={channels.email}
+                    onChange={(emailConfig) => handleChannelsChange({ ...channels, email: emailConfig })}
+                    onTest={handleTestEmail}
+                  />
+                </section>
 
-          {gatewayConfig && (
-            <div className="bg-secondary rounded-lg p-4 mt-4">
-              <h3 className="text-sm font-medium mb-2">{t('settings.gateway.currentModel')}</h3>
-              <code className="text-xs bg-background px-2 py-1 rounded block mb-4">
-                {gatewayConfig.agents?.defaults?.model || t('settings.gateway.notConfigured')}
-              </code>
+                <section>
+                  <h3 className="mb-4 text-lg font-semibold">{t('settings.imbot')}</h3>
+                  <IMBotConfig
+                    config={channels}
+                    onChange={handleChannelsChange}
+                    onTestChannel={handleTestChannel}
+                  />
+                </section>
+              </div>
+            )}
 
-              <h3 className="text-sm font-medium mb-2">{t('settings.gateway.workspace')}</h3>
-              <code className="text-xs bg-background px-2 py-1 rounded block">
-                {gatewayConfig.agents?.defaults?.workspace || t('settings.gateway.notConfigured')}
-              </code>
-            </div>
-          )}
+            {activeCategory === 'gateway' && (
+              <section className="rounded-xl border border-border bg-card p-5">
+                <h3 className="mb-4 text-lg font-semibold">{t('settings.gateway')}</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{t('settings.gateway.status')}</span>
+                    <button
+                      onClick={handleRestartGateway}
+                      className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
+                    >
+                      {t('settings.gateway.restart')}
+                    </button>
+                  </div>
+
+                  {gatewayConfig && (
+                    <div className="mt-4 rounded-lg bg-secondary p-4">
+                      <h4 className="mb-2 text-sm font-medium">{t('settings.gateway.currentModel')}</h4>
+                      <code className="mb-4 block rounded bg-background px-2 py-1 text-xs">
+                        {gatewayConfig.agents?.defaults?.model || t('settings.gateway.notConfigured')}
+                      </code>
+
+                      <h4 className="mb-2 text-sm font-medium">{t('settings.gateway.workspace')}</h4>
+                      <code className="block rounded bg-background px-2 py-1 text-xs">
+                        {gatewayConfig.agents?.defaults?.workspace || t('settings.gateway.notConfigured')}
+                      </code>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+          </main>
         </div>
-      </section>
+      </div>
     </div>
+  );
+}
+
+function GeneralIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8h18M3 16h18M8 3v18M16 3v18" />
+    </svg>
+  );
+}
+
+function ProvidersIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h10" />
+      <circle cx="18" cy="17" r="2" strokeWidth={2} />
+    </svg>
+  );
+}
+
+function ChannelsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h8M8 14h5M4 6h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1z" />
+    </svg>
+  );
+}
+
+function GatewayIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v4m0 10v4m9-9h-4M7 12H3m14.95-6.95l-2.83 2.83M8.88 15.12l-2.83 2.83m0-12.78l2.83 2.83m9.07 9.07l2.83 2.83" />
+      <circle cx="12" cy="12" r="3" strokeWidth={2} />
+    </svg>
   );
 }
