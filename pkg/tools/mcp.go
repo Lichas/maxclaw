@@ -29,6 +29,13 @@ const (
 	maxToolNameLength  = 64
 )
 
+var (
+	// defaultMCPConnectTimeout bounds initialize/list_tools during startup to avoid blocking message handling indefinitely.
+	defaultMCPConnectTimeout = 8 * time.Second
+	// defaultMCPToolCallTimeout bounds tools/call execution to avoid indefinite hangs on unresponsive MCP servers.
+	defaultMCPToolCallTimeout = 60 * time.Second
+)
+
 // MCPServerOptions 是 MCP 服务器配置（兼容 Claude Desktop / Cursor 的 mcpServers 条目）。
 type MCPServerOptions struct {
 	Name    string
@@ -150,13 +157,18 @@ func (c *MCPConnector) Connect(ctx context.Context, registry *Registry) error {
 			continue
 		}
 
-		if err := client.Initialize(ctx); err != nil {
+		initializeCtx, initializeCancel := withDefaultTimeout(ctx, defaultMCPConnectTimeout)
+		err = client.Initialize(initializeCtx)
+		initializeCancel()
+		if err != nil {
 			_ = client.Close()
 			errs = append(errs, fmt.Sprintf("%s: initialize failed: %v", name, err))
 			continue
 		}
 
-		remoteTools, err := client.ListTools(ctx)
+		listCtx, listCancel := withDefaultTimeout(ctx, defaultMCPConnectTimeout)
+		remoteTools, err := client.ListTools(listCtx)
+		listCancel()
 		if err != nil {
 			_ = client.Close()
 			errs = append(errs, fmt.Sprintf("%s: list tools failed: %v", name, err))
@@ -253,11 +265,24 @@ func newMCPToolWrapper(serverName string, remoteTool mcpRemoteTool, client mcpCl
 }
 
 func (t *mcpToolWrapper) Execute(ctx context.Context, params map[string]interface{}) (string, error) {
-	result, err := t.client.CallTool(ctx, t.originalName, params)
+	callCtx, cancel := withDefaultTimeout(ctx, defaultMCPToolCallTimeout)
+	defer cancel()
+
+	result, err := t.client.CallTool(callCtx, t.originalName, params)
 	if err != nil {
 		return "", fmt.Errorf("mcp tool %s/%s call failed: %w", t.serverName, t.originalName, err)
 	}
 	return renderMCPToolResult(result), nil
+}
+
+func withDefaultTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	if timeout <= 0 {
+		return ctx, func() {}
+	}
+	if _, hasDeadline := ctx.Deadline(); hasDeadline {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, timeout)
 }
 
 func buildMCPToolName(serverName, toolName string) string {

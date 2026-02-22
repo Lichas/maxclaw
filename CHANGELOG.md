@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### 变更
+
+#### 修复 MCP 服务卡死导致“发消息后无回复”
+- **变更**：为 MCP `initialize/list_tools` 与 `tools/call` 增加默认超时保护，避免不响应的 MCP 服务阻塞整条消息处理链路。
+- **位置**：`pkg/tools/mcp.go`、`pkg/tools/mcp_test.go`。
+- **验证**：`go test ./pkg/tools -count=1`、`go test ./internal/agent -count=1`、`make build`。
+
 ### 新增功能
 
 #### 数据导入/导出功能（`electron/src/main/ipc.ts`, `electron/src/renderer/views/SettingsView.tsx`）
