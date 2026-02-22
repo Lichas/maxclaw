@@ -6,6 +6,19 @@ import (
 	"time"
 )
 
+// ExecutionRecord 任务执行记录
+type ExecutionRecord struct {
+	ID        string     `json:"id"`
+	JobID     string     `json:"jobId"`
+	JobTitle  string     `json:"jobTitle"`
+	StartedAt time.Time  `json:"startedAt"`
+	EndedAt   *time.Time `json:"endedAt,omitempty"`
+	Status    string     `json:"status"` // running, success, failed
+	Output    string     `json:"output"`
+	Error     string     `json:"error,omitempty"`
+	Duration  int64      `json:"durationMs"` // milliseconds
+}
+
 // ScheduleType 调度类型
 type ScheduleType string
 

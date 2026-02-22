@@ -29,6 +29,7 @@ type Service struct {
 	onJob        JobFunc
 	onNotify     NotificationFunc
 	cron         *cron.Cron
+	historyStore *HistoryStore
 }
 
 // NewService 创建定时任务服务
@@ -40,6 +41,10 @@ func NewService(storePath string) *Service {
 		cron:      cron.New(),
 	}
 	s.load()
+
+	historyPath := filepath.Join(filepath.Dir(storePath), "cron_history.json")
+	s.historyStore = NewHistoryStore(historyPath)
+
 	return s
 }
 
@@ -265,8 +270,35 @@ func (s *Service) executeJob(job *Job, trigger string) {
 		return
 	}
 
+	// Create execution record
+	record := ExecutionRecord{
+		ID:        fmt.Sprintf("exec_%d", time.Now().UnixNano()),
+		JobID:     job.ID,
+		JobTitle:  job.Name,
+		StartedAt: time.Now(),
+		Status:    "running",
+	}
+	s.historyStore.AddRecord(record)
+
 	s.logCronf("cron execute trigger=%s job=%s job_id=%s", trigger, job.Name, job.ID)
+	start := time.Now()
 	result, err := s.onJob(job)
+	duration := time.Since(start).Milliseconds()
+
+	// Update record after execution
+	now := time.Now()
+	s.historyStore.UpdateRecord(record.ID, func(r *ExecutionRecord) {
+		r.EndedAt = &now
+		r.Duration = duration
+		r.Output = result
+		if err != nil {
+			r.Status = "failed"
+			r.Error = err.Error()
+		} else {
+			r.Status = "success"
+		}
+	})
+
 	if err != nil {
 		s.logCronf("cron failed trigger=%s job=%s job_id=%s err=%v", trigger, job.Name, job.ID, err)
 		// Send notification on failure
@@ -298,6 +330,11 @@ func (s *Service) executeJob(job *Job, trigger string) {
 			)
 		}
 	}
+}
+
+// GetHistoryStore 获取历史存储
+func (s *Service) GetHistoryStore() *HistoryStore {
+	return s.historyStore
 }
 
 func (s *Service) logCronf(format string, args ...interface{}) {

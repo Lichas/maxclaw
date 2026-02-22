@@ -88,6 +88,8 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	mux.HandleFunc("/api/gateway/restart", s.handleGatewayRestart)
 	mux.HandleFunc("/api/cron", s.handleCron)
 	mux.HandleFunc("/api/cron/", s.handleCronByID)
+	mux.HandleFunc("/api/cron/history", s.handleGetCronHistory)
+	mux.HandleFunc("/api/cron/history/", s.handleGetCronHistoryDetail)
 	mux.HandleFunc("/api/upload", s.handleUpload)
 	mux.HandleFunc("/api/uploads/", s.handleGetUpload)
 	mux.HandleFunc("/api/notifications/pending", s.handleGetPendingNotifications)
@@ -1247,6 +1249,48 @@ func (s *Server) handleCronDelete(w http.ResponseWriter, r *http.Request, jobID 
 	}
 
 	writeJSON(w, map[string]bool{"ok": true})
+}
+
+func (s *Server) handleGetCronHistory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	jobID := r.URL.Query().Get("jobId")
+	limit := 50
+	if l := r.URL.Query().Get("limit"); l != "" {
+		fmt.Sscanf(l, "%d", &limit)
+	}
+
+	if s.cronService == nil {
+		writeJSON(w, map[string]interface{}{"records": []interface{}{}})
+		return
+	}
+
+	records := s.cronService.GetHistoryStore().GetRecords(jobID, limit)
+	writeJSON(w, map[string]interface{}{"records": records})
+}
+
+func (s *Server) handleGetCronHistoryDetail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := strings.TrimPrefix(r.URL.Path, "/api/cron/history/")
+	if s.cronService == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	record, found := s.cronService.GetHistoryStore().GetRecord(id)
+	if !found {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	writeJSON(w, record)
 }
 
 // toCronJobResponse 将内部 Job 转换为前端期望的格式

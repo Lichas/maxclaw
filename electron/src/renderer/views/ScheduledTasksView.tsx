@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { CustomSelect } from '../components/CustomSelect';
 import { CronBuilder } from '../components/CronBuilder';
+import { ExecutionHistory } from '../components/ExecutionHistory';
 
 interface CronJob {
   id: string;
@@ -28,6 +29,8 @@ export function ScheduledTasksView() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | undefined>(undefined);
   const [formData, setFormData] = useState<JobFormData>({
     title: '',
     prompt: '',
@@ -110,6 +113,11 @@ export function ScheduledTasksView() {
     }
   };
 
+  const viewJobHistory = (id: string) => {
+    setSelectedJobId(id);
+    setShowHistory(true);
+  };
+
   const getScheduleLabel = (job: CronJob) => {
     if (job.scheduleType === 'every') return `每 ${job.schedule}`;
     if (job.scheduleType === 'once') return `一次性: ${job.schedule}`;
@@ -124,12 +132,23 @@ export function ScheduledTasksView() {
             <h1 className="text-2xl font-bold text-foreground">定时任务</h1>
             <p className="mt-1 text-sm text-foreground/55">创建和管理自动化 AI 任务</p>
           </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            {showForm ? '取消' : '+ 新建任务'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setSelectedJobId(undefined);
+                setShowHistory(true);
+              }}
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary"
+            >
+              执行历史
+            </button>
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              {showForm ? '取消' : '+ 新建任务'}
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -295,6 +314,13 @@ export function ScheduledTasksView() {
                   </div>
                   <div className="ml-4 flex shrink-0 items-center gap-2">
                     <button
+                      onClick={() => void viewJobHistory(job.id)}
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary"
+                      title="查看执行历史"
+                    >
+                      历史
+                    </button>
+                    <button
                       onClick={() => void toggleJob(job.id, job.enabled)}
                       className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
                         job.enabled
@@ -314,6 +340,45 @@ export function ScheduledTasksView() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Execution History Panel */}
+        {showHistory && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="max-h-[80vh] w-full max-w-3xl overflow-hidden rounded-xl border border-border bg-background shadow-lg">
+              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <div>
+                  <h3 className="font-semibold text-foreground">执行历史</h3>
+                  <p className="text-xs text-foreground/50">
+                    {selectedJobId
+                      ? jobs.find((j) => j.id === selectedJobId)?.title || '任务执行记录'
+                      : '所有任务执行记录'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedJobId && (
+                    <button
+                      onClick={() => setSelectedJobId(undefined)}
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary"
+                    >
+                      查看全部
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowHistory(false)}
+                    className="rounded-lg p-1.5 text-foreground/50 hover:bg-secondary hover:text-foreground"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div className="max-h-[60vh] overflow-y-auto p-4">
+                <ExecutionHistory jobId={selectedJobId} />
+              </div>
+            </div>
           </div>
         )}
       </div>

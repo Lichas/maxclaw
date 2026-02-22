@@ -2,6 +2,29 @@
 
 ## [Unreleased]
 
+### 新增功能
+
+#### 定时任务执行历史记录 (`internal/cron/`, `electron/src/renderer/`)
+- **功能**：为定时任务添加执行历史追踪，用户可查看每次执行的详细记录
+- **实现**：
+  - 后端：`internal/cron/types.go` 新增 `ExecutionRecord` 类型定义执行记录
+  - 后端：`internal/cron/history.go` 新增 `HistoryStore`，支持最多1000条记录的持久化存储
+  - 后端：`internal/cron/service.go` 在任务执行时自动创建和更新执行记录
+  - 后端：`internal/webui/server.go` 新增 `/api/cron/history` 和 `/api/cron/history/{id}` API 端点
+  - 前端：`electron/src/renderer/components/ExecutionHistory.tsx` 新增执行历史组件
+  - 前端：`electron/src/renderer/views/ScheduledTasksView.tsx` 集成历史查看功能，支持按任务筛选和查看全部
+- **验证**
+  - `go test ./internal/cron/...` 通过
+  - `make build` 成功
+  - `cd electron && npm run build` 成功
+- **文件**
+  - `internal/cron/types.go` - 添加 ExecutionRecord 类型
+  - `internal/cron/history.go` - 历史存储实现（新增）
+  - `internal/cron/service.go` - 集成历史追踪
+  - `internal/webui/server.go` - 添加 API 端点
+  - `electron/src/renderer/components/ExecutionHistory.tsx` - 历史组件（新增）
+  - `electron/src/renderer/views/ScheduledTasksView.tsx` - 集成历史查看
+
 ### 变更
 
 #### 文件预览栏默认关闭优化（新建/历史/回复场景）
