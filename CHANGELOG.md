@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 桌面端布局改为无顶栏 + 可折叠侧边栏 + 圆角主聊天面板
+- **变更**：移除渲染层顶部标题栏；新增左上角侧边栏折叠按钮；侧边栏折叠后显示独立铅笔按钮用于快速新建任务；右侧主内容区改为圆角矩形卡片容器。
+- **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/components/Sidebar.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### Provider 请求失败日志补充 `provider` 与 `model`
 - **变更**：OpenAI 兼容 Provider 在聊天/流式请求失败时，错误信息新增 `provider`、`model`、`api_base` 字段，便于从 Gateway 日志直接定位模型不存在或路由错误问题。
 - **位置**：`internal/providers/openai.go`。

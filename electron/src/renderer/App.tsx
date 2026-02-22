@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, setStatus, setActiveTab, setTheme, setLanguage, setCurrentSessionKey } from './store';
-import { TitleBar } from './components/TitleBar';
+import { RootState, setStatus, setActiveTab, setTheme, setLanguage, setCurrentSessionKey, toggleSidebar } from './store';
 import { Sidebar } from './components/Sidebar';
 import { ChatView } from './views/ChatView';
 import { SessionsView } from './views/SessionsView';
@@ -12,7 +11,8 @@ import { wsClient } from './services/websocket';
 
 function App() {
   const dispatch = useDispatch();
-  const { activeTab, theme, language } = useSelector((state: RootState) => state.ui);
+  const { activeTab, theme, sidebarCollapsed } = useSelector((state: RootState) => state.ui);
+  const isMac = window.electronAPI.platform.isMac;
 
   useEffect(() => {
     dispatch(setCurrentSessionKey(`desktop:${Date.now()}`));
@@ -86,12 +86,37 @@ function App() {
     }
   }, [theme]);
 
+  const handleNewTask = () => {
+    const newSessionKey = `desktop:${Date.now()}`;
+    dispatch(setCurrentSessionKey(newSessionKey));
+    dispatch(setActiveTab('chat'));
+  };
+
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground">
-      <TitleBar />
-      <div className="flex-1 flex overflow-hidden">
+    <div className="h-screen bg-background text-foreground">
+      <div className={`relative flex h-full overflow-hidden gap-3 p-3 ${isMac ? 'pt-12' : 'pt-4'}`}>
+        <div className={`absolute z-40 flex items-center gap-2 ${isMac ? 'left-20 top-3' : 'left-3 top-3'}`}>
+          <button
+            onClick={() => dispatch(toggleSidebar())}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-foreground/80 shadow-sm transition-colors hover:bg-secondary"
+            aria-label="Toggle sidebar"
+            title="Toggle sidebar"
+          >
+            <SidebarToggleIcon className="h-4 w-4" />
+          </button>
+          {sidebarCollapsed && (
+            <button
+              onClick={handleNewTask}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-foreground/80 shadow-sm transition-colors hover:bg-secondary"
+              aria-label="New task"
+              title="New task"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </button>
+          )}
+        </div>
         <Sidebar />
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           {activeTab === 'chat' && <ChatView />}
           {activeTab === 'sessions' && <SessionsView />}
           {activeTab === 'scheduled' && <ScheduledTasksView />}
@@ -104,3 +129,20 @@ function App() {
 }
 
 export default App;
+
+function SidebarToggleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  );
+}
+
+function PencilIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 20h9" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.5 3.5a2.1 2.1 0 113 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
+  );
+}

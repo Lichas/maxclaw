@@ -160,23 +160,23 @@ export function Sidebar() {
     dispatch(setActiveTab('chat'));
   };
 
+  if (sidebarCollapsed) {
+    return null;
+  }
+
   return (
     <aside
-      className={`flex flex-col h-full transition-all duration-300 ease-out ${
-        sidebarCollapsed ? 'w-16' : 'w-64'
-      }`}
+      className="flex h-full w-64 flex-col rounded-2xl border border-border shadow-sm"
       style={{ background: 'var(--secondary)' }}
     >
       {/* New Chat Button */}
       <div className="p-3">
         <button
           onClick={handleNewTask}
-          className={`w-full flex items-center justify-center gap-2 bg-primary/15 text-primary border border-primary/30 rounded-lg py-2.5 px-4 hover:bg-primary/20 transition-colors ${
-            sidebarCollapsed ? 'px-2' : ''
-          }`}
+          className="w-full flex items-center justify-center gap-2 bg-primary/15 text-primary border border-primary/30 rounded-lg py-2.5 px-4 hover:bg-primary/20 transition-colors"
         >
           <EditIcon className="w-5 h-5 flex-shrink-0" />
-          {!sidebarCollapsed && <span className="font-medium">{t('sidebar.newTask')}</span>}
+          <span className="font-medium">{t('sidebar.newTask')}</span>
         </button>
       </div>
 
@@ -213,13 +213,12 @@ export function Sidebar() {
               }}
             >
               <Icon className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
-              {!sidebarCollapsed && <span>{t(item.labelKey)}</span>}
+              <span>{t(item.labelKey)}</span>
             </button>
           );
         })}
 
-        {!sidebarCollapsed && (
-          <div className="mt-4 px-2">
+        <div className="mt-4 px-2">
             <p className="text-xs font-medium mb-3 px-2" style={{ color: 'var(--muted)' }}>
               {t('sidebar.history')}
             </p>
@@ -379,7 +378,6 @@ export function Sidebar() {
               })}
             </div>
           </div>
-        )}
       </nav>
 
       {/* Settings Button with Gateway Status */}
@@ -391,9 +389,7 @@ export function Sidebar() {
       >
         <button
           onClick={() => dispatch(setActiveTab('settings'))}
-          className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02] group ${
-            sidebarCollapsed ? 'justify-center' : ''
-          }`}
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02] group"
           style={{
             background: 'transparent'
           }}
@@ -416,11 +412,9 @@ export function Sidebar() {
               }}
             />
           </div>
-          {!sidebarCollapsed && (
-            <span className="text-sm" style={{ color: 'var(--secondary-foreground)' }}>
-              {t('nav.settings')}
-            </span>
-          )}
+          <span className="text-sm" style={{ color: 'var(--secondary-foreground)' }}>
+            {t('nav.settings')}
+          </span>
         </button>
       </div>
     </aside>
