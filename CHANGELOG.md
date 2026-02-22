@@ -298,6 +298,13 @@
   - `go build ./...`
   - `make build`
 
+#### 修复历史任务详情中 Markdown 显示原始文本（`electron/src/renderer/views/ChatView.tsx`）
+- **变更**：历史会话的 timeline 文本节点在非流式状态下改为使用 `MarkdownRenderer` 渲染；仅流式增量文本保持 `<pre>` 直出。
+- **位置**：`renderTimeline` 中 `entry.kind === 'text'` 分支。
+- **验证**：
+  - `cd electron && npm run build`
+  - `make build`
+
 ### 新增功能
 
 #### 实现定时任务 REST API（`internal/webui/server.go`）

@@ -731,10 +731,14 @@ export function ChatView() {
                   )}
                 </details>
               </div>
-            ) : (
+            ) : streaming ? (
               <pre key={entry.id} className="whitespace-pre-wrap break-all font-sans text-sm leading-7 text-foreground">
                 {entry.text}
               </pre>
+            ) : (
+              <div key={entry.id} className="text-foreground">
+                <MarkdownRenderer content={entry.text} />
+              </div>
             )
           )}
         </div>
