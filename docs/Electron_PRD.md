@@ -316,7 +316,7 @@ interface AppConfig {
 - [x] 消息列表（支持 Markdown、代码高亮）
 - [x] 输入框（富文本、@提及、快捷命令 `/new`, `/help`）
 - [x] 技能选择器（下拉菜单，支持搜索过滤）
-- [ ] 文件附件（拖拽上传、工作目录绑定）⚠️ UI占位，功能未接入
+- [x] 文件附件（拖拽上传、文件选择、随消息生效）
 - [x] 快捷操作栏（4个任务模板卡片）
 - [x] 模型切换下拉框（调用 Gateway API 获取可用模型）
 - [x] 流式响应显示（SSE 实时渲染）
@@ -361,26 +361,26 @@ interface AppConfig {
 #### 5.4 模型配置模块
 
 ##### 5.4.1 提供商管理（复用 Gateway Provider 配置）
-- [ ] 预设提供商列表（DeepSeek、OpenAI、Anthropic 等）❌ 未实现
-- [ ] 添加自定义提供商❌ 未实现
-- [ ] 启用/禁用切换❌ 未实现
-- [x] 配置字段编辑⚠️ Settings 页仅展示当前模型/工作区
+- [x] 预设提供商列表（DeepSeek、OpenAI、Anthropic、Moonshot、Groq、Gemini）
+- [x] 添加自定义提供商
+- [x] 启用/禁用切换
+- [x] 配置字段编辑
 - [x] **关键**：配置修改后调用 Gateway `/api/config` 更新并重启 Gateway
 
 ##### 5.4.2 连接测试
-- [ ] 一键测试 API 连通性（通过 Gateway 代理）❌ 未实现
-- [ ] 显示延迟和状态❌ 未实现
+- [x] 一键测试 API 连通性（通过 Gateway 代理）
+- [x] 显示延迟和状态
 
 #### 5.5 集成设置模块
 
 ##### 5.5.1 邮箱配置（复用 Gateway Email Channel）
-- [ ] 服务商预设（Gmail、Outlook、QQ邮箱、自定义）❌ 未实现
-- [ ] IMAP/SMTP 配置❌ 未实现
-- [ ] 连接测试❌ 未实现
+- [x] 服务商预设（Gmail、Outlook、QQ邮箱、163邮箱、自定义）
+- [x] IMAP/SMTP 配置
+- [x] 连接测试
 
 ##### 5.5.2 IM Bot 配置（复用 Gateway Channels）
-- [ ] 多平台配置面板：Telegram、Discord、WhatsApp、飞书、钉钉、Slack、QQ❌ 未实现
-- [x] 连接状态显示（从 Gateway `/api/status` 获取）✅ Gateway 状态指示器
+- [x] 多平台配置面板：Telegram、Discord、WhatsApp、飞书、钉钉、Slack、QQ
+- [x] 连接状态显示（从 Gateway `/api/status` 获取）
 - [ ] 二维码登录（WhatsApp、Telegram）❌ 未实现
 
 #### 5.6 系统设置模块
@@ -390,6 +390,7 @@ interface AppConfig {
 - [x] 开机自启动（electron-auto-launch）
 - [x] 主题切换（Light/Dark/System，深色主题柔和色调）
 - [x] 最小化到托盘
+- [x] 系统通知（定时任务完成、新消息推送）
 
 ##### 5.6.2 快捷键
 - [ ] 全局快捷键注册（呼出/隐藏窗口）❌ 未实现
