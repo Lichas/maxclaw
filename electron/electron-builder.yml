@@ -1,5 +1,5 @@
 appId: com.nanobot.desktop
-productName: Nanobot
+productName: nanobot-go
 directories:
   output: release
   buildResources: build
@@ -11,15 +11,18 @@ extraResources:
   - from: ../build/nanobot-go${ext}
     to: bin/nanobot-go${ext}
 mac:
+  icon: assets/icon.icns
   category: public.app-category.productivity
   target:
     - dmg
     - zip
 win:
+  icon: assets/icon.ico
   target:
     - nsis
     - portable
 linux:
+  icon: assets/icon.png
   target:
     - AppImage
     - deb
