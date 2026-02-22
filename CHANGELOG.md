@@ -119,6 +119,19 @@
   - `electron/src/renderer/views/SettingsView.tsx` - 集成提供商管理（修改）
   - `internal/webui/server.go` - 添加测试端点（修改）
 
+#### 配置 API 支持动态 Providers（`internal/config/schema.go`, `internal/webui/server.go`）
+- **问题**：前端发送 providers 为动态 map 格式，后端 ProvidersConfig 使用固定字段名，导致配置保存失败
+- **修复**：
+  - 新增 `ToMap()` 和 `ProvidersConfigFromMap()` 转换函数
+  - 修改 `handleConfig` PUT 方法使用部分更新策略
+  - 支持动态 providers map，同时保持配置文件格式兼容
+- **验证**
+  - `make build` 成功
+  - 前后端配置同步正常
+- **文件**
+  - `internal/config/schema.go` - 添加转换函数（修改）
+  - `internal/webui/server.go` - 更新配置 API（修改）
+
 ### Bug 修复
 
 #### 修复深色主题样式（`electron/src/renderer/styles/globals.css`, 各视图组件）
