@@ -58,6 +58,9 @@ const zh: Translations = {
   'settings.category.gateway.desc': '查看状态并执行重启',
   'settings.email': '邮箱配置',
   'settings.imbot': 'IM Bot 配置',
+  'settings.shortcuts': '全局快捷键',
+  'settings.shortcuts.toggle': '显示/隐藏窗口',
+  'settings.shortcuts.newChat': '新建对话',
 
   // Skills
   'skills.title': '技能市场',
@@ -152,6 +155,9 @@ const en: Translations = {
   'settings.category.gateway.desc': 'Status overview and restart controls',
   'settings.email': 'Email Configuration',
   'settings.imbot': 'IM Bot Configuration',
+  'settings.shortcuts': 'Global Shortcuts',
+  'settings.shortcuts.toggle': 'Show/Hide Window',
+  'settings.shortcuts.newChat': 'New Chat',
 
   // Skills
   'skills.title': 'Skills Marketplace',

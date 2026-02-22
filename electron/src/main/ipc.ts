@@ -11,6 +11,7 @@ import AutoLaunch from 'auto-launch';
 import log from 'electron-log';
 import { GatewayManager } from './gateway';
 import { NotificationManager } from './notifications';
+import { ShortcutManager } from './shortcuts';
 
 interface AppConfig {
   theme: 'light' | 'dark' | 'system';
@@ -528,11 +529,18 @@ async function openInFolder(inputPath: string, options?: FileResolveOptions): Pr
   }
 }
 
+let shortcutManagerInstance: ShortcutManager | null = null;
+
 export function createIPCHandlers(
   mainWindow: BrowserWindow,
   gatewayManager: GatewayManager,
-  notificationManager?: NotificationManager
+  notificationManager?: NotificationManager,
+  shortcutManager?: ShortcutManager
 ): void {
+  // Store shortcut manager reference for IPC handlers
+  if (shortcutManager) {
+    shortcutManagerInstance = shortcutManager;
+  }
   currentMainWindow = mainWindow;
   mainWindow.once('closed', () => {
     if (currentMainWindow === mainWindow) {
@@ -564,6 +572,16 @@ export function createIPCHandlers(
       log.error('Failed to restart gateway:', error);
       return { success: false, error: String(error) };
     }
+  });
+
+  // Shortcuts IPC
+  ipcMain.handle('shortcuts:update', (_, config) => {
+    shortcutManagerInstance?.register(config);
+    return { success: true };
+  });
+
+  ipcMain.handle('shortcuts:get', () => {
+    return Object.fromEntries(shortcutManagerInstance?.getCurrentShortcuts() || []);
   });
 
   // Config IPC

@@ -79,6 +79,16 @@ const electronAPI = {
     }
   },
 
+  // Shortcuts
+  shortcuts: {
+    update: (config: Record<string, string>) => ipcRenderer.invoke('shortcuts:update', config),
+    get: () => ipcRenderer.invoke('shortcuts:get'),
+    onNewChat: (callback: () => void) => {
+      ipcRenderer.on('shortcut:newChat', callback);
+      return () => ipcRenderer.removeAllListeners('shortcut:newChat');
+    }
+  },
+
   terminal: {
     start: (sessionKey: string, options?: { cols?: number; rows?: number }) =>
       ipcRenderer.invoke('terminal:start', sessionKey, options),

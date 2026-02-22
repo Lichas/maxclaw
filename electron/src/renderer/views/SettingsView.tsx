@@ -17,6 +17,11 @@ interface Settings {
   notificationsEnabled: boolean;
 }
 
+interface ShortcutsState {
+  toggleWindow: string;
+  newChat: string;
+}
+
 type SettingsCategory = 'general' | 'providers' | 'channels' | 'gateway';
 
 export function SettingsView() {
@@ -36,6 +41,11 @@ export function SettingsView() {
   const [editingProvider, setEditingProvider] = useState<ProviderConfig | null>(null);
   const [showAddProvider, setShowAddProvider] = useState(false);
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>('general');
+
+  const [shortcuts, setShortcuts] = useState<ShortcutsState>({
+    toggleWindow: 'CommandOrControl+Shift+Space',
+    newChat: 'CommandOrControl+N',
+  });
 
   // Channel config states
   const [channels, setChannels] = useState<ChannelsConfig>({
@@ -99,6 +109,11 @@ export function SettingsView() {
         }
       })
       .catch(console.error);
+
+    // Load shortcuts config
+    window.electronAPI.shortcuts?.get?.().then((current: Record<string, string>) => {
+      setShortcuts(prev => ({ ...prev, ...current }));
+    }).catch(console.error);
   }, []);
 
   // Sync with store changes
@@ -121,6 +136,13 @@ export function SettingsView() {
     } else if (key === 'language') {
       dispatch(setLanguage(value as 'zh' | 'en'));
     }
+  };
+
+  const handleShortcutChange = (key: keyof ShortcutsState, value: string) => {
+    const updated = { ...shortcuts, [key]: value };
+    setShortcuts(updated);
+    window.electronAPI.config.set({ shortcuts: updated });
+    window.electronAPI.shortcuts?.update?.(updated);
   };
 
   const handleRestartGateway = async () => {
@@ -429,6 +451,39 @@ export function SettingsView() {
                         className="h-4 w-4 rounded border-border"
                       />
                     </label>
+                  </div>
+                </section>
+
+                <section className="rounded-xl border border-border bg-card">
+                  <div className="border-b border-border px-4 py-3">
+                    <h3 className="text-base font-semibold">{t('settings.shortcuts')}</h3>
+                  </div>
+                  <div className="divide-y divide-border">
+                    <div className="flex items-center justify-between gap-4 px-4 py-3">
+                      <label className="text-sm font-medium">{t('settings.shortcuts.toggle')}</label>
+                      <input
+                        type="text"
+                        value={shortcuts.toggleWindow}
+                        onChange={(e) => handleShortcutChange('toggleWindow', e.target.value)}
+                        className="w-48 rounded-lg border border-border bg-secondary px-3 py-2 font-mono text-sm"
+                        placeholder="Cmd+Shift+Space"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-4 px-4 py-3">
+                      <label className="text-sm font-medium">{t('settings.shortcuts.newChat')}</label>
+                      <input
+                        type="text"
+                        value={shortcuts.newChat}
+                        onChange={(e) => handleShortcutChange('newChat', e.target.value)}
+                        className="w-48 rounded-lg border border-border bg-secondary px-3 py-2 font-mono text-sm"
+                        placeholder="Cmd+N"
+                      />
+                    </div>
+                  </div>
+                  <div className="border-t border-border px-4 py-2">
+                    <p className="text-xs text-foreground/50">
+                      Use "CommandOrControl" for cross-platform shortcuts
+                    </p>
                   </div>
                 </section>
               </div>

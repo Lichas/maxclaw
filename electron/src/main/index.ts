@@ -5,7 +5,9 @@ import { initializeTray } from './tray';
 import { GatewayManager } from './gateway';
 import { createIPCHandlers } from './ipc';
 import { NotificationManager } from './notifications';
+import { ShortcutManager, DEFAULT_SHORTCUTS } from './shortcuts';
 import log from 'electron-log';
+import Store from 'electron-store';
 
 // Avoid crashing on detached stdio (EPIPE) in desktop runtime.
 const swallowBrokenPipe = (error: NodeJS.ErrnoException) => {
@@ -24,7 +26,9 @@ log.initialize();
 let mainWindow: BrowserWindow | null = null;
 let gatewayManager: GatewayManager | null = null;
 let notificationManager: NotificationManager | null = null;
+let shortcutManager: ShortcutManager | null = null;
 let openingMainWindow: Promise<void> | null = null;
+const store = new Store();
 
 const isDev = !app.isPackaged;
 const loopbackNoProxyHosts = ['localhost', '127.0.0.1', '::1'];
@@ -80,7 +84,14 @@ async function openMainWindow(): Promise<void> {
 
   if (gatewayManager) {
     notificationManager = new NotificationManager(mainWindow);
-    createIPCHandlers(mainWindow, gatewayManager, notificationManager);
+    createIPCHandlers(mainWindow, gatewayManager, notificationManager, shortcutManager);
+  }
+
+  // Initialize shortcut manager
+  if (!shortcutManager) {
+    shortcutManager = new ShortcutManager(mainWindow);
+    const shortcutsConfig = store.get('shortcuts') as Partial<typeof DEFAULT_SHORTCUTS> || {};
+    shortcutManager.register(shortcutsConfig);
   }
 }
 
@@ -149,6 +160,11 @@ app.on('activate', () => {
 
 app.on('before-quit', async () => {
   await gatewayManager?.stop();
+});
+
+// Cleanup on quit
+app.on('will-quit', () => {
+  shortcutManager?.unregisterAll();
 });
 
 // Security: Prevent new window creation
