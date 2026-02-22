@@ -29,6 +29,108 @@
   - 前端打包后由 Gateway 静态托管
   - 通过 `/api/*` 与后端通讯
 
+## Electron Desktop App 架构
+
+### 自动更新机制
+
+使用 **electron-updater** 实现自动更新，从 GitHub Releases 获取新版本。
+
+#### 配置方式
+
+**electron-builder.yml**：
+```yaml
+publish:
+  provider: github
+  owner: Lichas
+  repo: maxclaw
+  releaseType: release
+```
+
+#### 更新流程
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│   启动后5秒     │────▶│  每小时检查      │────▶│  用户手动检查   │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+          │                       │                       │
+          ▼                       ▼                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     autoUpdater.checkForUpdates()                 │
+└─────────────────────────────────────────────────────────────────┘
+          │
+          ▼
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│ update-available│────▶│ 用户点击下载    │────▶│ downloadUpdate  │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+                                                      │
+          ┌───────────────────────────────────────────┘
+          ▼
+┌─────────────────┐     ┌──────────────────┐
+│ update-downloaded│────▶│ quitAndInstall  │
+└─────────────────┘     └──────────────────┘
+```
+
+#### 关键实现
+
+**主进程** (`electron/src/main/index.ts`)：
+```typescript
+function setupAutoUpdater() {
+  // 开发模式跳过
+  if (isDev) return;
+
+  autoUpdater.autoDownload = false; // 手动下载
+
+  // 事件处理
+  autoUpdater.on('update-available', (info) => {
+    mainWindow?.webContents.send('update:available', info);
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    mainWindow?.webContents.send('update:downloaded');
+  });
+
+  // 定时检查
+  setTimeout(() => autoUpdater.checkForUpdates(), 5000);   // 启动后5秒
+  setInterval(() => autoUpdater.checkForUpdates(), 3600000); // 每小时
+}
+```
+
+**IPC 接口** (`electron/src/main/ipc.ts`)：
+- `update:check` - 手动检查更新
+- `update:download` - 下载更新
+- `update:install` - 安装并重启
+
+**渲染进程** (`electron/src/renderer/views/SettingsView.tsx`)：
+- 设置页面提供检查/下载/安装按钮
+- 显示当前更新状态（checking/available/downloading/downloaded）
+- 展示新版本信息
+
+#### 发布流程
+
+1. 打包应用：`npm run build && npm run dist`
+2. 创建 GitHub Release
+3. 上传 `dist/` 目录中的安装包（.dmg, .exe, .AppImage）
+4. 客户端自动检测到新版本并提示用户
+
+### 全局快捷键
+
+使用 Electron `globalShortcut` API 注册系统级快捷键：
+
+```typescript
+// 默认快捷键
+CommandOrControl+Shift+Space  // 显示/隐藏窗口
+CommandOrControl+N            // 新建对话
+```
+
+支持在设置页面自定义快捷键组合。
+
+### 数据导入/导出
+
+使用 **JSZip** 实现配置备份：
+
+- **导出**：打包 `config.json` + `sessions.json` + `metadata.json` 为 ZIP
+- **导入**：解压 ZIP 并通过 Gateway API 恢复配置
+
 ## Web Fetch 方案
 
 ### HTTP 模式（默认）
