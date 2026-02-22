@@ -9,6 +9,11 @@
 - **位置**：`electron/src/renderer/types/providers.ts`、`internal/providers/registry.go`、`internal/config/schema.go`、`internal/webui/server.go`、`internal/config/config_test.go`、`internal/providers/registry_test.go`、`README.md`、`internal/providers/README.md`。
 - **验证**：`go test ./internal/config ./internal/providers`、`cd electron && npm run build`、`make build`。
 
+#### 修复设置页 Provider Test 在代理环境下 `Failed to fetch`
+- **变更**：Electron 启动时自动补齐 `NO_PROXY/no_proxy`（`localhost,127.0.0.1,::1`），避免本地 `http://localhost:18890` 请求被系统代理拦截导致连接测试失败。
+- **位置**：`electron/src/main/index.ts`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 项目统一更名为 `maxclaw`（Go CLI / Desktop / 文档与安装脚本）
 - **变更**：统一模块与品牌命名，CLI 命令、桌面应用标识、安装/发布脚本、Web UI 与主页文案改为 `maxclaw`；默认数据目录切换到 `~/.maxclaw`，并兼容旧 `~/.nanobot` 与 `NANOBOT_*` 环境变量。
 - **位置**：`cmd/maxclaw/main.go`、`internal/config/loader.go`、`internal/cli/root.go`、`internal/agent/context.go`、`electron/src/main/gateway.ts`、`electron/electron-builder.yml`、`deploy/systemd/maxclaw-*.service`、`install*.sh`、`README.md`、`homepage/index.html`。

@@ -15,6 +15,34 @@ let notificationManager: NotificationManager | null = null;
 let openingMainWindow: Promise<void> | null = null;
 
 const isDev = !app.isPackaged;
+const loopbackNoProxyHosts = ['localhost', '127.0.0.1', '::1'];
+
+function ensureLoopbackNoProxy(): void {
+  const currentRaw = process.env.NO_PROXY || process.env.no_proxy || '';
+  const parts = currentRaw
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const lowerSet = new Set(parts.map((item) => item.toLowerCase()));
+
+  let changed = false;
+  for (const host of loopbackNoProxyHosts) {
+    if (!lowerSet.has(host)) {
+      parts.push(host);
+      lowerSet.add(host);
+      changed = true;
+    }
+  }
+
+  if (!changed) {
+    return;
+  }
+
+  const merged = parts.join(',');
+  process.env.NO_PROXY = merged;
+  process.env.no_proxy = merged;
+  log.info('Updated NO_PROXY for local gateway access:', merged);
+}
 
 async function openMainWindow(): Promise<void> {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -81,6 +109,7 @@ async function initializeApp(): Promise<void> {
 
 // App event handlers
 app.whenReady().then(() => {
+  ensureLoopbackNoProxy();
   applyMacDockIcon();
   void initializeApp().catch((error) => {
     log.error('Failed to initialize app:', error);
