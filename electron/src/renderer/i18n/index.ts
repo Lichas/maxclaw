@@ -19,7 +19,7 @@ const zh: Translations = {
 
   // Navigation
   'nav.chat': '聊天',
-  'nav.sessions': '历史任务',
+  'nav.sessions': '搜索任务',
   'nav.scheduled': '定时任务',
   'nav.skills': '技能市场',
   'nav.settings': '设置',
@@ -102,7 +102,7 @@ const en: Translations = {
 
   // Navigation
   'nav.chat': 'Chat',
-  'nav.sessions': 'History',
+  'nav.sessions': 'Search',
   'nav.scheduled': 'Scheduled',
   'nav.skills': 'Skills',
   'nav.settings': 'Settings',
