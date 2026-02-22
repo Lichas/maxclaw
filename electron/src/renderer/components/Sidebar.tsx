@@ -170,7 +170,7 @@ export function Sidebar() {
       </div>
 
       {/* Menu Items */}
-      <nav className="flex-1 px-2 overflow-y-auto">
+      <nav className="flex-1 px-2 overflow-y-auto pb-16">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -306,7 +306,7 @@ export function Sidebar() {
       </nav>
 
       {/* Settings Button with Gateway Status */}
-      <div className="p-3 border-t border-border/70">
+      <div className="sticky bottom-0 p-3 border-t border-border/70 bg-secondary">
         <button
           onClick={() => dispatch(setActiveTab('settings'))}
           className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/65 hover:bg-background/60 transition-colors ${
