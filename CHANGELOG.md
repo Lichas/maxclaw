@@ -94,6 +94,31 @@
   - `electron/src/renderer/services/websocket.ts` - WebSocket 客户端（新增）
   - `electron/src/renderer/App.tsx` - 集成 WebSocket 连接（修改）
 
+#### 模型配置编辑器（`electron/src/renderer/components/ProviderEditor.tsx`, `internal/webui/server.go`）
+- **功能**：完整的模型提供商管理 UI，支持预设提供商和自定义提供商
+- **实现**：
+  - 预设提供商：DeepSeek、OpenAI、Anthropic、Moonshot、Groq、Gemini
+    - 每个提供商预配置默认 Base URL 和模型列表
+    - 一键添加，自动填充配置
+  - 自定义提供商：支持任意 OpenAI/Anthropic 兼容 API
+    - 自定义名称、API Key、Base URL
+    - 选择 API 格式（OpenAI/Anthropic）
+    - 自定义模型列表
+  - 连接测试：`/api/providers/test` 端点
+    - 支持延迟测量
+    - 详细的错误提示
+  - 集成到 SettingsView，与 Gateway 配置联动
+    - 保存后自动重启 Gateway
+    - 删除提供商功能
+- **验证**
+  - `cd electron && npm run build` 成功
+  - `make build` 成功
+- **文件**
+  - `electron/src/renderer/types/providers.ts` - 提供商类型定义（新增）
+  - `electron/src/renderer/components/ProviderEditor.tsx` - 提供商编辑器（新增）
+  - `electron/src/renderer/views/SettingsView.tsx` - 集成提供商管理（修改）
+  - `internal/webui/server.go` - 添加测试端点（修改）
+
 ### Bug 修复
 
 #### 修复深色主题样式（`electron/src/renderer/styles/globals.css`, 各视图组件）
