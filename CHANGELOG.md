@@ -132,6 +132,52 @@
   - `internal/config/schema.go` - 添加转换函数（修改）
   - `internal/webui/server.go` - 更新配置 API（修改）
 
+#### 邮箱配置支持（`electron/src/renderer/components/EmailConfig.tsx`, `internal/webui/server.go`）
+- **功能**：完整的 IMAP/SMTP 邮箱配置，支持服务商预设
+- **实现**：
+  - 预设服务商：Gmail、Outlook、QQ邮箱、163邮箱、自定义
+    - 自动填充 IMAP/SMTP 服务器地址、端口、SSL/TLS 设置
+  - 完整配置项：
+    - IMAP：服务器、端口、用户名、密码、SSL、读取后标记为已读
+    - SMTP：服务器、端口、发件人地址、TLS/SSL、自动回复
+    - 检查频率：可配置轮询间隔（默认30秒）
+    - 允许的发件人：白名单过滤
+  - 隐私安全声明：启用前需确认同意
+  - 连接测试：`/api/channels/email/test` 端点
+    - 支持延迟测量
+    - DNS 解析测试
+- **验证**
+  - `cd electron && npm run build` 成功
+  - `make build` 成功
+- **文件**
+  - `electron/src/renderer/types/channels.ts` - 频道类型定义（新增）
+  - `electron/src/renderer/components/EmailConfig.tsx` - 邮箱配置组件（新增）
+  - `electron/src/renderer/views/SettingsView.tsx` - 集成邮箱配置（修改）
+  - `internal/webui/server.go` - 添加邮箱测试端点（修改）
+
+#### IM Bot 配置面板（`electron/src/renderer/components/IMBotConfig.tsx`, `internal/webui/server.go`）
+- **功能**：多平台 IM Bot 配置管理，支持6种平台
+- **实现**：
+  - 支持平台：Telegram、Discord、WhatsApp、Slack、飞书/Lark、QQ（OneBot）
+  - 各平台配置项：
+    - Telegram：Bot Token、允许用户、代理
+    - Discord：Bot Token、允许用户
+    - WhatsApp：Bridge URL、Token、允许号码、允许自己
+    - Slack：Bot Token、App Token、允许用户
+    - 飞书：App ID、App Secret、Verification Token、监听地址
+    - QQ：WebSocket URL、Access Token、允许QQ号
+  - 独立启用/禁用开关
+  - 各频道独立连接测试按钮
+  - Tab 切换不同平台配置
+  - 文档链接跳转
+- **验证**
+  - `cd electron && npm run build` 成功
+  - `make build` 成功
+- **文件**
+  - `electron/src/renderer/components/IMBotConfig.tsx` - IM Bot 配置组件（新增）
+  - `electron/src/renderer/views/SettingsView.tsx` - 集成 IM Bot 配置（修改）
+  - `internal/webui/server.go` - 添加频道测试端点（修改）
+
 ### Bug 修复
 
 #### 修复深色主题样式（`electron/src/renderer/styles/globals.css`, 各视图组件）

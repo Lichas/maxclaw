@@ -4,6 +4,9 @@ import { RootState, setTheme, setLanguage } from '../store';
 import { useTranslation } from '../i18n';
 import { ProviderConfig, PRESET_PROVIDERS } from '../types/providers';
 import { ProviderEditor } from '../components/ProviderEditor';
+import { EmailConfig } from '../components/EmailConfig';
+import { IMBotConfig } from '../components/IMBotConfig';
+import type { ChannelsConfig, EmailConfig as EmailConfigType } from '../types/channels';
 
 interface Settings {
   theme: 'light' | 'dark' | 'system';
@@ -29,6 +32,18 @@ export function SettingsView() {
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [editingProvider, setEditingProvider] = useState<ProviderConfig | null>(null);
   const [showAddProvider, setShowAddProvider] = useState(false);
+
+  // Channel config states
+  const [channels, setChannels] = useState<ChannelsConfig>({
+    telegram: { enabled: false, token: '', allowFrom: [] },
+    discord: { enabled: false, token: '', allowFrom: [] },
+    whatsapp: { enabled: false, bridgeUrl: '', bridgeToken: '', allowFrom: [], allowSelf: false },
+    websocket: { enabled: false, host: '0.0.0.0', port: 18791, path: '/ws', allowOrigins: [] },
+    slack: { enabled: false, botToken: '', appToken: '', allowFrom: [] },
+    email: { enabled: false, consentGranted: false, allowFrom: [], imapPort: 993, smtpPort: 587, pollIntervalSeconds: 30 },
+    qq: { enabled: false, wsUrl: '', accessToken: '', allowFrom: [] },
+    feishu: { enabled: false, appId: '', appSecret: '', verificationToken: '', listenAddr: '0.0.0.0:18792', webhookPath: '/feishu/events', allowFrom: [] },
+  });
 
   useEffect(() => {
     // Load app settings
@@ -70,6 +85,13 @@ export function SettingsView() {
             }
           });
           setProviders(loadedProviders);
+        }
+        // Load channels config
+        if (config.channels) {
+          setChannels(prev => ({
+            ...prev,
+            ...config.channels
+          }));
         }
       })
       .catch(console.error);
@@ -197,6 +219,66 @@ export function SettingsView() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ providers: gatewayProviders }),
     });
+  };
+
+  // Channel config handlers
+  const handleChannelsChange = async (newChannels: ChannelsConfig) => {
+    setChannels(newChannels);
+    try {
+      await fetch('http://localhost:18890/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channels: newChannels }),
+      });
+    } catch (error) {
+      console.error('Failed to save channels config:', error);
+    }
+  };
+
+  const handleTestChannel = async (channel: keyof ChannelsConfig): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await fetch(`http://localhost:18890/api/channels/${channel}/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(channels[channel]),
+      });
+
+      if (response.ok) {
+        return { success: true };
+      } else {
+        const error = await response.text();
+        return { success: false, error };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Connection failed',
+      };
+    }
+  };
+
+  const handleTestEmail = async (): Promise<{ success: boolean; latency?: number; error?: string }> => {
+    try {
+      const startTime = Date.now();
+      const response = await fetch('http://localhost:18890/api/channels/email/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(channels.email),
+      });
+      const latency = Date.now() - startTime;
+
+      if (response.ok) {
+        return { success: true, latency };
+      } else {
+        const error = await response.text();
+        return { success: false, error };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Connection failed',
+      };
+    }
   };
 
   return (
@@ -363,6 +445,30 @@ export function SettingsView() {
             </button>
           </div>
         )}
+      </section>
+
+      {/* Email Configuration */}
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">
+          {language === 'zh' ? '邮箱配置' : 'Email Configuration'}
+        </h2>
+        <EmailConfig
+          config={channels.email}
+          onChange={(emailConfig) => handleChannelsChange({ ...channels, email: emailConfig })}
+          onTest={handleTestEmail}
+        />
+      </section>
+
+      {/* IM Bot Configuration */}
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">
+          {language === 'zh' ? 'IM Bot 配置' : 'IM Bot Configuration'}
+        </h2>
+        <IMBotConfig
+          config={channels}
+          onChange={handleChannelsChange}
+          onTestChannel={handleTestChannel}
+        />
       </section>
 
       {/* Gateway */}
