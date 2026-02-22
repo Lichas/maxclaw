@@ -142,6 +142,7 @@ export function ChatView() {
   const [modelsLoading, setModelsLoading] = useState(false);
   const [workspacePath, setWorkspacePath] = useState('');
   const [previewSidebarCollapsed, setPreviewSidebarCollapsed] = useState(false);
+  const [previewSidebarWidth, setPreviewSidebarWidth] = useState(460);
   const [selectedFileRef, setSelectedFileRef] = useState<FileReference | null>(null);
   const [previewData, setPreviewData] = useState<PreviewPayload | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -1041,14 +1042,14 @@ export function ChatView() {
     if (!selectedFileRef) {
       return;
     }
-    const result = await window.electronAPI.system.openPath(selectedFileRef.pathHint, {
+    const result = await window.electronAPI.system.openInFolder(selectedFileRef.pathHint, {
       workspace: workspacePath,
       sessionKey: currentSessionKey
     });
     if (!result.success) {
       setPreviewData({
         success: false,
-        error: result.error || '打开文件失败'
+        error: result.error || '打开所在目录失败'
       });
     }
   };
@@ -1078,14 +1079,14 @@ export function ChatView() {
             <button
               type="button"
               onClick={() =>
-                void window.electronAPI.system.openPath(reference.pathHint, {
+                void window.electronAPI.system.openInFolder(reference.pathHint, {
                   workspace: workspacePath,
                   sessionKey: currentSessionKey
                 })
               }
               className="rounded border border-border/80 bg-background px-1.5 py-0.5 text-[11px] text-foreground/65 transition-colors hover:bg-secondary"
             >
-              打开
+              打开目录
             </button>
           </div>
         ))}
@@ -1413,10 +1414,12 @@ export function ChatView() {
 
         <FilePreviewSidebar
           collapsed={previewSidebarCollapsed}
+          width={previewSidebarWidth}
           selected={selectedFileRef}
           preview={previewData}
           loading={previewLoading}
           onToggle={() => setPreviewSidebarCollapsed((prev) => !prev)}
+          onResize={setPreviewSidebarWidth}
           onOpenFile={() => {
             void handleOpenSelectedFile();
           }}

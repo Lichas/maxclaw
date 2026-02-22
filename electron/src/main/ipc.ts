@@ -108,6 +108,13 @@ interface FilePreviewResult {
   error?: string;
 }
 
+interface OpenPathResult {
+  success: boolean;
+  resolvedPath?: string;
+  openedPath?: string;
+  error?: string;
+}
+
 function sendTerminalData(sessionKey: string, chunk: string): void {
   if (currentMainWindow && !currentMainWindow.isDestroyed()) {
     currentMainWindow.webContents.send('terminal:data', { sessionKey, chunk });
@@ -503,6 +510,24 @@ async function buildFilePreview(inputPath: string, options?: FileResolveOptions)
   }
 }
 
+async function openInFolder(inputPath: string, options?: FileResolveOptions): Promise<OpenPathResult> {
+  try {
+    const resolvedPath = resolveLocalFilePath(inputPath, options);
+    const stat = await fs.promises.stat(resolvedPath);
+    const targetDir = stat.isDirectory() ? resolvedPath : path.dirname(resolvedPath);
+    const openErr = await shell.openPath(targetDir);
+    if (openErr) {
+      return { success: false, resolvedPath, openedPath: targetDir, error: openErr };
+    }
+    return { success: true, resolvedPath, openedPath: targetDir };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
 export function createIPCHandlers(
   mainWindow: BrowserWindow,
   gatewayManager: GatewayManager,
@@ -598,6 +623,10 @@ export function createIPCHandlers(
         error: error instanceof Error ? error.message : String(error)
       };
     }
+  });
+
+  ipcMain.handle('system:openInFolder', async (_, targetPath: string, options?: FileResolveOptions) => {
+    return openInFolder(targetPath, options);
   });
 
   ipcMain.handle('system:previewFile', async (_, targetPath: string, options?: FileResolveOptions) => {

@@ -54,6 +54,8 @@ const electronAPI = {
     openExternal: (url: string) => ipcRenderer.invoke('system:openExternal', url),
     openPath: (targetPath: string, options?: { workspace?: string; sessionKey?: string }) =>
       ipcRenderer.invoke('system:openPath', targetPath, options),
+    openInFolder: (targetPath: string, options?: { workspace?: string; sessionKey?: string }) =>
+      ipcRenderer.invoke('system:openInFolder', targetPath, options),
     previewFile: (targetPath: string, options?: { workspace?: string; sessionKey?: string }) =>
       ipcRenderer.invoke('system:previewFile', targetPath, options),
     selectFolder: () => ipcRenderer.invoke('system:selectFolder'),

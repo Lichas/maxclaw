@@ -52,6 +52,10 @@ export interface ElectronAPI {
       targetPath: string,
       options?: { workspace?: string; sessionKey?: string }
     ) => Promise<{ success: boolean; error?: string; resolvedPath?: string }>;
+    openInFolder: (
+      targetPath: string,
+      options?: { workspace?: string; sessionKey?: string }
+    ) => Promise<{ success: boolean; error?: string; resolvedPath?: string; openedPath?: string }>;
     previewFile: (
       targetPath: string,
       options?: { workspace?: string; sessionKey?: string }

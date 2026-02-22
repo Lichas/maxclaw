@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 文件“打开”改为打开所在目录 + 右侧预览栏支持拖拽宽度（默认加宽）
+- **变更**：聊天中的文件操作按钮与右侧预览栏操作统一改为“打开所在目录”（不再直接打开文件）；新增预览栏左侧拖拽手柄，可实时调整宽度，并将默认宽度由固定窄栏提升为更宽展示。
+- **位置**：`electron/src/main/ipc.ts`、`electron/src/preload/index.ts`、`electron/src/renderer/types/electron.d.ts`、`electron/src/renderer/components/FilePreviewSidebar.tsx`、`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 会话产物按 `sessionKey` 落盘 + 聊天文件渲染按钮与右侧预览栏
 - **变更**：文件工具在有会话上下文时将相对路径默认解析到 `<workspace>/.sessions/<sessionKey>/`（含读/写/编辑/列目录，拦截 `..` 逃逸）；聊天消息新增文件识别与“渲染/打开”按钮，支持常见后缀（`md/docx/pptx/xlsx/pdf`、图片、文本代码等）；新增右侧可收起文件预览栏，支持点击消息内文件链接直接预览，并可打开本地文件。
 - **位置**：`pkg/tools/filesystem.go`、`pkg/tools/runtime_context.go`、`pkg/tools/tools_test.go`、`internal/agent/loop.go`、`electron/src/main/ipc.ts`、`electron/src/preload/index.ts`、`electron/src/renderer/types/electron.d.ts`、`electron/src/renderer/components/MarkdownRenderer.tsx`、`electron/src/renderer/components/FilePreviewSidebar.tsx`、`electron/src/renderer/utils/fileReferences.ts`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`。
