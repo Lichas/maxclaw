@@ -18,7 +18,7 @@ interface Settings {
 
 export function SettingsView() {
   const dispatch = useDispatch();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { theme: storeTheme, language: storeLanguage } = useSelector((state: RootState) => state.ui);
 
   const [settings, setSettings] = useState<Settings>({
