@@ -12,6 +12,12 @@ export default {
         primary: 'var(--primary)',
         'primary-foreground': 'var(--primary-foreground)',
         secondary: 'var(--secondary)',
+        'secondary-foreground': 'var(--secondary-foreground)',
+        card: 'var(--card)',
+        'card-foreground': 'var(--card-foreground)',
+        accent: 'var(--accent)',
+        'accent-foreground': 'var(--accent-foreground)',
+        muted: 'var(--muted)',
         border: 'var(--border)',
       }
     },

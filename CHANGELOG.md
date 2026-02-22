@@ -347,6 +347,13 @@
   - `cd electron && npm run build`
   - `make build`
 
+#### 补齐 Tailwind 语义色映射，避免样式类失效（`electron/tailwind.config.js`）
+- **变更**：在 Tailwind 主题中新增 `card`、`card-foreground`、`secondary-foreground`、`accent`、`accent-foreground`、`muted` 映射到 CSS 变量，保证语义类（如 `bg-card`）稳定生效。
+- **位置**：`theme.extend.colors`。
+- **验证**：
+  - `cd electron && npm run build`
+  - `make build`
+
 ### 新增功能
 
 #### 实现定时任务 REST API（`internal/webui/server.go`）
