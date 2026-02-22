@@ -1224,7 +1224,7 @@ export function ChatView() {
               </div>
             }
           >
-            <LazyTerminalPanel />
+            <LazyTerminalPanel key={currentSessionKey} sessionKey={currentSessionKey} />
           </Suspense>
         )}
       </div>

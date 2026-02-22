@@ -1,6 +1,8 @@
 import { ipcMain, BrowserWindow, dialog, shell, app } from 'electron';
 import { spawn as spawnPty, type IPty } from 'node-pty';
+import { createRequire } from 'node:module';
 import fs from 'fs';
+import path from 'path';
 import Store from 'electron-store';
 import AutoLaunch from 'auto-launch';
 import log from 'electron-log';
@@ -33,21 +35,22 @@ const autoLauncher = new AutoLaunch({
   name: 'Maxclaw',
   path: app.getPath('exe')
 });
+const nodeRequire = createRequire(import.meta.url);
 
 let handlersRegistered = false;
 let currentMainWindow: BrowserWindow | null = null;
 let gatewayStatusTimer: NodeJS.Timeout | null = null;
-let terminalProcess: IPty | null = null;
+const terminalProcesses = new Map<string, IPty>();
 
-function sendTerminalData(chunk: string): void {
+function sendTerminalData(sessionKey: string, chunk: string): void {
   if (currentMainWindow && !currentMainWindow.isDestroyed()) {
-    currentMainWindow.webContents.send('terminal:data', chunk);
+    currentMainWindow.webContents.send('terminal:data', { sessionKey, chunk });
   }
 }
 
-function sendTerminalExit(code: number | null, signal: string | null): void {
+function sendTerminalExit(sessionKey: string, code: number | null, signal: string | null): void {
   if (currentMainWindow && !currentMainWindow.isDestroyed()) {
-    currentMainWindow.webContents.send('terminal:exit', { code, signal });
+    currentMainWindow.webContents.send('terminal:exit', { sessionKey, code, signal });
   }
 }
 
@@ -95,6 +98,53 @@ function resolveShellCandidates(): Array<{ command: string; args: string[] }> {
   return candidates;
 }
 
+function ensurePtySpawnHelperExecutable(): void {
+  if (process.platform === 'win32') {
+    return;
+  }
+
+  const helperCandidates = new Set<string>();
+
+  try {
+    const packageJson = nodeRequire.resolve('node-pty/package.json');
+    const packageDir = path.dirname(packageJson);
+    helperCandidates.add(path.join(packageDir, 'prebuilds', `${process.platform}-${process.arch}`, 'spawn-helper'));
+  } catch (error) {
+    log.warn('Failed to ensure node-pty spawn-helper executable:', error);
+  }
+
+  helperCandidates.add(
+    path.join(process.cwd(), 'node_modules', 'node-pty', 'prebuilds', `${process.platform}-${process.arch}`, 'spawn-helper')
+  );
+  helperCandidates.add(
+    path.join(
+      process.resourcesPath,
+      'app.asar.unpacked',
+      'node_modules',
+      'node-pty',
+      'prebuilds',
+      `${process.platform}-${process.arch}`,
+      'spawn-helper'
+    )
+  );
+
+  for (const helperPath of helperCandidates) {
+    try {
+      if (!fs.existsSync(helperPath)) {
+        continue;
+      }
+
+      const stats = fs.statSync(helperPath);
+      if ((stats.mode & 0o111) === 0) {
+        fs.chmodSync(helperPath, 0o755);
+        log.info('Updated node-pty spawn-helper permission:', helperPath);
+      }
+    } catch (error) {
+      log.warn('Failed to update node-pty spawn-helper permission:', helperPath, error);
+    }
+  }
+}
+
 function buildPtyEnv(): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) {
@@ -121,12 +171,33 @@ function resolveTerminalCwd(): string {
   return process.cwd();
 }
 
+function normalizeSessionKey(value: unknown): string {
+  if (typeof value !== 'string') {
+    return 'default';
+  }
+  const normalized = value.trim();
+  return normalized === '' ? 'default' : normalized;
+}
+
 export function createIPCHandlers(
   mainWindow: BrowserWindow,
   gatewayManager: GatewayManager,
   notificationManager?: NotificationManager
 ): void {
   currentMainWindow = mainWindow;
+  mainWindow.once('closed', () => {
+    if (currentMainWindow === mainWindow) {
+      currentMainWindow = null;
+    }
+    for (const [, terminalProcess] of terminalProcesses) {
+      try {
+        terminalProcess.kill();
+      } catch (error) {
+        log.warn('Failed to stop terminal process on window close:', error);
+      }
+    }
+    terminalProcesses.clear();
+  });
 
   if (handlersRegistered) {
     return;
@@ -219,83 +290,110 @@ export function createIPCHandlers(
   });
 
   // Terminal IPC
-  ipcMain.handle('terminal:start', async (_, options?: { cols?: number; rows?: number }) => {
-    if (terminalProcess) {
-      if (options?.cols && options?.rows) {
-        terminalProcess.resize(options.cols, options.rows);
+  ipcMain.handle(
+    'terminal:start',
+    async (
+      _,
+      sessionKeyOrOptions?: string | { cols?: number; rows?: number },
+      maybeOptions?: { cols?: number; rows?: number }
+    ) => {
+      const key = normalizeSessionKey(typeof sessionKeyOrOptions === 'string' ? sessionKeyOrOptions : undefined);
+      const options = typeof sessionKeyOrOptions === 'string' ? maybeOptions : sessionKeyOrOptions;
+      const existing = terminalProcesses.get(key);
+      if (existing) {
+        if (options?.cols && options?.rows) {
+          existing.resize(options.cols, options.rows);
+        }
+        return { success: true, alreadyRunning: true };
       }
-      return { success: true, alreadyRunning: true };
-    }
 
-    const shellCandidates = resolveShellCandidates();
-    const cols = options?.cols && options.cols > 0 ? options.cols : 120;
-    const rows = options?.rows && options.rows > 0 ? options.rows : 28;
-    const cwd = resolveTerminalCwd();
-    const env = buildPtyEnv();
-    let usedShell = '';
-    let lastError = '';
+      ensurePtySpawnHelperExecutable();
 
-    for (const shellCandidate of shellCandidates) {
-      try {
-        terminalProcess = spawnPty(shellCandidate.command, shellCandidate.args, {
-          name: 'xterm-256color',
-          cols,
-          rows,
-          cwd,
-          env
-        });
-        usedShell = shellCandidate.command;
-        break;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        lastError = message;
-        log.warn(`Failed to start terminal shell candidate ${shellCandidate.command}:`, message);
+      const shellCandidates = resolveShellCandidates();
+      const cols = options?.cols && options.cols > 0 ? options.cols : 120;
+      const rows = options?.rows && options.rows > 0 ? options.rows : 28;
+      const cwd = resolveTerminalCwd();
+      const env = buildPtyEnv();
+      let usedShell = '';
+      let lastError = '';
+      let ptyProcess: IPty | null = null;
+
+      for (const shellCandidate of shellCandidates) {
+        try {
+          ptyProcess = spawnPty(shellCandidate.command, shellCandidate.args, {
+            name: 'xterm-256color',
+            cols,
+            rows,
+            cwd,
+            env
+          });
+          usedShell = shellCandidate.command;
+          break;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          lastError = message;
+          log.warn(`Failed to start terminal shell candidate ${shellCandidate.command}:`, message);
+        }
       }
+
+      if (!ptyProcess) {
+        const fallbackError = lastError || 'no available shell candidates';
+        log.error('Failed to start terminal shell:', fallbackError);
+        return { success: false, error: fallbackError };
+      }
+
+      terminalProcesses.set(key, ptyProcess);
+
+      ptyProcess.onData((data: string) => {
+        sendTerminalData(key, data);
+      });
+
+      ptyProcess.onExit(({ exitCode, signal }) => {
+        sendTerminalExit(key, exitCode, signal !== undefined && signal !== null ? String(signal) : null);
+        terminalProcesses.delete(key);
+      });
+
+      sendTerminalData(key, `\r\n[terminal] started with ${usedShell}\r\n`);
+      return { success: true, shell: usedShell };
     }
+  );
 
-    if (!terminalProcess) {
-      const fallbackError = lastError || 'no available shell candidates';
-      log.error('Failed to start terminal shell:', fallbackError);
-      return { success: false, error: fallbackError };
-    }
-
-    terminalProcess.onData((data: string) => {
-      sendTerminalData(data);
-    });
-
-    terminalProcess.onExit(({ exitCode, signal }) => {
-      sendTerminalExit(exitCode, signal !== undefined && signal !== null ? String(signal) : null);
-      terminalProcess = null;
-    });
-
-    sendTerminalData(`\r\n[terminal] started with ${usedShell}\r\n`);
-    return { success: true, shell: usedShell };
-  });
-
-  ipcMain.handle('terminal:input', async (_, value: string) => {
+  ipcMain.handle('terminal:input', async (_, sessionKeyOrValue: string, maybeValue?: string) => {
+    const key = maybeValue === undefined ? 'default' : normalizeSessionKey(sessionKeyOrValue);
+    const value = maybeValue === undefined ? sessionKeyOrValue : maybeValue;
+    const terminalProcess = terminalProcesses.get(key);
     if (!terminalProcess) {
       return { success: false, error: 'terminal not running' };
+    }
+    if (typeof value !== 'string') {
+      return { success: false, error: 'invalid terminal input' };
     }
 
     terminalProcess.write(value);
     return { success: true };
   });
 
-  ipcMain.handle('terminal:resize', async (_, cols: number, rows: number) => {
+  ipcMain.handle('terminal:resize', async (_, sessionKeyOrCols: string | number, maybeCols: number, maybeRows?: number) => {
+    const key = typeof sessionKeyOrCols === 'string' ? normalizeSessionKey(sessionKeyOrCols) : 'default';
+    const cols = typeof sessionKeyOrCols === 'string' ? maybeCols : sessionKeyOrCols;
+    const rows = typeof sessionKeyOrCols === 'string' ? maybeRows : maybeCols;
+    const terminalProcess = terminalProcesses.get(key);
     if (!terminalProcess) {
       return { success: false, error: 'terminal not running' };
     }
-    if (cols > 0 && rows > 0) {
+    if (typeof cols === 'number' && typeof rows === 'number' && cols > 0 && rows > 0) {
       terminalProcess.resize(cols, rows);
       return { success: true };
     }
     return { success: false, error: 'invalid cols/rows' };
   });
 
-  ipcMain.handle('terminal:stop', async () => {
+  ipcMain.handle('terminal:stop', async (_, sessionKey?: string) => {
+    const key = normalizeSessionKey(sessionKey);
+    const terminalProcess = terminalProcesses.get(key);
     if (terminalProcess) {
       terminalProcess.kill();
-      terminalProcess = null;
+      terminalProcesses.delete(key);
     }
     return { success: true };
   });

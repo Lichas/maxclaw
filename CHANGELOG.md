@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 终端稳定性与体验修复：解决 `posix_spawnp failed`、按任务隔离会话、主题跟随
+- **变更**：终端 IPC 改为按 `sessionKey` 管理独立 PTY（不同任务对应不同 terminal）；补充旧参数签名兼容，避免参数错位导致启动/输入异常；主进程在启动前自动修复 `node-pty` 的 `spawn-helper` 可执行权限（含开发与打包路径候选）；终端面板主题改为跟随应用浅/深色模式（浅色主题白底）。
+- **位置**：`electron/src/main/ipc.ts`、`electron/src/preload/index.ts`、`electron/src/renderer/types/electron.d.ts`、`electron/src/renderer/components/TerminalPanel.tsx`、`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 修复内置终端启动失败 `posix_spawnp failed`（shell 解析与环境兜底）
 - **变更**：终端启动改为多候选 shell 逐个尝试（`$SHELL`、`/bin/zsh`、`/bin/bash`、`/bin/sh`），并清洗 PTY 环境变量、兜底工作目录到用户主目录，降低 `terminal start failed` 概率。
 - **位置**：`electron/src/main/ipc.ts`。
