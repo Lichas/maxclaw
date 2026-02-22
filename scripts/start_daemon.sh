@@ -146,6 +146,12 @@ should_kill_gateway_pid() {
     *"/maxclaw gateway"*) return 0 ;;
     *"/build/maxclaw gateway"*) return 0 ;;
     *"maxclaw gateway -p"*) return 0 ;;
+    *"/nanobot-go gateway"*) return 0 ;;
+    *"/build/nanobot-go gateway"*) return 0 ;;
+    *"nanobot-go gateway -p"*) return 0 ;;
+    *"/nanobot gateway"*) return 0 ;;
+    *"/build/nanobot gateway"*) return 0 ;;
+    *"nanobot gateway -p"*) return 0 ;;
   esac
   return 1
 }
