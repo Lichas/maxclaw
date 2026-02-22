@@ -1210,7 +1210,7 @@ export function ChatView() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-border/60 bg-card p-4">{renderComposer(false)}</div>
+      <div className="bg-card p-4 pt-3">{renderComposer(false)}</div>
     </div>
   );
 }
