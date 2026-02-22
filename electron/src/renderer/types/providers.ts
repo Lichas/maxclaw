@@ -46,7 +46,7 @@ export const PRESET_PROVIDERS: Omit<ProviderConfig, 'id' | 'apiKey'>[] = [
     baseURL: 'https://api.anthropic.com',
     apiFormat: 'anthropic',
     models: [
-      { id: 'claude-opus-4', name: 'Claude Opus 4', enabled: true },
+      { id: 'claude-opus-4.5', name: 'Claude Opus 4.5', enabled: true },
       { id: 'claude-sonnet-4', name: 'Claude Sonnet 4', enabled: true },
     ],
     enabled: false,
@@ -57,9 +57,8 @@ export const PRESET_PROVIDERS: Omit<ProviderConfig, 'id' | 'apiKey'>[] = [
     baseURL: 'https://open.bigmodel.cn/api/coding/paas/v4',
     apiFormat: 'openai',
     models: [
-      { id: 'glm-4.5', name: 'GLM-4.5', enabled: true },
-      { id: 'glm-4.5-air', name: 'GLM-4.5-Air', enabled: true },
-      { id: 'glm5', name: 'GLM-5', enabled: true },
+      { id: 'glm-4.7', name: 'GLM-4.7', enabled: true },
+      { id: 'glm-5', name: 'GLM-5', enabled: true },
     ],
     enabled: false,
   },

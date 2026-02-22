@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 更新 Provider 预置模型版本（Anthropic / Zhipu）
+- **变更**：Anthropic 预置模型更新为 `claude-opus-4.5`；Zhipu 预置模型更新为 `glm-4.7` 与 `glm-5`。
+- **位置**：`electron/src/renderer/types/providers.ts`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 历史详情隐藏内部状态并优化启动默认页、智谱 GLM-5 标识
 - **变更**：查看历史会话详情时不再渲染 `Using model`、`Preparing final response`、`Executing tools` 等内部状态；应用重启后默认进入“新建任务”空会话；智谱 GLM-5 模型标识统一为 `glm5`（不再使用 `zai/glm-5`）。
 - **位置**：`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/App.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`electron/src/renderer/types/providers.ts`。
