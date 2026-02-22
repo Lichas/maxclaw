@@ -181,7 +181,7 @@ export function Sidebar() {
             }}
           >
             <img
-              src="/assets/icon.png"
+              src="./icon.png"
               alt="Nanobot"
               className="w-7 h-7 rounded-[10px] object-cover"
               onError={(e) => {
