@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 刷新 Provider 默认模型清单（对齐 2026 年初官方文档）
+- **变更**：更新聊天模型候选与设置页预置模型，覆盖 OpenRouter、Anthropic、OpenAI、DeepSeek、Zhipu、Groq、Gemini、DashScope、Moonshot、MiniMax，替换过时 ID（如 `gpt-4`、`mixtral-8x7b`、`moonshot-v1-*` 等）为较新模型标识。
+- **位置**：`electron/src/renderer/hooks/useGateway.ts`、`electron/src/renderer/types/providers.ts`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 更新 Provider 预置模型版本（Anthropic / Zhipu）
 - **变更**：Anthropic 预置模型更新为 `claude-opus-4.5`；Zhipu 预置模型更新为 `glm-4.7` 与 `glm-5`。
 - **位置**：`electron/src/renderer/types/providers.ts`。

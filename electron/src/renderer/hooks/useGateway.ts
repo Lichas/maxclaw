@@ -68,16 +68,16 @@ interface GatewayConfigResponse {
 }
 
 const PROVIDER_DEFAULT_MODELS: Record<string, string[]> = {
-  openrouter: ['openrouter/anthropic/claude-3.7-sonnet', 'openrouter/openai/gpt-4o'],
-  anthropic: ['anthropic/claude-opus-4-5', 'anthropic/claude-sonnet-4-5'],
-  openai: ['openai/gpt-4o', 'openai/gpt-4.1-mini'],
+  openrouter: ['openrouter/auto', 'openrouter/anthropic/claude-sonnet-4.5'],
+  anthropic: ['anthropic/claude-opus-4-1', 'anthropic/claude-sonnet-4'],
+  openai: ['openai/gpt-5.1', 'openai/gpt-5-mini'],
   deepseek: ['deepseek-chat', 'deepseek-reasoner'],
-  zhipu: ['glm-4.5', 'glm-4.5-air', 'glm5'],
-  groq: ['groq/llama-3.1-70b-versatile', 'groq/mixtral-8x7b-32768'],
-  gemini: ['gemini/gemini-2.0-flash', 'gemini/gemini-1.5-pro'],
-  dashscope: ['qwen-max', 'qwen-plus'],
-  moonshot: ['moonshot-v1-8k', 'moonshot-v1-32k'],
-  minimax: ['minimax/MiniMax-M2']
+  zhipu: ['glm-5', 'glm-4.7'],
+  groq: ['groq/llama-3.3-70b-versatile', 'groq/mistral-saba-24b'],
+  gemini: ['gemini/gemini-2.5-pro', 'gemini/gemini-2.5-flash'],
+  dashscope: ['qwen-max-latest', 'qwen-plus-latest'],
+  moonshot: ['kimi-k2-0905-preview', 'kimi-k2-turbo-preview'],
+  minimax: ['MiniMax-M2.1', 'MiniMax-M2.1-lightning']
 };
 
 const PROVIDER_KEYWORDS: Array<{ provider: string; keywords: string[] }> = [
