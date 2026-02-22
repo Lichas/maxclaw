@@ -154,23 +154,29 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`bg-secondary border-r border-border flex flex-col h-full transition-all duration-200 ${
+      className={`flex flex-col h-full transition-all duration-300 ease-out ${
         sidebarCollapsed ? 'w-16' : 'w-64'
       }`}
+      style={{ background: 'var(--secondary)' }}
     >
       {/* New Chat Button */}
       <div className="p-3">
         <button
           onClick={handleNewTask}
-          className="w-full flex items-center justify-center gap-2 bg-primary/15 text-primary border border-primary/30 rounded-lg py-2.5 px-4 hover:bg-primary/20 transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+          style={{
+            background: 'var(--primary)',
+            color: 'var(--primary-foreground)',
+            boxShadow: '0 2px 8px rgba(107, 144, 128, 0.25)'
+          }}
         >
           <EditIcon className="w-5 h-5" />
-          {!sidebarCollapsed && <span className="font-medium">{t('sidebar.newTask')}</span>}
+          {!sidebarCollapsed && <span>{t('sidebar.newTask')}</span>}
         </button>
       </div>
 
       {/* Menu Items */}
-      <nav className="flex-1 px-2 overflow-y-auto pb-16">
+      <nav className="flex-1 px-2 overflow-y-auto pb-4">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -179,26 +185,50 @@ export function Sidebar() {
             <button
               key={item.id}
               onClick={() => dispatch(setActiveTab(item.id))}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 transition-all duration-200 group ${
                 isActive
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-foreground/60 hover:bg-background/60 hover:text-foreground'
+                  ? 'font-medium'
+                  : 'hover:scale-[1.02]'
               }`}
+              style={{
+                background: isActive ? 'var(--active)' : 'transparent',
+                color: isActive ? 'var(--foreground)' : 'var(--secondary-foreground)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = 'var(--hover)';
+                  e.currentTarget.style.color = 'var(--foreground)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'var(--secondary-foreground)';
+                }
+              }}
             >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-              {!sidebarCollapsed && <span className="font-medium">{t(item.labelKey)}</span>}
+              <Icon className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
+              {!sidebarCollapsed && <span>{t(item.labelKey)}</span>}
             </button>
           );
         })}
 
         {!sidebarCollapsed && (
           <div className="mt-4 px-2">
-            <p className="text-xs font-semibold text-foreground/45 tracking-wide mb-2">{t('nav.sessions')}</p>
-            <div className="mb-2 relative">
+            <p className="text-xs font-medium mb-3 px-2" style={{ color: 'var(--muted)' }}>
+              {t('nav.sessions')}
+            </p>
+
+            {/* Channel Filter Dropdown */}
+            <div className="relative mb-3">
               <select
                 value={channelFilter}
                 onChange={(event) => setChannelFilter(event.target.value)}
-                className="w-full appearance-none rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground/75 focus:border-primary/40 focus:outline-none"
+                className="w-full appearance-none rounded-xl px-3 py-2 text-sm font-medium focus:outline-none transition-all duration-200 hover:scale-[1.01] cursor-pointer"
+                style={{
+                  background: 'var(--background)',
+                  color: 'var(--foreground)',
+                }}
               >
                 {channelOptions.map((channel) => (
                   <option key={channel} value={channel}>
@@ -206,12 +236,13 @@ export function Sidebar() {
                   </option>
                 ))}
               </select>
-              <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/45" />
+              <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors" style={{ color: 'var(--muted)' }} />
             </div>
 
+            {/* Session List */}
             <div className="space-y-1 mt-2">
               {sessionItems.length === 0 && (
-                <div className="text-sm text-foreground/45 px-2 py-1">
+                <div className="text-sm px-3 py-2 rounded-xl" style={{ color: 'var(--muted)' }}>
                   {t('skills.empty')}
                 </div>
               )}
@@ -223,7 +254,11 @@ export function Sidebar() {
 
                 if (isEditing) {
                   return (
-                    <div key={session.key} className="px-2 py-2 rounded-lg bg-background">
+                    <div
+                      key={session.key}
+                      className="px-3 py-2.5 rounded-xl"
+                      style={{ background: 'var(--card)' }}
+                    >
                       <input
                         type="text"
                         value={editTitle}
@@ -234,9 +269,13 @@ export function Sidebar() {
                         }}
                         onBlur={handleRename}
                         autoFocus
-                        className="w-full text-sm font-medium bg-transparent border-b border-primary/50 focus:outline-none focus:border-primary text-foreground"
+                        className="w-full text-sm font-medium bg-transparent border-0 border-b focus:outline-none focus:ring-0 pb-1"
+                        style={{
+                          borderColor: 'var(--primary)',
+                          color: 'var(--foreground)'
+                        }}
                       />
-                      <p className="text-xs text-foreground/40 mt-1">
+                      <p className="text-xs mt-1.5" style={{ color: 'var(--muted)' }}>
                         Enter to confirm, Esc to cancel
                       </p>
                     </div>
@@ -246,9 +285,23 @@ export function Sidebar() {
                 return (
                   <div
                     key={session.key}
-                    className={`group relative flex items-center gap-1 px-2 py-2 rounded-lg transition-colors ${
-                      isCurrent ? 'bg-background text-foreground' : 'hover:bg-background/60'
+                    className={`group relative flex items-center gap-1 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
+                      !isCurrent && 'hover:scale-[1.01]'
                     }`}
+                    style={{
+                      background: isCurrent ? 'var(--card)' : 'transparent',
+                      boxShadow: isCurrent ? '0 1px 3px rgba(0,0,0,0.05)' : 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isCurrent) {
+                        e.currentTarget.style.background = 'var(--hover)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isCurrent) {
+                        e.currentTarget.style.background = 'transparent';
+                      }
+                    }}
                   >
                     <button
                       onClick={() => {
@@ -257,10 +310,10 @@ export function Sidebar() {
                       }}
                       className="flex-1 text-left min-w-0"
                     >
-                      <p className="text-sm font-medium leading-5 truncate">
+                      <p className="text-sm font-medium leading-5 truncate" style={{ color: 'var(--foreground)' }}>
                         {session.lastMessage || session.key.replace(/^desktop:/, '新任务')}
                       </p>
-                      <p className="text-sm text-foreground/50 leading-5 mt-0.5">
+                      <p className="text-xs leading-5 mt-0.5" style={{ color: 'var(--muted)' }}>
                         {formatRelativeTime(session.lastMessageAt)}
                       </p>
                     </button>
@@ -272,24 +325,47 @@ export function Sidebar() {
                           e.stopPropagation();
                           setOpenMenuKey(isMenuOpen ? null : session.key);
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-foreground/10 transition-opacity"
+                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all duration-200 hover:scale-110"
+                        style={{
+                          background: isMenuOpen ? 'var(--hover)' : 'transparent'
+                        }}
                       >
-                        <DotsIcon className="w-4 h-4 text-foreground/50" />
+                        <DotsIcon className="w-4 h-4" style={{ color: 'var(--muted)' }} />
                       </button>
 
                       {/* Dropdown Menu */}
                       {isMenuOpen && (
-                        <div className="absolute right-0 top-full mt-1 w-32 rounded-lg border border-border bg-background shadow-lg z-50 py-1">
+                        <div
+                          className="absolute right-0 top-full mt-1 w-32 rounded-xl py-1 z-50"
+                          style={{
+                            background: 'var(--card)',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+                          }}
+                        >
                           <button
                             onClick={() => handleStartRename(session)}
-                            className="w-full px-3 py-2 text-sm text-left hover:bg-secondary flex items-center gap-2"
+                            className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 transition-colors duration-150 hover:rounded-lg mx-1 w-[calc(100%-8px)]"
+                            style={{ color: 'var(--foreground)' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'var(--hover)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                            }}
                           >
                             <EditIcon className="w-3.5 h-3.5" />
                             {t('sidebar.rename')}
                           </button>
                           <button
                             onClick={() => handleDelete(session.key)}
-                            className="w-full px-3 py-2 text-sm text-left hover:bg-red-50 text-red-600 flex items-center gap-2"
+                            className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 transition-colors duration-150 hover:rounded-lg mx-1 w-[calc(100%-8px)]"
+                            style={{ color: '#e74c3c' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(231, 76, 60, 0.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                            }}
                           >
                             <TrashIcon className="w-3.5 h-3.5" />
                             {t('sidebar.delete')}
@@ -306,26 +382,44 @@ export function Sidebar() {
       </nav>
 
       {/* Settings Button with Gateway Status */}
-      <div className="sticky bottom-0 p-3 border-t border-border/70 bg-secondary">
+      <div
+        className="sticky bottom-0 p-3"
+        style={{
+          background: 'var(--secondary)',
+        }}
+      >
         <button
           onClick={() => dispatch(setActiveTab('settings'))}
-          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-foreground/65 hover:bg-background/60 transition-colors ${
+          className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02] group ${
             sidebarCollapsed ? 'justify-center' : ''
           }`}
+          style={{
+            background: 'transparent'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'var(--hover)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+          }}
         >
           <div className="relative">
-            <SettingsIcon className="w-4 h-4 flex-shrink-0" />
+            <SettingsIcon
+              className="w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:rotate-45"
+              style={{ color: 'var(--secondary-foreground)' }}
+            />
             <div
-              className={`absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${
-                status === 'running'
-                  ? 'bg-green-500'
-                  : status === 'error'
-                  ? 'bg-red-500'
-                  : 'bg-yellow-500'
-              }`}
+              className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full"
+              style={{
+                background: status === 'running' ? '#84a98c' : status === 'error' ? '#e74c3c' : '#f39c12'
+              }}
             />
           </div>
-          {!sidebarCollapsed && <span className="text-sm">{t('nav.settings')}</span>}
+          {!sidebarCollapsed && (
+            <span className="text-sm" style={{ color: 'var(--secondary-foreground)' }}>
+              {t('nav.settings')}
+            </span>
+          )}
         </button>
       </div>
     </aside>
