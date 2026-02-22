@@ -400,6 +400,52 @@ tail -f /Users/lua/.nanobot/logs/channels.log
 - `go test ./internal/cli` 通过。
 - `make build` 通过。
 
+## 2026-02-22 - SkillsView 无限循环请求 skills 接口
+
+**问题**：打开技能市场页面后，浏览器开发者工具显示无限重复请求 `/api/skills` 接口，CPU 占用高。
+
+**根因**：
+- `SkillsView` 组件中 `useEffect` 依赖的 `fetchSkills` 使用了 `useCallback`
+- `fetchSkills` 的依赖项 `[t]` 中的 `t` 函数（来自 `useTranslation()`）在每次渲染时引用都会变化
+- 这导致 `fetchSkills` 不断重新创建，触发 `useEffect` 重复执行，形成无限循环
+
+**修复措施**：
+- 移除 `fetchSkills` 对 `t` 的依赖，错误信息使用硬编码字符串
+- 给 `useEffect` 空依赖数组 `[]`，确保只在组件挂载时获取一次
+
+```typescript
+// 修复前（有问题的代码）
+const fetchSkills = useCallback(async () => {
+  // ...
+  setError(err instanceof Error ? err.message : t('common.error'));
+}, [t]);  // ❌ t 每次渲染都变化
+
+useEffect(() => {
+  void fetchSkills();
+}, [fetchSkills]);  // ❌ fetchSkills 不断变化，导致无限循环
+
+// 修复后
+const fetchSkills = useCallback(async () => {
+  // ...
+  setError(err instanceof Error ? err.message : 'Failed to load skills');
+}, []);  // ✅ 无依赖
+
+useEffect(() => {
+  void fetchSkills();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);  // ✅ 只在挂载时执行
+```
+
+**验证**：
+- `cd electron && npm run build`
+- 打开技能市场页面，确认 `/api/skills` 只请求一次
+- 浏览器开发者工具 Network 面板无重复请求
+
+**修复文件**：
+- `electron/src/renderer/views/SkillsView.tsx`
+
+---
+
 ## 2026-02-20 - Electron 安装后无法启动（`Electron failed to install correctly`）
 
 **问题**：`cd electron && npm run dev` / `npm run start` 可完成前置构建，但 Electron 主进程启动时直接报错：
