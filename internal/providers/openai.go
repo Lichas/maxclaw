@@ -77,7 +77,7 @@ func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, tools []m
 
 	respBody, err := p.doRequest(ctx, payload, false)
 	if err != nil {
-		return nil, err
+		return nil, p.wrapModelRequestError("chat request failed", model, err)
 	}
 
 	var resp chatResponse
@@ -136,8 +136,9 @@ func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, too
 
 	stream, err := p.doStreamRequest(ctx, payload)
 	if err != nil {
-		handler.OnError(err)
-		return err
+		wrappedErr := p.wrapModelRequestError("stream request failed", model, err)
+		handler.OnError(wrappedErr)
+		return wrappedErr
 	}
 	defer stream.Close()
 
@@ -214,8 +215,10 @@ func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, too
 	}
 
 	if err := scanner.Err(); err != nil {
-		handler.OnError(fmt.Errorf("stream error: %w", err))
-		return err
+		wrappedErr := fmt.Errorf("stream error: %w", err)
+		modelErr := p.wrapModelRequestError("stream read failed", model, wrappedErr)
+		handler.OnError(modelErr)
+		return modelErr
 	}
 
 	for _, builder := range buildersByIndex {
@@ -226,6 +229,47 @@ func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, too
 
 	handler.OnComplete()
 	return nil
+}
+
+func (p *OpenAIProvider) wrapModelRequestError(prefix, model string, err error) error {
+	return fmt.Errorf("%s provider=%s model=%s api_base=%s: %w", prefix, p.detectProvider(model), model, p.apiBase, err)
+}
+
+func (p *OpenAIProvider) detectProvider(model string) string {
+	normalizedModel := strings.ToLower(strings.TrimSpace(model))
+	if normalizedModel != "" && strings.Contains(normalizedModel, "/") {
+		prefix := strings.SplitN(normalizedModel, "/", 2)[0]
+		switch prefix {
+		case "openrouter", "anthropic", "openai", "deepseek", "zhipu", "groq", "gemini", "dashscope", "moonshot", "minimax", "vllm":
+			return prefix
+		}
+	}
+
+	base := strings.ToLower(p.apiBase)
+	switch {
+	case strings.Contains(base, "openrouter.ai"):
+		return "openrouter"
+	case strings.Contains(base, "api.anthropic.com"):
+		return "anthropic"
+	case strings.Contains(base, "api.openai.com"):
+		return "openai"
+	case strings.Contains(base, "deepseek.com"):
+		return "deepseek"
+	case strings.Contains(base, "bigmodel.cn"):
+		return "zhipu"
+	case strings.Contains(base, "groq.com"):
+		return "groq"
+	case strings.Contains(base, "generativelanguage.googleapis.com"):
+		return "gemini"
+	case strings.Contains(base, "dashscope.aliyuncs.com"):
+		return "dashscope"
+	case strings.Contains(base, "moonshot"):
+		return "moonshot"
+	case strings.Contains(base, "minimax"):
+		return "minimax"
+	}
+
+	return "unknown"
 }
 
 // toolCallBuilder 工具调用构建器

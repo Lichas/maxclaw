@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### Provider 请求失败日志补充 `provider` 与 `model`
+- **变更**：OpenAI 兼容 Provider 在聊天/流式请求失败时，错误信息新增 `provider`、`model`、`api_base` 字段，便于从 Gateway 日志直接定位模型不存在或路由错误问题。
+- **位置**：`internal/providers/openai.go`。
+- **验证**：`go test ./internal/providers`、`make build`。
+
 #### 刷新 Provider 默认模型清单（对齐 2026 年初官方文档）
 - **变更**：更新聊天模型候选与设置页预置模型，覆盖 OpenRouter、Anthropic、OpenAI、DeepSeek、Zhipu、Groq、Gemini、DashScope、Moonshot、MiniMax，替换过时 ID（如 `gpt-4`、`mixtral-8x7b`、`moonshot-v1-*` 等）为较新模型标识。
 - **位置**：`electron/src/renderer/hooks/useGateway.ts`、`electron/src/renderer/types/providers.ts`。
