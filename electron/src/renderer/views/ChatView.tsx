@@ -88,12 +88,31 @@ const starterCards = [
   }
 ];
 
+function formatSessionTitle(text?: string): string {
+  if (!text) {
+    return 'New thread';
+  }
+
+  const firstLine = text
+    .split('\n')
+    .map((line) => line.trim())
+    .find((line) => line.length > 0);
+
+  if (!firstLine) {
+    return 'New thread';
+  }
+
+  const collapsed = firstLine.replace(/\s+/g, ' ');
+  return collapsed.length > 72 ? `${collapsed.slice(0, 72)}...` : collapsed;
+}
+
 export function ChatView() {
   const dispatch = useDispatch();
   const { currentSessionKey } = useSelector((state: RootState) => state.ui);
-  const { sendMessage, getSession, getSkills, getModels, updateConfig, isLoading } = useGateway();
+  const { sendMessage, getSession, getSessions, getSkills, getModels, updateConfig, isLoading } = useGateway();
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [sessionTitle, setSessionTitle] = useState('New thread');
   const [input, setInput] = useState('');
   const [streamingTimeline, setStreamingTimeline] = useState<TimelineEntry[]>([]);
   const [availableSkills, setAvailableSkills] = useState<SkillSummary[]>([]);
@@ -130,6 +149,7 @@ export function ChatView() {
           const newSessionKey = `desktop:${Date.now()}`;
           dispatch(setCurrentSessionKey(newSessionKey));
           setMessages([]);
+          setSessionTitle('New thread');
           resetTypingState();
         }
       },
@@ -649,6 +669,16 @@ export function ChatView() {
     return normalized;
   };
 
+  const resolveTitleFromMessages = (restored: Message[]): string => {
+    const firstUserMessage = restored.find((message) => message.role === 'user' && message.content.trim().length > 0);
+    if (firstUserMessage) {
+      return formatSessionTitle(firstUserMessage.content);
+    }
+
+    const firstMessage = restored.find((message) => message.content.trim().length > 0);
+    return formatSessionTitle(firstMessage?.content);
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -670,10 +700,31 @@ export function ChatView() {
           }));
 
         setMessages(restored);
+        const fallbackTitle = resolveTitleFromMessages(restored);
+        setSessionTitle(fallbackTitle);
+
+        try {
+          const sessions = await getSessions();
+          if (cancelled) {
+            return;
+          }
+          const matched = sessions.find((item) => item.key === currentSessionKey);
+          if (matched?.lastMessage) {
+            setSessionTitle(formatSessionTitle(matched.lastMessage));
+          } else {
+            setSessionTitle(fallbackTitle);
+          }
+        } catch {
+          if (!cancelled) {
+            setSessionTitle(fallbackTitle);
+          }
+        }
+
         resetTypingState();
       } catch {
         if (!cancelled) {
           setMessages([]);
+          setSessionTitle('New thread');
           resetTypingState();
         }
       }
@@ -685,7 +736,7 @@ export function ChatView() {
       cancelled = true;
       resetTypingState();
     };
-  }, [currentSessionKey, getSession]);
+  }, [currentSessionKey, getSession, getSessions]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -700,8 +751,12 @@ export function ChatView() {
       timestamp: new Date(),
       attachments: attachedFiles.length > 0 ? [...attachedFiles] : undefined
     };
+    const shouldUpdateTitle = messages.length === 0;
 
     setMessages((prev) => [...prev, userMessage]);
+    if (shouldUpdateTitle) {
+      setSessionTitle(formatSessionTitle(userMessage.content));
+    }
     setInput('');
     setAttachedFiles([]);
     setSkillsPickerOpen(false);
@@ -1007,39 +1062,50 @@ export function ChatView() {
     </form>
   );
 
+  const renderThreadHeader = () => (
+    <div className="draggable flex h-12 items-center border-b border-border/80 bg-background/95 px-6">
+      <div className="min-w-0">
+        <h1 className="truncate text-[15px] font-semibold text-foreground">{sessionTitle}</h1>
+      </div>
+    </div>
+  );
+
   if (isStarterMode) {
     return (
-      <div className="h-full overflow-y-auto bg-background px-8 py-10">
-        <div className="mx-auto max-w-4xl">
-          <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary p-1 shadow-md">
-              <img
-                src="./icon.png"
-                alt="maxclaw"
-                className="h-full w-full rounded-xl object-cover"
-              />
+      <div className="h-full flex flex-col bg-background">
+        {renderThreadHeader()}
+        <div className="flex-1 overflow-y-auto px-8 py-10">
+          <div className="mx-auto max-w-4xl">
+            <div className="mb-8 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary p-1 shadow-md">
+                <img
+                  src="./icon.png"
+                  alt="maxclaw"
+                  className="h-full w-full rounded-xl object-cover"
+                />
+              </div>
+              <h1 className="text-4xl font-semibold text-foreground">开始协作</h1>
+              <p className="mt-3 text-base text-foreground/55">7x24 小时帮你干活的全场景个人助理 Agent</p>
             </div>
-            <h1 className="text-4xl font-semibold text-foreground">开始协作</h1>
-            <p className="mt-3 text-base text-foreground/55">7x24 小时帮你干活的全场景个人助理 Agent</p>
+
+            {renderComposer(true)}
+
+            <section className="mt-10">
+              <p className="mb-3 text-sm font-medium text-foreground/65">任务模板</p>
+              <div className="grid grid-cols-2 gap-3">
+                {starterCards.map((card) => (
+                  <button
+                    key={card.title}
+                    onClick={() => applyTemplate(card.prompt)}
+                    className="rounded-xl border border-border bg-background px-4 py-4 text-left transition-colors hover:border-primary/45 hover:bg-primary/5"
+                  >
+                    <p className="text-base font-semibold text-foreground">{card.title}</p>
+                    <p className="mt-1 text-sm text-foreground/55">{card.description}</p>
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
-
-          {renderComposer(true)}
-
-          <section className="mt-10">
-            <p className="mb-3 text-sm font-medium text-foreground/65">任务模板</p>
-            <div className="grid grid-cols-2 gap-3">
-              {starterCards.map((card) => (
-                <button
-                  key={card.title}
-                  onClick={() => applyTemplate(card.prompt)}
-                  className="rounded-xl border border-border bg-background px-4 py-4 text-left transition-colors hover:border-primary/45 hover:bg-primary/5"
-                >
-                  <p className="text-base font-semibold text-foreground">{card.title}</p>
-                  <p className="mt-1 text-sm text-foreground/55">{card.description}</p>
-                </button>
-              ))}
-            </div>
-          </section>
         </div>
       </div>
     );
@@ -1047,6 +1113,7 @@ export function ChatView() {
 
   return (
     <div className="h-full flex flex-col bg-background">
+      {renderThreadHeader()}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.map((message) => (
           <div

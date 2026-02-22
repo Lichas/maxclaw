@@ -93,21 +93,22 @@ function App() {
   };
 
   return (
-    <div className="h-screen bg-background text-foreground">
-      <div className={`relative flex h-full overflow-hidden gap-3 p-3 ${isMac ? 'pt-12' : 'pt-4'}`}>
-        <div className={`absolute z-40 flex items-center gap-2 ${isMac ? 'left-20 top-3' : 'left-3 top-3'}`}>
+    <div className="h-screen overflow-hidden bg-background text-foreground">
+      <div className="relative flex h-full overflow-hidden">
+        <div className={`absolute inset-x-0 top-0 z-10 h-12 draggable ${isMac ? 'h-14' : ''}`} />
+        <div className={`absolute z-40 flex items-center gap-2 no-drag ${isMac ? 'left-20 top-3' : 'left-3 top-2.5'}`}>
           <button
             onClick={() => dispatch(toggleSidebar())}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-foreground/80 shadow-sm transition-colors hover:bg-secondary"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-border/80 bg-background/90 text-foreground/70 transition-colors hover:bg-secondary hover:text-foreground"
             aria-label="Toggle sidebar"
             title="Toggle sidebar"
           >
-            <SidebarToggleIcon className="h-4 w-4" />
+            <SidebarToggleIcon collapsed={sidebarCollapsed} className="h-4 w-4" />
           </button>
           {sidebarCollapsed && (
             <button
               onClick={handleNewTask}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-foreground/80 shadow-sm transition-colors hover:bg-secondary"
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-border/80 bg-background/90 text-foreground/70 transition-colors hover:bg-secondary hover:text-foreground"
               aria-label="New task"
               title="New task"
             >
@@ -116,7 +117,7 @@ function App() {
           )}
         </div>
         <Sidebar />
-        <main className="flex-1 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <main className="flex-1 overflow-hidden rounded-l-2xl border border-border bg-card shadow-sm">
           {activeTab === 'chat' && <ChatView />}
           {activeTab === 'sessions' && <SessionsView />}
           {activeTab === 'scheduled' && <ScheduledTasksView />}
@@ -130,10 +131,16 @@ function App() {
 
 export default App;
 
-function SidebarToggleIcon({ className }: { className?: string }) {
+function SidebarToggleIcon({ className, collapsed }: { className?: string; collapsed: boolean }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+      <rect x={3} y={4} width={18} height={16} rx={2.5} strokeWidth={1.7} />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M9 4v16" />
+      {collapsed ? (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M13 9l3 3-3 3" />
+      ) : (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M15 9l-3 3 3 3" />
+      )}
     </svg>
   );
 }

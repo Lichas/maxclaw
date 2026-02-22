@@ -23,6 +23,7 @@ export function Sidebar() {
   const { activeTab, sidebarCollapsed, currentSessionKey } = useSelector((state: RootState) => state.ui);
   const { status } = useSelector((state: RootState) => state.gateway);
   const { getSessions, deleteSession, renameSession } = useGateway();
+  const isMac = window.electronAPI.platform.isMac;
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [channelFilter, setChannelFilter] = useState<string>('desktop');
 
@@ -166,7 +167,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="flex h-full w-64 flex-col rounded-2xl border border-border shadow-sm"
+      className={`flex h-full w-72 flex-col border-r border-border/80 ${isMac ? 'pt-10' : 'pt-2'}`}
       style={{ background: 'var(--secondary)' }}
     >
       {/* New Chat Button */}

@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 桌面端 UI 进一步对齐 Codex：贴顶会话头、可拖拽、历史标题展示与侧栏图标优化
+- **变更**：主聊天区布局改为贴顶显示；新增顶部拖拽区域恢复窗口拖动能力；侧边栏切换按钮改为面板样式图标；聊天页新增会话标题头，打开历史任务时顶部展示该会话描述标题。
+- **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 桌面端布局改为无顶栏 + 可折叠侧边栏 + 圆角主聊天面板
 - **变更**：移除渲染层顶部标题栏；新增左上角侧边栏折叠按钮；侧边栏折叠后显示独立铅笔按钮用于快速新建任务；右侧主内容区改为圆角矩形卡片容器。
 - **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/components/Sidebar.tsx`。
