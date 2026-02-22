@@ -1,4 +1,5 @@
 import { ipcMain, BrowserWindow, dialog, shell, app } from 'electron';
+import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import Store from 'electron-store';
 import AutoLaunch from 'auto-launch';
 import log from 'electron-log';
@@ -35,6 +36,28 @@ const autoLauncher = new AutoLaunch({
 let handlersRegistered = false;
 let currentMainWindow: BrowserWindow | null = null;
 let gatewayStatusTimer: NodeJS.Timeout | null = null;
+let terminalProcess: ChildProcessWithoutNullStreams | null = null;
+
+function sendTerminalData(chunk: string): void {
+  if (currentMainWindow && !currentMainWindow.isDestroyed()) {
+    currentMainWindow.webContents.send('terminal:data', chunk);
+  }
+}
+
+function sendTerminalExit(code: number | null, signal: NodeJS.Signals | null): void {
+  if (currentMainWindow && !currentMainWindow.isDestroyed()) {
+    currentMainWindow.webContents.send('terminal:exit', { code, signal });
+  }
+}
+
+function resolveShell(): { command: string; args: string[] } {
+  if (process.platform === 'win32') {
+    return { command: 'powershell.exe', args: ['-NoLogo'] };
+  }
+
+  const shellPath = process.env.SHELL || '/bin/zsh';
+  return { command: shellPath, args: ['-i'] };
+}
 
 export function createIPCHandlers(
   mainWindow: BrowserWindow,
@@ -131,6 +154,66 @@ export function createIPCHandlers(
     }
 
     return result.filePaths[0];
+  });
+
+  // Terminal IPC
+  ipcMain.handle('terminal:start', async () => {
+    if (terminalProcess && !terminalProcess.killed) {
+      return { success: true, alreadyRunning: true };
+    }
+
+    const shell = resolveShell();
+    try {
+      terminalProcess = spawn(shell.command, shell.args, {
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          TERM: process.env.TERM || 'xterm-256color'
+        },
+        stdio: 'pipe'
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      log.error('Failed to start terminal shell:', error);
+      return { success: false, error: message };
+    }
+
+    terminalProcess.stdout.on('data', (data: Buffer) => {
+      sendTerminalData(data.toString('utf-8'));
+    });
+
+    terminalProcess.stderr.on('data', (data: Buffer) => {
+      sendTerminalData(data.toString('utf-8'));
+    });
+
+    terminalProcess.on('close', (code: number | null, signal: NodeJS.Signals | null) => {
+      sendTerminalExit(code, signal);
+      terminalProcess = null;
+    });
+
+    terminalProcess.on('error', (error: Error) => {
+      sendTerminalData(`\n[terminal error] ${error.message}\n`);
+    });
+
+    sendTerminalData(`\n[terminal] started with ${shell.command}\n`);
+    return { success: true, shell: shell.command };
+  });
+
+  ipcMain.handle('terminal:input', async (_, value: string) => {
+    if (!terminalProcess || terminalProcess.killed) {
+      return { success: false, error: 'terminal not running' };
+    }
+
+    terminalProcess.stdin.write(value);
+    return { success: true };
+  });
+
+  ipcMain.handle('terminal:stop', async () => {
+    if (terminalProcess && !terminalProcess.killed) {
+      terminalProcess.kill();
+      terminalProcess = null;
+    }
+    return { success: true };
   });
 
   // Gateway status polling - notify renderer

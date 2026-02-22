@@ -45,6 +45,14 @@ export interface ElectronAPI {
     onRestartGateway: (callback: () => void) => () => void;
   };
 
+  terminal: {
+    start: () => Promise<{ success: boolean; shell?: string; alreadyRunning?: boolean; error?: string }>;
+    input: (value: string) => Promise<{ success: boolean; error?: string }>;
+    stop: () => Promise<{ success: boolean }>;
+    onData: (callback: (chunk: string) => void) => () => void;
+    onExit: (callback: (code: number | null, signal: string | null) => void) => () => void;
+  };
+
   platform: {
     isMac: boolean;
     isWindows: boolean;

@@ -108,7 +108,7 @@ function formatSessionTitle(text?: string): string {
 
 export function ChatView() {
   const dispatch = useDispatch();
-  const { currentSessionKey, sidebarCollapsed } = useSelector((state: RootState) => state.ui);
+  const { currentSessionKey, sidebarCollapsed, terminalVisible } = useSelector((state: RootState) => state.ui);
   const isMac = window.electronAPI.platform.isMac;
   const { sendMessage, getSession, getSessions, getSkills, getModels, updateConfig, isLoading } = useGateway();
 
@@ -124,6 +124,10 @@ export function ChatView() {
   const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string; provider: string }>>([]);
   const [currentModel, setCurrentModel] = useState<string>('');
   const [modelsLoading, setModelsLoading] = useState(false);
+  const [terminalOutput, setTerminalOutput] = useState('');
+  const [terminalCommand, setTerminalCommand] = useState('');
+  const [terminalRunning, setTerminalRunning] = useState(false);
+  const [terminalStarting, setTerminalStarting] = useState(false);
 
   // File attachments state
   const [attachedFiles, setAttachedFiles] = useState<UploadedFile[]>([]);
@@ -214,6 +218,7 @@ export function ChatView() {
   const skillsPickerRef = useRef<HTMLDivElement>(null);
   const isComposingRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const terminalOutputRef = useRef<HTMLDivElement>(null);
   const typingQueueRef = useRef<string[]>([]);
   const typingTimerRef = useRef<number | null>(null);
   const entrySeqRef = useRef(0);
@@ -224,6 +229,57 @@ export function ChatView() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingTimeline]);
+
+  useEffect(() => {
+    const unsubscribeData = window.electronAPI.terminal.onData((chunk) => {
+      setTerminalOutput((prev) => `${prev}${chunk}`.slice(-120000));
+    });
+
+    const unsubscribeExit = window.electronAPI.terminal.onExit((code, signal) => {
+      setTerminalRunning(false);
+      const suffix = signal ? ` (signal ${signal})` : '';
+      setTerminalOutput((prev) => `${prev}\n[terminal] exited with code ${code ?? 'null'}${suffix}\n`);
+    });
+
+    return () => {
+      unsubscribeData();
+      unsubscribeExit();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!terminalVisible) {
+      return;
+    }
+
+    let cancelled = false;
+    setTerminalStarting(true);
+    window.electronAPI.terminal.start().then((result) => {
+      if (cancelled) {
+        return;
+      }
+      if (result.success) {
+        setTerminalRunning(true);
+      } else {
+        setTerminalOutput((prev) => `${prev}\n[terminal] failed to start: ${result.error || 'unknown error'}\n`);
+      }
+    }).finally(() => {
+      if (!cancelled) {
+        setTerminalStarting(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [terminalVisible]);
+
+  useEffect(() => {
+    if (!terminalVisible || !terminalOutputRef.current) {
+      return;
+    }
+    terminalOutputRef.current.scrollTop = terminalOutputRef.current.scrollHeight;
+  }, [terminalOutput, terminalVisible]);
 
   useEffect(() => {
     let cancelled = false;
@@ -826,6 +882,27 @@ export function ChatView() {
     inputRef.current?.focus();
   };
 
+  const handleTerminalSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const command = terminalCommand.trim();
+    if (!command) {
+      return;
+    }
+
+    setTerminalOutput((prev) => `${prev}\n$ ${command}\n`);
+    setTerminalCommand('');
+
+    const result = await window.electronAPI.terminal.input(`${command}\n`);
+    if (!result.success) {
+      setTerminalOutput((prev) => `${prev}[terminal] ${result.error || 'write failed'}\n`);
+    }
+  };
+
+  const handleStopTerminal = async () => {
+    await window.electronAPI.terminal.stop();
+    setTerminalRunning(false);
+  };
+
   const renderTimeline = (items: TimelineEntry[], streaming: boolean) => {
     const openIndex =
       streaming && items.length > 0 && items[items.length - 1].kind === 'activity' ? items.length - 1 : -1;
@@ -1210,7 +1287,60 @@ export function ChatView() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="bg-card p-4 pt-3">{renderComposer(false)}</div>
+      <div className="bg-card p-4 pt-3">
+        {renderComposer(false)}
+        {terminalVisible && (
+          <div className="mt-3 rounded-xl border border-border/70 bg-background/75">
+            <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
+              <div className="flex items-center gap-2 text-xs text-foreground/70">
+                <TerminalPanelIcon className="h-3.5 w-3.5" />
+                <span className="font-medium">Shell</span>
+                <span className={`inline-block h-1.5 w-1.5 rounded-full ${terminalRunning ? 'bg-emerald-500' : 'bg-foreground/30'}`} />
+                {terminalStarting && <span className="text-foreground/45">starting...</span>}
+              </div>
+              <div className="flex items-center gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setTerminalOutput('')}
+                  className="rounded px-2 py-1 text-foreground/55 hover:bg-secondary hover:text-foreground"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={handleStopTerminal}
+                  className="rounded px-2 py-1 text-foreground/55 hover:bg-secondary hover:text-foreground"
+                >
+                  Stop
+                </button>
+              </div>
+            </div>
+
+            <div
+              ref={terminalOutputRef}
+              className="h-44 overflow-y-auto px-3 py-2 font-mono text-xs leading-5 text-foreground/90 whitespace-pre-wrap"
+            >
+              {terminalOutput || 'Terminal ready. Type a command below and press Enter.'}
+            </div>
+
+            <form onSubmit={handleTerminalSubmit} className="flex items-center gap-2 border-t border-border/60 px-3 py-2">
+              <span className="font-mono text-xs text-foreground/55">$</span>
+              <input
+                value={terminalCommand}
+                onChange={(event) => setTerminalCommand(event.target.value)}
+                placeholder="Enter command..."
+                className="flex-1 bg-transparent font-mono text-xs text-foreground placeholder:text-foreground/35 focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="rounded-md border border-border px-2 py-1 text-xs text-foreground/70 hover:bg-secondary"
+              >
+                Run
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1288,6 +1418,15 @@ function ChevronDownIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+function TerminalPanelIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x={3} y={5} width={18} height={14} rx={2.5} strokeWidth={1.8} />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 9l3 3-3 3m5 0h5" />
     </svg>
   );
 }

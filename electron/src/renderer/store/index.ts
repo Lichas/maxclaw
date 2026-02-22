@@ -10,6 +10,7 @@ interface UIState {
   theme: 'light' | 'dark' | 'system';
   language: 'zh' | 'en';
   sidebarCollapsed: boolean;
+  terminalVisible: boolean;
   activeTab: 'chat' | 'sessions' | 'scheduled' | 'skills' | 'settings';
   currentSessionKey: string;
 }
@@ -33,6 +34,7 @@ const uiSlice = createSlice({
     theme: 'system',
     language: 'zh',
     sidebarCollapsed: false,
+    terminalVisible: false,
     activeTab: 'chat',
     currentSessionKey: 'desktop:default'
   } as UIState,
@@ -46,6 +48,12 @@ const uiSlice = createSlice({
     toggleSidebar: (state) => {
       state.sidebarCollapsed = !state.sidebarCollapsed;
     },
+    toggleTerminal: (state) => {
+      state.terminalVisible = !state.terminalVisible;
+    },
+    setTerminalVisible: (state, action: PayloadAction<boolean>) => {
+      state.terminalVisible = action.payload;
+    },
     setActiveTab: (state, action: PayloadAction<UIState['activeTab']>) => {
       state.activeTab = action.payload;
     },
@@ -56,7 +64,7 @@ const uiSlice = createSlice({
 });
 
 export const { setStatus } = gatewaySlice.actions;
-export const { setTheme, setLanguage, toggleSidebar, setActiveTab, setCurrentSessionKey } = uiSlice.actions;
+export const { setTheme, setLanguage, toggleSidebar, toggleTerminal, setTerminalVisible, setActiveTab, setCurrentSessionKey } = uiSlice.actions;
 
 export const store = configureStore({
   reducer: {

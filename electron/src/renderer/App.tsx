@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, setStatus, setActiveTab, setTheme, setLanguage, setCurrentSessionKey, toggleSidebar } from './store';
+import { RootState, setStatus, setActiveTab, setTheme, setLanguage, setCurrentSessionKey, toggleSidebar, toggleTerminal } from './store';
 import { Sidebar } from './components/Sidebar';
 import { ChatView } from './views/ChatView';
 import { SessionsView } from './views/SessionsView';
@@ -11,7 +11,7 @@ import { wsClient } from './services/websocket';
 
 function App() {
   const dispatch = useDispatch();
-  const { activeTab, theme, sidebarCollapsed } = useSelector((state: RootState) => state.ui);
+  const { activeTab, theme, sidebarCollapsed, terminalVisible } = useSelector((state: RootState) => state.ui);
   const isMac = window.electronAPI.platform.isMac;
   const controlAnchorStyle = isMac
     ? { left: '92px', top: '10px' }
@@ -122,6 +122,23 @@ function App() {
             </button>
           )}
         </div>
+        {activeTab === 'chat' && (
+          <div className="absolute right-3 top-2.5 z-40 no-drag">
+            <button
+              onClick={() => dispatch(toggleTerminal())}
+              className={`flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs transition-colors ${
+                terminalVisible
+                  ? 'border-primary/50 bg-primary/10 text-primary'
+                  : 'border-border/80 bg-background/90 text-foreground/70 hover:bg-secondary hover:text-foreground'
+              }`}
+              aria-label="Toggle terminal"
+              title="Toggle terminal"
+            >
+              <TerminalIcon className="h-3.5 w-3.5" />
+              <span>Terminal</span>
+            </button>
+          </div>
+        )}
         <Sidebar />
         <main className="flex-1 overflow-hidden rounded-[18px] border border-border/75 bg-card shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
           {activeTab === 'chat' && <ChatView />}
@@ -156,6 +173,15 @@ function PencilIcon({ className }: { className?: string }) {
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 20h9" />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.5 3.5a2.1 2.1 0 113 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
+  );
+}
+
+function TerminalIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x={3} y={5} width={18} height={14} rx={2.5} strokeWidth={1.8} />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 9l3 3-3 3m5 0h5" />
     </svg>
   );
 }

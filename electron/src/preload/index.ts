@@ -73,6 +73,23 @@ const electronAPI = {
     }
   },
 
+  terminal: {
+    start: () => ipcRenderer.invoke('terminal:start'),
+    input: (value: string) => ipcRenderer.invoke('terminal:input', value),
+    stop: () => ipcRenderer.invoke('terminal:stop'),
+    onData: (callback: (chunk: string) => void) => {
+      const listener = (_: unknown, chunk: string) => callback(chunk);
+      ipcRenderer.on('terminal:data', listener);
+      return () => ipcRenderer.removeListener('terminal:data', listener);
+    },
+    onExit: (callback: (code: number | null, signal: string | null) => void) => {
+      const listener = (_: unknown, payload: { code: number | null; signal: string | null }) =>
+        callback(payload.code, payload.signal);
+      ipcRenderer.on('terminal:exit', listener);
+      return () => ipcRenderer.removeListener('terminal:exit', listener);
+    }
+  },
+
   // Platform info
   platform: {
     isMac: process.platform === 'darwin',

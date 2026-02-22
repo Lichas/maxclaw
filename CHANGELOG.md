@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 新增可切换内置终端：右上角按钮 + 聊天输入下方 shell 面板
+- **变更**：聊天页右上角新增 `Terminal` toggle 按钮；点击后在聊天输入框下方展开 shell 面板，支持输入命令、回车执行、流式输出、清空输出与停止终端；新增主进程终端 IPC（start/input/stop/data/exit）并通过 preload 暴露给渲染层。
+- **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/main/ipc.ts`、`electron/src/preload/index.ts`、`electron/src/renderer/store/index.ts`、`electron/src/renderer/types/electron.d.ts`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 移除聊天信息流与输入区之间的横向分割线
 - **变更**：聊天页底部输入区容器去掉顶部边线，仅保留间距，降低视觉噪声。
 - **位置**：`electron/src/renderer/views/ChatView.tsx`。
