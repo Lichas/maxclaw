@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 历史详情隐藏内部状态并优化启动默认页、智谱 GLM-5 标识
+- **变更**：查看历史会话详情时不再渲染 `Using model`、`Preparing final response`、`Executing tools` 等内部状态；应用重启后默认进入“新建任务”空会话；智谱 GLM-5 模型标识统一为 `glm5`（不再使用 `zai/glm-5`）。
+- **位置**：`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/App.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`electron/src/renderer/types/providers.ts`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 会话可见并可验证当前生效模型（模型切换即时应用）
 - **变更**：后端在 `PUT /api/config` 后即时应用新的 `agents.defaults.model` 到运行中的 Agent（同步更新运行时 provider + model，无需重启）；流式会话新增状态事件 `Using model: ...`，可在会话中直接确认本轮请求实际使用模型。
 - **位置**：`internal/webui/server.go`、`internal/agent/loop.go`。

@@ -40,6 +40,15 @@ function isIterationStatus(summary: string): boolean {
   return iterationStatusPattern.test(summary.trim());
 }
 
+function shouldHideStatusInHistory(summary: string): boolean {
+  const normalized = summary.trim().toLowerCase();
+  return (
+    normalized.startsWith('using model:') ||
+    normalized === 'preparing final response' ||
+    normalized === 'executing tools'
+  );
+}
+
 function loadPreferredModel(): string {
   try {
     return window.localStorage.getItem(MODEL_PREFERENCE_KEY) || '';
@@ -601,7 +610,10 @@ export function ChatView() {
     const normalized: TimelineEntry[] = [];
     entries.forEach((entry, index) => {
       if (entry.kind === 'activity' && entry.activity && entry.activity.summary) {
-        if (entry.activity.type === 'status' && isIterationStatus(entry.activity.summary)) {
+        if (
+          entry.activity.type === 'status' &&
+          (isIterationStatus(entry.activity.summary) || shouldHideStatusInHistory(entry.activity.summary))
+        ) {
           return;
         }
         normalized.push({

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, setStatus, setActiveTab, setTheme, setLanguage } from './store';
+import { RootState, setStatus, setActiveTab, setTheme, setLanguage, setCurrentSessionKey } from './store';
 import { TitleBar } from './components/TitleBar';
 import { Sidebar } from './components/Sidebar';
 import { ChatView } from './views/ChatView';
@@ -15,6 +15,8 @@ function App() {
   const { activeTab, theme, language } = useSelector((state: RootState) => state.ui);
 
   useEffect(() => {
+    dispatch(setCurrentSessionKey(`desktop:${Date.now()}`));
+
     // Load app settings from electron store
     window.electronAPI.config.get().then((config) => {
       if (config.theme) {

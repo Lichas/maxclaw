@@ -72,7 +72,7 @@ const PROVIDER_DEFAULT_MODELS: Record<string, string[]> = {
   anthropic: ['anthropic/claude-opus-4-5', 'anthropic/claude-sonnet-4-5'],
   openai: ['openai/gpt-4o', 'openai/gpt-4.1-mini'],
   deepseek: ['deepseek-chat', 'deepseek-reasoner'],
-  zhipu: ['glm-4.5', 'glm-4.5-air', 'zai/glm-5'],
+  zhipu: ['glm-4.5', 'glm-4.5-air', 'glm5'],
   groq: ['groq/llama-3.1-70b-versatile', 'groq/mixtral-8x7b-32768'],
   gemini: ['gemini/gemini-2.0-flash', 'gemini/gemini-1.5-pro'],
   dashscope: ['qwen-max', 'qwen-plus'],

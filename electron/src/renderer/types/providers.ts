@@ -59,7 +59,7 @@ export const PRESET_PROVIDERS: Omit<ProviderConfig, 'id' | 'apiKey'>[] = [
     models: [
       { id: 'glm-4.5', name: 'GLM-4.5', enabled: true },
       { id: 'glm-4.5-air', name: 'GLM-4.5-Air', enabled: true },
-      { id: 'zai/glm-5', name: 'GLM-5', enabled: true },
+      { id: 'glm5', name: 'GLM-5', enabled: true },
     ],
     enabled: false,
   },
