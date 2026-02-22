@@ -326,6 +326,13 @@
   - `cd electron && npm run build`
   - `make build`
 
+#### 修复 macOS 开发模式 Dock 图标仍显示 Electron 原子图标（`electron/src/main/window.ts`, `electron/src/main/index.ts`）
+- **变更**：新增 Dock 图标多路径解析与有效性校验，`app.whenReady` 和窗口创建时都会应用 `icon.png`，覆盖 dev 场景下路径差异导致的回退行为。
+- **位置**：主进程 `applyMacDockIcon()` 与 `resolveIconPath()` 逻辑。
+- **验证**：
+  - `cd electron && npm run build`
+  - `make build`
+
 ### 新增功能
 
 #### 实现定时任务 REST API（`internal/webui/server.go`）

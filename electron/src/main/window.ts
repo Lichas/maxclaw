@@ -1,7 +1,8 @@
 import { BrowserWindow, screen, ipcMain, app, nativeImage } from 'electron';
 import path from 'path';
 import Store from 'electron-store';
-import os from 'os';
+import fs from 'fs';
+import log from 'electron-log';
 
 interface WindowState {
   width: number;
@@ -22,26 +23,49 @@ const store = new Store<WindowState>({
   }
 });
 
-function getIconPath(): string {
-  const platform = os.platform();
-  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+function getIconCandidates(): string[] {
+  const appPath = app.getAppPath();
+  const cwd = process.cwd();
+  return [
+    path.join(appPath, 'assets/icon.png'),
+    path.join(appPath, 'assets/icon.icns'),
+    path.join(appPath, 'dist/main/icon.png'),
+    path.join(appPath, 'public/icon.png'),
+    path.join(appPath, '../icon.png'),
+    path.join(cwd, 'assets/icon.png'),
+    path.join(cwd, 'public/icon.png'),
+    path.join(cwd, 'icon.png'),
+    path.join(process.resourcesPath, 'assets/icon.png'),
+    path.join(process.resourcesPath, 'assets/icon.icns')
+  ];
+}
 
-  if (platform === 'darwin') {
-    // macOS uses .icns
-    return isDev
-      ? path.join(__dirname, '../../assets/icon.icns')
-      : path.join(process.resourcesPath, 'assets/icon.icns');
-  } else if (platform === 'win32') {
-    // Windows uses .ico
-    return isDev
-      ? path.join(__dirname, '../../assets/icon.ico')
-      : path.join(process.resourcesPath, 'assets/icon.ico');
-  } else {
-    // Linux uses .png
-    return isDev
-      ? path.join(__dirname, '../../assets/icon.png')
-      : path.join(process.resourcesPath, 'assets/icon.png');
+function resolveIconPath(): string | null {
+  for (const candidate of getIconCandidates()) {
+    if (!fs.existsSync(candidate)) {
+      continue;
+    }
+    const icon = nativeImage.createFromPath(candidate);
+    if (!icon.isEmpty()) {
+      return candidate;
+    }
   }
+  return null;
+}
+
+export function applyMacDockIcon(): void {
+  if (process.platform !== 'darwin' || !app.dock) {
+    return;
+  }
+
+  const iconPath = resolveIconPath();
+  if (!iconPath) {
+    log.warn('[icon] Dock icon not applied: no valid icon file found');
+    return;
+  }
+
+  app.dock.setIcon(nativeImage.createFromPath(iconPath));
+  log.info('[icon] Dock icon applied:', iconPath);
 }
 
 export function createWindow(): BrowserWindow {
@@ -58,15 +82,8 @@ export function createWindow(): BrowserWindow {
   const windowX = isVisible ? x : undefined;
   const windowY = isVisible ? y : undefined;
 
-  // Set Dock icon on macOS (for development mode)
-  if (process.platform === 'darwin' && app.dock) {
-    try {
-      const iconPath = getIconPath();
-      app.dock.setIcon(nativeImage.createFromPath(iconPath));
-    } catch {
-      // Ignore icon errors
-    }
-  }
+  // Re-apply Dock icon when creating window, keeping dev mode behavior stable.
+  applyMacDockIcon();
 
   const window = new BrowserWindow({
     width,

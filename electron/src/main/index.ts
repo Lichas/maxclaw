@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import { createWindow } from './window';
+import { createWindow, applyMacDockIcon } from './window';
 import { initializeTray } from './tray';
 import { GatewayManager } from './gateway';
 import { createIPCHandlers } from './ipc';
@@ -81,6 +81,7 @@ async function initializeApp(): Promise<void> {
 
 // App event handlers
 app.whenReady().then(() => {
+  applyMacDockIcon();
   void initializeApp().catch((error) => {
     log.error('Failed to initialize app:', error);
   });
