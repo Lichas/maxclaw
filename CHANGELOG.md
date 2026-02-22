@@ -305,6 +305,13 @@
   - `cd electron && npm run build`
   - `make build`
 
+#### 修复侧边栏历史区块文案错误（`electron/src/renderer/components/Sidebar.tsx`, `electron/src/renderer/i18n/index.ts`）
+- **变更**：将“技能市场”下方会话列表区块标题从“搜索任务”改为“历史任务”，并新增独立翻译键 `sidebar.history`（中英）。
+- **位置**：侧边栏区块标题改为 `t('sidebar.history')`，不再复用 `nav.sessions`。
+- **验证**：
+  - `cd electron && npm run build`
+  - `make build`
+
 ### 新增功能
 
 #### 实现定时任务 REST API（`internal/webui/server.go`）

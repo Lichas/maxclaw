@@ -235,7 +235,7 @@ export function Sidebar() {
         {!sidebarCollapsed && (
           <div className="mt-4 px-2">
             <p className="text-xs font-medium mb-3 px-2" style={{ color: 'var(--muted)' }}>
-              {t('nav.sessions')}
+              {t('sidebar.history')}
             </p>
 
             {/* Channel Filter Dropdown */}

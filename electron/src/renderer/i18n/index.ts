@@ -67,6 +67,7 @@ const zh: Translations = {
 
   // Sidebar
   'sidebar.newTask': '新建任务',
+  'sidebar.history': '历史任务',
   'sidebar.filter.all': '全部',
   'sidebar.filter.desktop': '桌面',
   'sidebar.search': '搜索任务...',
@@ -150,6 +151,7 @@ const en: Translations = {
 
   // Sidebar
   'sidebar.newTask': 'New Task',
+  'sidebar.history': 'History',
   'sidebar.filter.all': 'All',
   'sidebar.filter.desktop': 'Desktop',
   'sidebar.search': 'Search tasks...',
