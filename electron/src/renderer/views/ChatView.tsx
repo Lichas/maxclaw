@@ -108,7 +108,8 @@ function formatSessionTitle(text?: string): string {
 
 export function ChatView() {
   const dispatch = useDispatch();
-  const { currentSessionKey } = useSelector((state: RootState) => state.ui);
+  const { currentSessionKey, sidebarCollapsed } = useSelector((state: RootState) => state.ui);
+  const isMac = window.electronAPI.platform.isMac;
   const { sendMessage, getSession, getSessions, getSkills, getModels, updateConfig, isLoading } = useGateway();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -1063,7 +1064,11 @@ export function ChatView() {
   );
 
   const renderThreadHeader = () => (
-    <div className="draggable flex h-12 items-center border-b border-border/80 bg-background/95 px-6">
+    <div
+      className={`draggable flex h-12 items-center border-b border-border/80 bg-background/95 ${
+        isMac && sidebarCollapsed ? 'pl-44 pr-6' : 'px-6'
+      }`}
+    >
       <div className="min-w-0">
         <h1 className="truncate text-[15px] font-semibold text-foreground">{sessionTitle}</h1>
       </div>

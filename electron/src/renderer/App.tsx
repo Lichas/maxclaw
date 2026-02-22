@@ -13,6 +13,9 @@ function App() {
   const dispatch = useDispatch();
   const { activeTab, theme, sidebarCollapsed } = useSelector((state: RootState) => state.ui);
   const isMac = window.electronAPI.platform.isMac;
+  const controlAnchorStyle = isMac
+    ? { left: '92px', top: '10px' }
+    : { left: '12px', top: '10px' };
 
   useEffect(() => {
     dispatch(setCurrentSessionKey(`desktop:${Date.now()}`));
@@ -96,7 +99,7 @@ function App() {
     <div className="h-screen overflow-hidden bg-background text-foreground">
       <div className="relative flex h-full overflow-hidden">
         <div className={`absolute inset-x-0 top-0 z-10 h-12 draggable ${isMac ? 'h-14' : ''}`} />
-        <div className={`absolute z-40 flex items-center gap-2 no-drag ${isMac ? 'left-20 top-3' : 'left-3 top-2.5'}`}>
+        <div className="absolute z-40 flex items-center gap-2 no-drag" style={controlAnchorStyle}>
           <button
             onClick={() => dispatch(toggleSidebar())}
             className="flex h-8 w-8 items-center justify-center rounded-md border border-border/80 bg-background/90 text-foreground/70 transition-colors hover:bg-secondary hover:text-foreground"

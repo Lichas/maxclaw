@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 修复 macOS 顶部控制区间距：侧栏收起后按钮与会话标题避让
+- **变更**：调整左上角 toggle/新建按钮锚点位置，确保与 macOS 三色窗口按钮保持稳定间隔；侧边栏收起时聊天页标题栏增加左侧避让，避免与控制按钮重叠。
+- **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 桌面端 UI 进一步对齐 Codex：贴顶会话头、可拖拽、历史标题展示与侧栏图标优化
 - **变更**：主聊天区布局改为贴顶显示；新增顶部拖拽区域恢复窗口拖动能力；侧边栏切换按钮改为面板样式图标；聊天页新增会话标题头，打开历史任务时顶部展示该会话描述标题。
 - **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/views/ChatView.tsx`。
