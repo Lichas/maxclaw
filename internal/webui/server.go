@@ -81,6 +81,7 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	mux.HandleFunc("/api/uploads/", s.handleGetUpload)
 	mux.HandleFunc("/api/notifications/pending", s.handleGetPendingNotifications)
 	mux.HandleFunc("/api/notifications/", s.handleMarkNotificationDelivered)
+	mux.HandleFunc("/api/providers/test", s.handleTestProvider)
 	mux.HandleFunc("/ws", s.handleWebSocket)
 
 	mux.Handle("/", spaHandler(s.uiDir))
@@ -1197,6 +1198,90 @@ type sessionSummary struct {
 	MessageCount  int    `json:"messageCount"`
 	LastMessageAt string `json:"lastMessageAt,omitempty"`
 	LastMessage   string `json:"lastMessage,omitempty"`
+}
+
+// ProviderTestRequest represents a provider test request
+type ProviderTestRequest struct {
+	Name      string `json:"name"`
+	APIKey    string `json:"apiKey"`
+	BaseURL   string `json:"baseURL,omitempty"`
+	APIFormat string `json:"apiFormat"`
+}
+
+func (s *Server) handleTestProvider(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req ProviderTestRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.APIKey == "" {
+		http.Error(w, "API key is required", http.StatusBadRequest)
+		return
+	}
+
+	// Test the provider connection
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	var testURL string
+	headers := make(map[string]string)
+
+	switch req.APIFormat {
+	case "anthropic":
+		baseURL := req.BaseURL
+		if baseURL == "" {
+			baseURL = "https://api.anthropic.com"
+		}
+		testURL = baseURL + "/v1/models"
+		headers["x-api-key"] = req.APIKey
+		headers["anthropic-version"] = "2023-06-01"
+	default: // openai
+		baseURL := req.BaseURL
+		if baseURL == "" {
+			// Try to determine from provider name
+			switch req.Name {
+			case "DeepSeek":
+				baseURL = "https://api.deepseek.com/v1"
+			case "Moonshot":
+				baseURL = "https://api.moonshot.cn/v1"
+			case "Groq":
+				baseURL = "https://api.groq.com/openai/v1"
+			default:
+				baseURL = "https://api.openai.com/v1"
+			}
+		}
+		testURL = baseURL + "/models"
+		headers["Authorization"] = "Bearer " + req.APIKey
+	}
+
+	httpReq, err := http.NewRequest("GET", testURL, nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	for k, v := range headers {
+		httpReq.Header.Set(k, v)
+	}
+
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "API returned status "+resp.Status, resp.StatusCode)
+		return
+	}
+
+	writeJSON(w, map[string]bool{"ok": true})
 }
 
 func writeJSON(w http.ResponseWriter, v interface{}) {

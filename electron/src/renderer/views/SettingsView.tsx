@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, setTheme, setLanguage } from '../store';
 import { useTranslation } from '../i18n';
+import { ProviderConfig, PRESET_PROVIDERS } from '../types/providers';
+import { ProviderEditor } from '../components/ProviderEditor';
 
 interface Settings {
   theme: 'light' | 'dark' | 'system';
@@ -24,6 +26,9 @@ export function SettingsView() {
     notificationsEnabled: true
   });
   const [gatewayConfig, setGatewayConfig] = useState<any>(null);
+  const [providers, setProviders] = useState<ProviderConfig[]>([]);
+  const [editingProvider, setEditingProvider] = useState<ProviderConfig | null>(null);
+  const [showAddProvider, setShowAddProvider] = useState(false);
 
   useEffect(() => {
     // Load app settings
@@ -45,7 +50,28 @@ export function SettingsView() {
     // Load Gateway config
     fetch('http://localhost:18890/api/config')
       .then(res => res.json())
-      .then(setGatewayConfig)
+      .then(config => {
+        setGatewayConfig(config);
+        // Convert gateway providers format to our format
+        if (config.providers) {
+          const loadedProviders: ProviderConfig[] = [];
+          Object.entries(config.providers).forEach(([key, value]: [string, any]) => {
+            if (value && (value.apiKey || value.apiBase)) {
+              loadedProviders.push({
+                id: key,
+                name: key.charAt(0).toUpperCase() + key.slice(1),
+                type: key === 'anthropic' ? 'anthropic' : 'openai',
+                apiKey: value.apiKey || '',
+                baseURL: value.apiBase || '',
+                apiFormat: key === 'anthropic' ? 'anthropic' : 'openai',
+                models: [],
+                enabled: true,
+              });
+            }
+          });
+          setProviders(loadedProviders);
+        }
+      })
       .catch(console.error);
   }, []);
 
@@ -73,6 +99,104 @@ export function SettingsView() {
 
   const handleRestartGateway = async () => {
     await window.electronAPI.gateway.restart();
+  };
+
+  const handleAddProvider = (preset: typeof PRESET_PROVIDERS[0]) => {
+    const newProvider: ProviderConfig = {
+      ...preset,
+      id: `${Date.now()}`,
+      apiKey: '',
+    };
+    setEditingProvider(newProvider);
+    setShowAddProvider(false);
+  };
+
+  const handleSaveProvider = async (provider: ProviderConfig) => {
+    try {
+      const existingIndex = providers.findIndex((p) => p.id === provider.id);
+      let newProviders;
+
+      if (existingIndex >= 0) {
+        newProviders = [...providers];
+        newProviders[existingIndex] = provider;
+      } else {
+        newProviders = [...providers, provider];
+      }
+
+      // Convert to gateway config format
+      const gatewayProviders: Record<string, { apiKey: string; apiBase?: string }> = {};
+      newProviders.forEach((p) => {
+        const key = p.name.toLowerCase().replace(/\s+/g, '');
+        gatewayProviders[key] = {
+          apiKey: p.apiKey,
+          apiBase: p.baseURL,
+        };
+      });
+
+      // Update Gateway config
+      const response = await fetch('http://localhost:18890/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ providers: gatewayProviders }),
+      });
+
+      if (response.ok) {
+        setProviders(newProviders);
+        setEditingProvider(null);
+
+        // Restart Gateway to apply changes
+        await fetch('http://localhost:18890/api/gateway/restart', {
+          method: 'POST',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to save provider:', error);
+    }
+  };
+
+  const handleTestConnection = async (provider: ProviderConfig) => {
+    try {
+      const startTime = Date.now();
+      const response = await fetch('http://localhost:18890/api/providers/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(provider),
+      });
+      const latency = Date.now() - startTime;
+
+      if (response.ok) {
+        return { success: true, latency };
+      } else {
+        const error = await response.text();
+        return { success: false, error };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Connection failed',
+      };
+    }
+  };
+
+  const handleDeleteProvider = async (id: string) => {
+    const newProviders = providers.filter((p) => p.id !== id);
+    setProviders(newProviders);
+
+    // Update Gateway config
+    const gatewayProviders: Record<string, { apiKey: string; apiBase?: string }> = {};
+    newProviders.forEach((p) => {
+      const key = p.name.toLowerCase().replace(/\s+/g, '');
+      gatewayProviders[key] = {
+        apiKey: p.apiKey,
+        apiBase: p.baseURL,
+      };
+    });
+
+    await fetch('http://localhost:18890/api/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ providers: gatewayProviders }),
+    });
   };
 
   return (
@@ -150,6 +274,95 @@ export function SettingsView() {
             />
           </label>
         </div>
+      </section>
+
+      {/* Providers */}
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">{t('settings.providers') || 'Model Providers'}</h2>
+
+        {editingProvider ? (
+          <ProviderEditor
+            provider={editingProvider}
+            onSave={handleSaveProvider}
+            onTest={handleTestConnection}
+            onCancel={() => setEditingProvider(null)}
+          />
+        ) : showAddProvider ? (
+          <div className="rounded-lg border border-border bg-card p-4">
+            <h3 className="mb-3 text-sm font-medium">{t('settings.providers.add') || 'Select Provider'}</h3>
+            <div className="flex flex-wrap gap-2">
+              {PRESET_PROVIDERS.map((preset) => (
+                <button
+                  key={preset.name}
+                  onClick={() => handleAddProvider(preset)}
+                  className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-secondary"
+                >
+                  + {preset.name}
+                </button>
+              ))}
+              <button
+                onClick={() =>
+                  handleAddProvider({
+                    name: 'Custom',
+                    type: 'custom',
+                    apiFormat: 'openai',
+                    models: [],
+                    enabled: false,
+                  })
+                }
+                className="rounded-lg border border-dashed border-border px-3 py-2 text-sm hover:bg-secondary"
+              >
+                + Custom
+              </button>
+            </div>
+            <button
+              onClick={() => setShowAddProvider(false)}
+              className="mt-3 text-sm text-foreground/60 hover:text-foreground"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {providers.length === 0 ? (
+              <p className="text-sm text-foreground/50">{t('settings.providers.empty') || 'No providers configured.'}</p>
+            ) : (
+              providers.map((provider) => (
+                <div
+                  key={provider.id}
+                  className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
+                >
+                  <div>
+                    <h3 className="font-medium">{provider.name}</h3>
+                    <p className="text-xs text-foreground/60">
+                      {provider.baseURL || 'Default endpoint'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setEditingProvider(provider)}
+                      className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-secondary"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProvider(provider.id)}
+                      className="rounded-lg border border-border px-3 py-1.5 text-sm text-red-500 hover:bg-red-500/10"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+            <button
+              onClick={() => setShowAddProvider(true)}
+              className="w-full rounded-lg border border-dashed border-border py-2 text-sm text-foreground/60 hover:bg-secondary hover:text-foreground"
+            >
+              + {t('settings.providers.add') || 'Add Provider'}
+            </button>
+          </div>
+        )}
       </section>
 
       {/* Gateway */}

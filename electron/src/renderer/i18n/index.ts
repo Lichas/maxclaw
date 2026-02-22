@@ -45,6 +45,9 @@ const zh: Translations = {
   'settings.gateway.notConfigured': '未配置',
   'settings.notifications': '通知',
   'settings.notifications.enable': '启用系统通知',
+  'settings.providers': '模型提供商',
+  'settings.providers.add': '添加提供商',
+  'settings.providers.empty': '暂无配置的提供商',
 
   // Skills
   'skills.title': '技能市场',
@@ -125,6 +128,9 @@ const en: Translations = {
   'settings.gateway.notConfigured': 'Not configured',
   'settings.notifications': 'Notifications',
   'settings.notifications.enable': 'Enable System Notifications',
+  'settings.providers': 'Model Providers',
+  'settings.providers.add': 'Add Provider',
+  'settings.providers.empty': 'No providers configured',
 
   // Skills
   'skills.title': 'Skills Marketplace',
