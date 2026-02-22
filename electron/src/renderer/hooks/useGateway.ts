@@ -77,7 +77,7 @@ const PROVIDER_DEFAULT_MODELS: Record<string, string[]> = {
   gemini: ['gemini/gemini-2.5-pro', 'gemini/gemini-2.5-flash'],
   dashscope: ['qwen-max-latest', 'qwen-plus-latest'],
   moonshot: ['kimi-k2-0905-preview', 'kimi-k2-turbo-preview'],
-  minimax: ['MiniMax-M2.1', 'MiniMax-M2.1-lightning']
+  minimax: ['MiniMax-M2.5', 'MiniMax-M2.5-highspeed']
 };
 
 const PROVIDER_KEYWORDS: Array<{ provider: string; keywords: string[] }> = [

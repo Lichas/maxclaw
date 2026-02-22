@@ -24,7 +24,7 @@ export const PRESET_PROVIDERS: Omit<ProviderConfig, 'id' | 'apiKey'>[] = [
     apiFormat: 'openai',
     models: [
       { id: 'openrouter/auto', name: 'OpenRouter Auto', enabled: true },
-      { id: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5', enabled: true },
+      { id: 'openrouter/anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5', enabled: true },
     ],
     enabled: false,
   },
@@ -123,8 +123,8 @@ export const PRESET_PROVIDERS: Omit<ProviderConfig, 'id' | 'apiKey'>[] = [
     baseURL: 'https://api.minimax.io/v1',
     apiFormat: 'openai',
     models: [
-      { id: 'MiniMax-M2.1', name: 'MiniMax M2.1', enabled: true },
-      { id: 'MiniMax-M2.1-lightning', name: 'MiniMax M2.1 Lightning', enabled: true },
+      { id: 'MiniMax-M2.5', name: 'MiniMax M2.5', enabled: true },
+      { id: 'MiniMax-M2.5-highspeed', name: 'MiniMax M2.5 Highspeed', enabled: true },
     ],
     enabled: false,
   },
