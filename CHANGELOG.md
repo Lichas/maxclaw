@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 聊天主面板像素级微调：圆角半径、阴影强度与内层背景统一
+- **变更**：进一步微调聊天主容器的圆角半径、边框透明度和阴影强度；聊天页头部/内容区/输入区统一使用 `card` 背景层，减少层级割裂感，提升圆角矩形面板的精致度。
+- **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 聊天主面板视觉精修为完整圆角矩形（更优雅卡片感）
 - **变更**：右侧主聊天区域由左侧圆角改为完整圆角矩形，并增强阴影与边框层次，提升整体精致感与可读性。
 - **位置**：`electron/src/renderer/App.tsx`。

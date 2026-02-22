@@ -1065,7 +1065,7 @@ export function ChatView() {
 
   const renderThreadHeader = () => (
     <div
-      className={`flex h-12 items-center border-b border-border/80 bg-background/95 ${
+      className={`flex h-12 items-center border-b border-border/60 bg-card/95 ${
         isMac && sidebarCollapsed ? 'pl-44 pr-6' : 'px-6'
       }`}
     >
@@ -1077,7 +1077,7 @@ export function ChatView() {
 
   if (isStarterMode) {
     return (
-      <div className="h-full flex flex-col bg-background">
+      <div className="h-full flex flex-col bg-card">
         {renderThreadHeader()}
         <div className="flex-1 overflow-y-auto px-8 py-10">
           <div className="mx-auto max-w-4xl">
@@ -1117,7 +1117,7 @@ export function ChatView() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-card">
       {renderThreadHeader()}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.map((message) => (
@@ -1168,7 +1168,7 @@ export function ChatView() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t border-border bg-background p-4">{renderComposer(false)}</div>
+      <div className="border-t border-border/60 bg-card p-4">{renderComposer(false)}</div>
     </div>
   );
 }

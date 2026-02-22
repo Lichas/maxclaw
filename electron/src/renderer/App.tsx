@@ -123,7 +123,7 @@ function App() {
           )}
         </div>
         <Sidebar />
-        <main className="flex-1 overflow-hidden rounded-2xl border border-border/85 bg-card shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
+        <main className="flex-1 overflow-hidden rounded-[20px] border border-border/75 bg-card shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
           {activeTab === 'chat' && <ChatView />}
           {activeTab === 'sessions' && <SessionsView />}
           {activeTab === 'scheduled' && <ScheduledTasksView />}
