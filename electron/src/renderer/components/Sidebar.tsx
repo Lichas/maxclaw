@@ -154,7 +154,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`bg-secondary border-r border-border flex flex-col transition-all duration-200 ${
+      className={`bg-secondary border-r border-border flex flex-col h-screen transition-all duration-200 ${
         sidebarCollapsed ? 'w-16' : 'w-64'
       }`}
     >
@@ -170,7 +170,7 @@ export function Sidebar() {
       </div>
 
       {/* Menu Items */}
-      <nav className="flex-1 px-2">
+      <nav className="flex-1 px-2 flex flex-col min-h-0 overflow-hidden">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -192,7 +192,7 @@ export function Sidebar() {
         })}
 
         {!sidebarCollapsed && (
-          <div className="mt-4 px-2">
+          <div className="mt-4 px-2 flex flex-col min-h-0 overflow-hidden">
             <p className="text-xs font-semibold text-foreground/45 tracking-wide mb-2">{t('nav.sessions')}</p>
             <div className="mb-2 relative">
               <select
@@ -209,7 +209,7 @@ export function Sidebar() {
               <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/45" />
             </div>
 
-            <div className="space-y-1 mt-2">
+            <div className="flex-1 overflow-y-auto space-y-1 mt-2 min-h-0">
               {sessionItems.length === 0 && (
                 <div className="text-sm text-foreground/45 px-2 py-1">
                   {t('skills.empty')}
