@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 历史会话执行过程改为默认折叠（总览 + 分步折叠）并补充状态图标
+- **变更**：历史会话中的工具/思考过程由逐条铺开改为“执行过程”总览折叠；默认收起，展开后可逐步骤单独展开查看细节；新增思考/工具/错误图标，降低过程信息喧宾夺主的问题。
+- **位置**：`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 微调主面板与侧边栏：18px 圆角、隐藏式浅色滚动条、移除侧栏分割线
 - **变更**：聊天主面板圆角改为 `18px`；侧边栏滚动条改为默认隐藏、交互时显示的浅色细滚动条；移除侧边栏右侧分割线，避免与右侧圆角聊天面板产生视觉冲突。
 - **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/styles/globals.css`。

@@ -829,27 +829,69 @@ export function ChatView() {
   const renderTimeline = (items: TimelineEntry[], streaming: boolean) => {
     const openIndex =
       streaming && items.length > 0 && items[items.length - 1].kind === 'activity' ? items.length - 1 : -1;
+    const activityItems = items.filter(
+      (entry): entry is Extract<TimelineEntry, { kind: 'activity' }> => entry.kind === 'activity'
+    );
+    const textItems = items.filter(
+      (entry): entry is Extract<TimelineEntry, { kind: 'text' }> => entry.kind === 'text' && entry.text.trim() !== ''
+    );
+
+    const renderActivityItem = (
+      entry: Extract<TimelineEntry, { kind: 'activity' }>,
+      defaultOpen?: boolean
+    ) => (
+      <details key={entry.id} open={defaultOpen} className="rounded-lg border border-border/65 bg-background/90">
+        <summary className="cursor-pointer list-none px-3 py-2.5">
+          <div className="flex items-center gap-2 text-sm text-foreground/80">
+            <ActivityTypeIcon type={entry.activity.type} className="h-4 w-4 flex-shrink-0" />
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground/45">
+              {getActivityLabel(entry.activity.type)}
+            </span>
+            <span className="truncate">{entry.activity.summary}</span>
+            <ChevronDownIcon className="ml-auto h-3.5 w-3.5 flex-shrink-0 text-foreground/40" />
+          </div>
+        </summary>
+        {entry.activity.detail && (
+          <pre className="border-t border-border/60 px-3 py-2 whitespace-pre-wrap break-all font-sans text-foreground/60">
+            {entry.activity.detail}
+          </pre>
+        )}
+      </details>
+    );
+
+    if (!streaming) {
+      return (
+        <div className="space-y-3">
+          {activityItems.length > 0 && (
+            <details className="rounded-xl border border-border/70 bg-secondary/35">
+              <summary className="cursor-pointer list-none px-3 py-2.5">
+                <div className="flex items-center gap-2 text-sm text-foreground/80">
+                  <WorkflowIcon className="h-4 w-4 flex-shrink-0" />
+                  <span className="font-medium">执行过程（{activityItems.length} 步）</span>
+                  <span className="text-xs text-foreground/45">默认折叠，点击展开</span>
+                  <ChevronDownIcon className="ml-auto h-3.5 w-3.5 flex-shrink-0 text-foreground/40" />
+                </div>
+              </summary>
+              <div className="space-y-2 border-t border-border/60 px-2 py-2">
+                {activityItems.map((entry) => renderActivityItem(entry))}
+              </div>
+            </details>
+          )}
+
+          {textItems.map((entry) => (
+            <div key={entry.id} className="text-foreground">
+              <MarkdownRenderer content={entry.text} />
+            </div>
+          ))}
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-3">
         <div className="space-y-2">
           {items.map((entry, index) =>
-            entry.kind === 'activity' ? (
-              <div key={entry.id} className="rounded-lg border border-border/70 bg-background">
-                <details open={index === openIndex ? true : undefined}>
-                  <summary className="cursor-pointer list-none px-3 py-2 font-medium text-foreground/75">
-                    {entry.activity.type === 'status' && !streaming
-                      ? entry.activity.summary
-                      : `${getActivityLabel(entry.activity.type)}: ${entry.activity.summary}`}
-                  </summary>
-                  {entry.activity.detail && (
-                    <pre className="border-t border-border/70 px-3 py-2 whitespace-pre-wrap break-all font-sans text-foreground/60">
-                      {entry.activity.detail}
-                    </pre>
-                  )}
-                </details>
-              </div>
-            ) : (
+            entry.kind === 'activity' ? renderActivityItem(entry, index === openIndex) : (
               <div key={entry.id} className="text-foreground">
                 <MarkdownRenderer content={entry.text} />
               </div>
@@ -1201,6 +1243,51 @@ function PuzzleIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z" />
+    </svg>
+  );
+}
+
+function WorkflowIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <circle cx="6" cy="6" r="2.5" strokeWidth={1.8} />
+      <circle cx="18" cy="6" r="2.5" strokeWidth={1.8} />
+      <circle cx="12" cy="18" r="2.5" strokeWidth={1.8} />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8.2 7.2l2.6 7.6m4.4-7.6l-2.6 7.6M8.3 6h7.4" />
+    </svg>
+  );
+}
+
+function ActivityTypeIcon({ className, type }: { className?: string; type: StreamActivity['type'] }) {
+  if (type === 'status') {
+    return (
+      <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.36 6.36l-2.12-2.12M7.76 7.76L5.64 5.64m12.72 0l-2.12 2.12M7.76 16.24l-2.12 2.12" />
+      </svg>
+    );
+  }
+
+  if (type === 'error') {
+    return (
+      <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" strokeWidth={1.8} />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v5m0 3h.01" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x={4} y={5} width={16} height={12} rx={2.5} strokeWidth={1.8} />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 19h8M9 17l-1.2 2m6.2-2l1.2 2" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9l6 6 6-6" />
     </svg>
   );
 }
