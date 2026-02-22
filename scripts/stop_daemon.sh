@@ -84,7 +84,35 @@ kill_stale_by_port() {
   done
 }
 
+kill_stale_by_pattern() {
+  local name="$1"
+  shift
+  local patterns=("$@")
+
+  for pattern in "${patterns[@]}"; do
+    if ! command -v pgrep >/dev/null 2>&1; then
+      return 0
+    fi
+
+    local pids
+    pids="$(pgrep -f "$pattern" 2>/dev/null || true)"
+    [ -z "$pids" ] && continue
+
+    for pid in $pids; do
+      if [ "$name" = "bridge" ] && should_kill_bridge_pid "$pid"; then
+        echo "Stopping stale $name by pattern '$pattern' (PID $pid)"
+        kill "$pid" >/dev/null 2>&1 || true
+      elif [ "$name" = "gateway" ] && should_kill_gateway_pid "$pid"; then
+        echo "Stopping stale $name by pattern '$pattern' (PID $pid)"
+        kill "$pid" >/dev/null 2>&1 || true
+      fi
+    done
+  done
+}
+
 stop_pid bridge
 stop_pid gateway
 kill_stale_by_port bridge "$BRIDGE_PORT"
 kill_stale_by_port gateway "$GATEWAY_PORT"
+kill_stale_by_pattern bridge "/bridge/dist/index.js" "maxclaw-whatsapp-bridge" "nanobot-whatsapp-bridge"
+kill_stale_by_pattern gateway "/build/maxclaw gateway" "/build/nanobot-go gateway" "/build/nanobot gateway" "maxclaw gateway -p" "nanobot-go gateway -p" "nanobot gateway -p"

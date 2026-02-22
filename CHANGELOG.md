@@ -10,7 +10,7 @@
 - **验证**：`go test ./...`、`make build`、`cd electron && npm run build`、`cd webui && npm run build`、`cd bridge && npm run build`。
 
 #### Daemon 重启端口清理修复（`scripts/start_daemon.sh`, `scripts/start_all.sh`, `scripts/stop_daemon.sh`）
-- **变更**：修复 `make restart-daemon` 场景下旧 `nanobot-go` Gateway 进程未被识别并清理的问题；补充 legacy 进程名匹配，并在 `stop_daemon.sh` 增加按端口的兜底清理逻辑（处理 stale PID 文件）。
+- **变更**：修复 `make restart-daemon` 场景下旧 `nanobot-go` Gateway 进程未被识别并清理的问题；补充 legacy 进程名匹配，并在 `stop_daemon.sh` 增加按端口 + 按命令模式的双重兜底清理逻辑（处理 stale PID 文件与非监听残留进程）。
 - **位置**：`scripts/start_daemon.sh`、`scripts/start_all.sh`、`scripts/stop_daemon.sh`。
 - **验证**：`bash -n scripts/start_daemon.sh scripts/start_all.sh scripts/stop_daemon.sh`、`./scripts/stop_daemon.sh`（可清理 `18890` 端口残留旧进程）、`make restart-daemon`（端口冲突已消失，后续失败原因为未配置 API Key）。
 
