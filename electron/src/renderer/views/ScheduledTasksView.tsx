@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { CustomSelect } from '../components/CustomSelect';
+import { CronBuilder } from '../components/CronBuilder';
 
 interface CronJob {
   id: string;
@@ -187,19 +188,29 @@ export function ScheduledTasksView() {
                   />
                 </div>
 
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-foreground">
-                    {formData.scheduleType === 'cron' ? 'Cron 表达式' : formData.scheduleType === 'every' ? '间隔(毫秒)' : '执行时间'}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.scheduleValue}
-                    onChange={(e) => setFormData({ ...formData, scheduleValue: e.target.value })}
-                    placeholder={formData.scheduleType === 'cron' ? '0 9 * * *' : formData.scheduleType === 'every' ? '3600000' : '2026-02-21T09:00:00'}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
-                    required
-                  />
-                </div>
+                {formData.scheduleType === 'cron' ? (
+                  <div className="form-group">
+                    <label className="mb-1.5 block text-sm font-medium text-foreground">Cron 表达式</label>
+                    <CronBuilder
+                      value={formData.scheduleValue}
+                      onChange={(value) => setFormData({ ...formData, scheduleValue: value })}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-foreground">
+                      {formData.scheduleType === 'every' ? '间隔(毫秒)' : '执行时间'}
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.scheduleValue}
+                      onChange={(e) => setFormData({ ...formData, scheduleValue: e.target.value })}
+                      placeholder={formData.scheduleType === 'every' ? '3600000' : '2026-02-21T09:00:00'}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                      required
+                    />
+                  </div>
+                )}
               </div>
 
               <div>

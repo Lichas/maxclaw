@@ -1,0 +1,166 @@
+.cron-builder {
+  background: var(--background, #ffffff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cron-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cron-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground, #374151);
+}
+
+.preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preset-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  background: var(--background, #ffffff);
+  color: var(--foreground, #374151);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-btn:hover {
+  background: var(--secondary, #f3f4f6);
+  border-color: var(--primary, #6366f1);
+}
+
+.preset-btn.active {
+  background: var(--primary, #6366f1);
+  color: var(--primary-foreground, #ffffff);
+  border-color: var(--primary, #6366f1);
+}
+
+.cron-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: var(--secondary, #f3f4f6);
+  border-radius: 8px;
+}
+
+.cron-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cron-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cron-field label {
+  font-size: 12px;
+  color: var(--foreground, #6b7280);
+  font-weight: 500;
+}
+
+.cron-field input {
+  padding: 8px 10px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--background, #ffffff);
+  color: var(--foreground, #374151);
+  transition: border-color 0.15s ease;
+}
+
+.cron-field input:focus {
+  outline: none;
+  border-color: var(--primary, #6366f1);
+}
+
+.cron-weekday {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cron-weekday label {
+  font-size: 12px;
+  color: var(--foreground, #6b7280);
+  font-weight: 500;
+}
+
+.weekday-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.weekday-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--background, #ffffff);
+  color: var(--foreground, #374151);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.weekday-btn:hover {
+  background: var(--secondary, #f3f4f6);
+  border-color: var(--primary, #6366f1);
+}
+
+.weekday-btn.active {
+  background: var(--primary, #6366f1);
+  color: var(--primary-foreground, #ffffff);
+  border-color: var(--primary, #6366f1);
+}
+
+.cron-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: var(--secondary, #f3f4f6);
+  border-radius: 8px;
+}
+
+.cron-preview label {
+  font-size: 12px;
+  color: var(--foreground, #6b7280);
+  font-weight: 500;
+}
+
+.cron-preview code {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 14px;
+  color: var(--primary, #6366f1);
+  background: var(--background, #ffffff);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #e5e7eb);
+}
+
+.cron-description {
+  font-size: 13px;
+  color: var(--foreground, #6b7280);
+  text-align: center;
+  padding: 8px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+  border-radius: 6px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
