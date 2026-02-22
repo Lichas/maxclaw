@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 修复内置终端启动失败 `posix_spawnp failed`（shell 解析与环境兜底）
+- **变更**：终端启动改为多候选 shell 逐个尝试（`$SHELL`、`/bin/zsh`、`/bin/bash`、`/bin/sh`），并清洗 PTY 环境变量、兜底工作目录到用户主目录，降低 `terminal start failed` 概率。
+- **位置**：`electron/src/main/ipc.ts`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 修复 Electron 主进程偶发 `write EPIPE` 崩溃（日志输出到断开管道）
 - **变更**：主进程对 `stdout/stderr` 的 `EPIPE` 错误做安全吞掉处理，并禁用 `electron-log` 的 console transport（保留文件日志），避免日志写入断开管道导致进程异常退出。
 - **位置**：`electron/src/main/index.ts`。

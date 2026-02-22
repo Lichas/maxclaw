@@ -1,5 +1,6 @@
 import { ipcMain, BrowserWindow, dialog, shell, app } from 'electron';
 import { spawn as spawnPty, type IPty } from 'node-pty';
+import fs from 'fs';
 import Store from 'electron-store';
 import AutoLaunch from 'auto-launch';
 import log from 'electron-log';
@@ -50,13 +51,74 @@ function sendTerminalExit(code: number | null, signal: string | null): void {
   }
 }
 
-function resolveShell(): { command: string; args: string[] } {
-  if (process.platform === 'win32') {
-    return { command: 'powershell.exe', args: ['-NoLogo'] };
+function parseShellExecutable(raw: string | undefined): string | undefined {
+  if (!raw) {
+    return undefined;
   }
 
-  const shellPath = process.env.SHELL || '/bin/zsh';
-  return { command: shellPath, args: ['-i'] };
+  const value = raw.trim();
+  if (value === '') {
+    return undefined;
+  }
+
+  const [command] = value.split(/\s+/);
+  return command || undefined;
+}
+
+function resolveShellCandidates(): Array<{ command: string; args: string[] }> {
+  if (process.platform === 'win32') {
+    return [
+      { command: 'powershell.exe', args: ['-NoLogo'] },
+      { command: 'cmd.exe', args: [] }
+    ];
+  }
+
+  const candidates: Array<{ command: string; args: string[] }> = [];
+  const appendCandidate = (command: string | undefined) => {
+    if (!command) {
+      return;
+    }
+    const exists = command.startsWith('/') ? fs.existsSync(command) : true;
+    if (!exists) {
+      return;
+    }
+    if (!candidates.some((candidate) => candidate.command === command)) {
+      candidates.push({ command, args: ['-i'] });
+    }
+  };
+
+  appendCandidate(parseShellExecutable(process.env.SHELL));
+  appendCandidate('/bin/zsh');
+  appendCandidate('/bin/bash');
+  appendCandidate('/bin/sh');
+
+  return candidates;
+}
+
+function buildPtyEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (typeof value === 'string') {
+      env[key] = value;
+    }
+  }
+
+  if (!env.TERM) {
+    env.TERM = 'xterm-256color';
+  }
+  if (!env.LANG) {
+    env.LANG = 'en_US.UTF-8';
+  }
+
+  return env;
+}
+
+function resolveTerminalCwd(): string {
+  const home = process.env.HOME || app.getPath('home');
+  if (home && fs.existsSync(home)) {
+    return home;
+  }
+  return process.cwd();
 }
 
 export function createIPCHandlers(
@@ -165,25 +227,36 @@ export function createIPCHandlers(
       return { success: true, alreadyRunning: true };
     }
 
-    const shell = resolveShell();
+    const shellCandidates = resolveShellCandidates();
     const cols = options?.cols && options.cols > 0 ? options.cols : 120;
     const rows = options?.rows && options.rows > 0 ? options.rows : 28;
+    const cwd = resolveTerminalCwd();
+    const env = buildPtyEnv();
+    let usedShell = '';
+    let lastError = '';
 
-    try {
-      terminalProcess = spawnPty(shell.command, shell.args, {
-        name: 'xterm-256color',
-        cols,
-        rows,
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          TERM: process.env.TERM || 'xterm-256color'
-        } as Record<string, string>
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      log.error('Failed to start terminal shell:', error);
-      return { success: false, error: message };
+    for (const shellCandidate of shellCandidates) {
+      try {
+        terminalProcess = spawnPty(shellCandidate.command, shellCandidate.args, {
+          name: 'xterm-256color',
+          cols,
+          rows,
+          cwd,
+          env
+        });
+        usedShell = shellCandidate.command;
+        break;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        lastError = message;
+        log.warn(`Failed to start terminal shell candidate ${shellCandidate.command}:`, message);
+      }
+    }
+
+    if (!terminalProcess) {
+      const fallbackError = lastError || 'no available shell candidates';
+      log.error('Failed to start terminal shell:', fallbackError);
+      return { success: false, error: fallbackError };
     }
 
     terminalProcess.onData((data: string) => {
@@ -195,8 +268,8 @@ export function createIPCHandlers(
       terminalProcess = null;
     });
 
-    sendTerminalData(`\r\n[terminal] started with ${shell.command}\r\n`);
-    return { success: true, shell: shell.command };
+    sendTerminalData(`\r\n[terminal] started with ${usedShell}\r\n`);
+    return { success: true, shell: usedShell };
   });
 
   ipcMain.handle('terminal:input', async (_, value: string) => {
