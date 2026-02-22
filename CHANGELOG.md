@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 修复模型下拉菜单边缘遮挡（自动向上展开）
+- **变更**：`CustomSelect` 增加菜单智能定位逻辑；当触发器下方空间不足时自动改为向上展开，并根据可用空间动态限制菜单最大高度，避免在窗口下边缘被裁切。
+- **位置**：`electron/src/renderer/components/CustomSelect.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 新建任务模型选择器移至输入框左下并支持默认/记忆选择
 - **变更**：聊天输入区的模型选择器移到左下角工具栏；首次无历史选择时默认使用第一个 provider 的第一个模型；记住上次模型选择并在下次进入时恢复；修复前端更新模型配置时仅提交 `model` 字段导致后端无法落盘的问题，改为写入 `agents.defaults.model`。
 - **位置**：`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`。

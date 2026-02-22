@@ -46,6 +46,8 @@ export function CustomSelect({
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [menuPlacement, setMenuPlacement] = useState<'top' | 'bottom'>('bottom');
+  const [menuMaxHeight, setMenuMaxHeight] = useState<number>(240);
   const rootRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = useMemo(() => options.find((option) => option.value === value), [options, value]);
@@ -71,6 +73,42 @@ export function CustomSelect({
     const selectedIndex = options.findIndex((option) => option.value === value && !option.disabled);
     setActiveIndex(selectedIndex >= 0 ? selectedIndex : findNextEnabled(options, -1, 1));
   }, [open, options, value]);
+
+  useEffect(() => {
+    if (!open || !rootRef.current) {
+      return;
+    }
+
+    const VERTICAL_GAP = 8;
+    const MIN_MENU_HEIGHT = 120;
+
+    const updateMenuPosition = () => {
+      if (!rootRef.current) {
+        return;
+      }
+
+      const rect = rootRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom - VERTICAL_GAP;
+      const spaceAbove = rect.top - VERTICAL_GAP;
+      const shouldOpenTop = spaceBelow < MIN_MENU_HEIGHT && spaceAbove > spaceBelow;
+      const availableHeight = Math.max(
+        shouldOpenTop ? spaceAbove : spaceBelow,
+        MIN_MENU_HEIGHT
+      );
+
+      setMenuPlacement(shouldOpenTop ? 'top' : 'bottom');
+      setMenuMaxHeight(Math.floor(availableHeight));
+    };
+
+    updateMenuPosition();
+
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
+    };
+  }, [open]);
 
   const chooseOption = (option: SelectOption) => {
     if (option.disabled) {
@@ -144,9 +182,11 @@ export function CustomSelect({
 
       {open && (
         <div
-          className={`absolute left-0 right-0 top-[calc(100%+0.35rem)] z-50 overflow-hidden rounded-xl border border-border bg-background shadow-xl ${menuClassName}`}
+          className={`absolute left-0 right-0 z-50 overflow-hidden rounded-xl border border-border bg-background shadow-xl ${
+            menuPlacement === 'top' ? 'bottom-[calc(100%+0.35rem)]' : 'top-[calc(100%+0.35rem)]'
+          } ${menuClassName}`}
         >
-          <div className="max-h-60 overflow-y-auto p-1.5">
+          <div className="overflow-y-auto p-1.5" style={{ maxHeight: `${menuMaxHeight}px` }}>
             {options.map((option, index) => {
               const selected = option.value === value;
               const active = index === activeIndex;
