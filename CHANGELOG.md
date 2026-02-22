@@ -340,6 +340,13 @@
   - `cd electron && npm run build`
   - `make build`
 
+#### 修复自定义下拉菜单背景透明导致底部内容穿透（`electron/src/renderer/components/CustomSelect.tsx`）
+- **变更**：将菜单容器背景从未定义主题色 `bg-card` 改为已定义的 `bg-background`，确保下拉面板不透明遮罩下方文字与控件。
+- **位置**：`CustomSelect` 弹层容器 class。
+- **验证**：
+  - `cd electron && npm run build`
+  - `make build`
+
 ### 新增功能
 
 #### 实现定时任务 REST API（`internal/webui/server.go`）

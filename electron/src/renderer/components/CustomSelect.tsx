@@ -144,7 +144,7 @@ export function CustomSelect({
 
       {open && (
         <div
-          className={`absolute left-0 right-0 top-[calc(100%+0.35rem)] z-50 overflow-hidden rounded-xl border border-border bg-card shadow-xl ${menuClassName}`}
+          className={`absolute left-0 right-0 top-[calc(100%+0.35rem)] z-50 overflow-hidden rounded-xl border border-border bg-background shadow-xl ${menuClassName}`}
         >
           <div className="max-h-60 overflow-y-auto p-1.5">
             {options.map((option, index) => {
