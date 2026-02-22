@@ -3,22 +3,13 @@ import { useDispatch } from 'react-redux';
 import { setActiveTab, setCurrentSessionKey } from '../store';
 import { SessionSummary, useGateway } from '../hooks/useGateway';
 import { CustomSelect } from '../components/CustomSelect';
-
-const baseChannelOptions = ['desktop', 'telegram', 'webui'] as const;
-const channelLabelMap: Record<string, string> = {
-  desktop: '桌面',
-  telegram: 'Telegram',
-  webui: 'WebUI'
-};
-
-function extractSessionChannel(sessionKey: string): string {
-  const prefix = sessionKey.split(':', 2)[0];
-  return prefix ? prefix.toLowerCase() : 'unknown';
-}
-
-function getChannelLabel(channel: string): string {
-  return channelLabelMap[channel] || channel;
-}
+import { useTranslation } from '../i18n';
+import {
+  DEFAULT_CHANNEL_ORDER,
+  extractSessionChannel,
+  getChannelLabel,
+  normalizeChannelKey
+} from '../utils/sessionChannels';
 
 function formatRelativeTime(time?: string): string {
   if (!time) return '刚刚';
@@ -36,6 +27,7 @@ function formatRelativeTime(time?: string): string {
 
 export function SessionsView() {
   const dispatch = useDispatch();
+  const { language } = useTranslation();
   const { getSessions, deleteSession, renameSession } = useGateway();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,31 +67,43 @@ export function SessionsView() {
 
   // Build channel options dynamically
   const channelOptions = useMemo(() => {
+    const defaultOptions = [...DEFAULT_CHANNEL_ORDER];
+    const defaultSet = new Set<string>(defaultOptions);
     const dynamicChannels = sessions
       .map((session) => extractSessionChannel(session.key))
-      .filter((channel) => !baseChannelOptions.includes(channel as (typeof baseChannelOptions)[number]))
+      .filter((channel) => !defaultSet.has(channel))
       .filter((channel, index, arr) => arr.indexOf(channel) === index)
       .sort((a, b) => a.localeCompare(b));
 
-    return ['all', ...baseChannelOptions, ...dynamicChannels];
+    return ['all', ...defaultOptions, ...dynamicChannels];
   }, [sessions]);
 
   const channelFilterOptions = useMemo(
     () => [
-      { value: 'all', label: '所有渠道' },
+      { value: 'all', label: language === 'zh' ? '所有渠道' : 'All Channels' },
       ...channelOptions
         .filter((channel) => channel !== 'all')
-        .map((channel) => ({ value: channel, label: getChannelLabel(channel) }))
+        .map((channel) => ({ value: channel, label: getChannelLabel(channel, language) }))
     ],
-    [channelOptions]
+    [channelOptions, language]
   );
+
+  useEffect(() => {
+    if (channelFilter === 'all') {
+      return;
+    }
+    const normalizedFilter = normalizeChannelKey(channelFilter);
+    if (!channelOptions.includes(normalizedFilter)) {
+      setChannelFilter('all');
+    }
+  }, [channelFilter, channelOptions]);
 
   // Filter and search sessions
   const filteredSessions = useMemo(() => {
     return sessions
       .filter((session) => {
         if (channelFilter === 'all') return true;
-        return extractSessionChannel(session.key) === channelFilter;
+        return extractSessionChannel(session.key) === normalizeChannelKey(channelFilter);
       })
       .filter((session) => {
         if (!searchQuery.trim()) return true;
@@ -193,7 +197,7 @@ export function SessionsView() {
           <div className="relative sm:w-48">
             <CustomSelect
               value={channelFilter}
-              onChange={setChannelFilter}
+              onChange={(value) => setChannelFilter(value === 'all' ? 'all' : normalizeChannelKey(value))}
               options={channelFilterOptions}
               size="md"
             />
@@ -204,7 +208,7 @@ export function SessionsView() {
         <div className="mb-4 text-sm text-foreground/50">
           共 {filteredSessions.length} 个会话
           {searchQuery && `（搜索 "${searchQuery}"）`}
-          {channelFilter !== 'all' && ` · ${getChannelLabel(channelFilter)}`}
+          {channelFilter !== 'all' && ` · ${getChannelLabel(channelFilter, language)}`}
         </div>
 
         {/* Session List */}
@@ -274,7 +278,7 @@ export function SessionsView() {
                                 : 'bg-purple-500'
                             }`}
                           />
-                          {getChannelLabel(extractSessionChannel(session.key))}
+                          {getChannelLabel(extractSessionChannel(session.key), language)}
                         </span>
                         <span>{session.messageCount || 0} 条消息</span>
                         <span>{formatRelativeTime(session.lastMessageAt)}</span>

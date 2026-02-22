@@ -4,6 +4,12 @@ import { RootState, setActiveTab, setCurrentSessionKey } from '../store';
 import { SessionSummary, useGateway } from '../hooks/useGateway';
 import { useTranslation } from '../i18n';
 import { CustomSelect } from './CustomSelect';
+import {
+  DEFAULT_CHANNEL_ORDER,
+  extractSessionChannel,
+  getChannelLabel,
+  normalizeChannelKey
+} from '../utils/sessionChannels';
 
 const menuItems = [
   { id: 'sessions', labelKey: 'nav.sessions', icon: SearchIcon },
@@ -11,20 +17,9 @@ const menuItems = [
   { id: 'skills', labelKey: 'nav.skills', icon: PuzzleIcon },
 ] as const;
 
-const baseChannelOptions = ['desktop', 'telegram', 'webui'] as const;
-
-function extractSessionChannel(sessionKey: string): string {
-  const prefix = sessionKey.split(':', 2)[0];
-  if (!prefix) {
-    return 'unknown';
-  }
-  return prefix.toLowerCase();
-}
-
-
 export function Sidebar() {
   const dispatch = useDispatch();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { activeTab, sidebarCollapsed, currentSessionKey } = useSelector((state: RootState) => state.ui);
   const { status } = useSelector((state: RootState) => state.gateway);
   const { getSessions, deleteSession, renameSession } = useGateway();
@@ -128,22 +123,34 @@ export function Sidebar() {
   }, [sessions, currentSessionKey]);
 
   const channelOptions = useMemo(() => {
+    const defaultOptions = [...DEFAULT_CHANNEL_ORDER];
+    const defaultSet = new Set<string>(defaultOptions);
     const dynamicChannels = mergedSessions
       .map((session) => extractSessionChannel(session.key))
-      .filter((channel) => !baseChannelOptions.includes(channel as (typeof baseChannelOptions)[number]))
+      .filter((channel) => !defaultSet.has(channel))
       .filter((channel, index, arr) => arr.indexOf(channel) === index)
       .sort((a, b) => a.localeCompare(b));
 
-    return [...baseChannelOptions, ...dynamicChannels];
+    return [...defaultOptions, ...dynamicChannels];
   }, [mergedSessions]);
 
   const sessionItems = useMemo(
     () =>
       mergedSessions
-        .filter((session) => extractSessionChannel(session.key) === channelFilter)
+        .filter((session) => extractSessionChannel(session.key) === normalizeChannelKey(channelFilter))
         .slice(0, 20),
     [mergedSessions, channelFilter]
   );
+
+  useEffect(() => {
+    if (channelOptions.length === 0) {
+      return;
+    }
+    const normalizedFilter = normalizeChannelKey(channelFilter);
+    if (!channelOptions.includes(normalizedFilter)) {
+      setChannelFilter(channelOptions[0]);
+    }
+  }, [channelOptions, channelFilter]);
 
   const handleNewTask = () => {
     const newSessionKey = `desktop:${Date.now()}`;
@@ -221,8 +228,14 @@ export function Sidebar() {
             <div className="relative mb-3">
               <CustomSelect
                 value={channelFilter}
-                onChange={setChannelFilter}
-                options={channelOptions.map((channel) => ({ value: channel, label: channel }))}
+                onChange={(value) => {
+                  setChannelFilter(normalizeChannelKey(value));
+                  setOpenMenuKey(null);
+                }}
+                options={channelOptions.map((channel) => ({
+                  value: channel,
+                  label: getChannelLabel(channel, language)
+                }))}
                 size="md"
               />
             </div>
@@ -302,7 +315,7 @@ export function Sidebar() {
                         {session.lastMessage || session.key.replace(/^desktop:/, '新任务')}
                       </p>
                       <p className="text-xs leading-5 mt-0.5" style={{ color: 'var(--muted)' }}>
-                        {formatRelativeTime(session.lastMessageAt)}
+                        {getChannelLabel(extractSessionChannel(session.key), language)} · {formatRelativeTime(session.lastMessageAt)}
                       </p>
                     </button>
 

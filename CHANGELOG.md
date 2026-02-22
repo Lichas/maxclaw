@@ -361,6 +361,13 @@
   - `cd electron && npm run build`
   - `make build`
 
+#### 修复历史任务渠道过滤混入与名称可读性（`electron/src/renderer/components/Sidebar.tsx`, `electron/src/renderer/views/SessionsView.tsx`, `electron/src/renderer/utils/sessionChannels.ts`）
+- **变更**：新增会话渠道标准化工具（别名归一化 + 统一提取逻辑），侧边栏与搜索任务页过滤均基于标准化渠道键；渠道下拉与会话元信息改为与设置渠道一致的可读名称（桌面/Web UI/飞书/邮箱等）。
+- **位置**：历史任务过滤与渠道选项构建逻辑统一迁移到 `sessionChannels` 工具。
+- **验证**：
+  - `cd electron && npm run build`
+  - `make build`
+
 ### 新增功能
 
 #### 实现定时任务 REST API（`internal/webui/server.go`）
