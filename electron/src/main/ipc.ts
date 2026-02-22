@@ -1,5 +1,5 @@
 import { ipcMain, BrowserWindow, dialog, shell, app } from 'electron';
-import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import { spawn as spawnPty, type IPty } from 'node-pty';
 import Store from 'electron-store';
 import AutoLaunch from 'auto-launch';
 import log from 'electron-log';
@@ -36,7 +36,7 @@ const autoLauncher = new AutoLaunch({
 let handlersRegistered = false;
 let currentMainWindow: BrowserWindow | null = null;
 let gatewayStatusTimer: NodeJS.Timeout | null = null;
-let terminalProcess: ChildProcessWithoutNullStreams | null = null;
+let terminalProcess: IPty | null = null;
 
 function sendTerminalData(chunk: string): void {
   if (currentMainWindow && !currentMainWindow.isDestroyed()) {
@@ -44,7 +44,7 @@ function sendTerminalData(chunk: string): void {
   }
 }
 
-function sendTerminalExit(code: number | null, signal: NodeJS.Signals | null): void {
+function sendTerminalExit(code: number | null, signal: string | null): void {
   if (currentMainWindow && !currentMainWindow.isDestroyed()) {
     currentMainWindow.webContents.send('terminal:exit', { code, signal });
   }
@@ -157,20 +157,28 @@ export function createIPCHandlers(
   });
 
   // Terminal IPC
-  ipcMain.handle('terminal:start', async () => {
-    if (terminalProcess && !terminalProcess.killed) {
+  ipcMain.handle('terminal:start', async (_, options?: { cols?: number; rows?: number }) => {
+    if (terminalProcess) {
+      if (options?.cols && options?.rows) {
+        terminalProcess.resize(options.cols, options.rows);
+      }
       return { success: true, alreadyRunning: true };
     }
 
     const shell = resolveShell();
+    const cols = options?.cols && options.cols > 0 ? options.cols : 120;
+    const rows = options?.rows && options.rows > 0 ? options.rows : 28;
+
     try {
-      terminalProcess = spawn(shell.command, shell.args, {
+      terminalProcess = spawnPty(shell.command, shell.args, {
+        name: 'xterm-256color',
+        cols,
+        rows,
         cwd: process.cwd(),
         env: {
           ...process.env,
           TERM: process.env.TERM || 'xterm-256color'
-        },
-        stdio: 'pipe'
+        } as Record<string, string>
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -178,38 +186,41 @@ export function createIPCHandlers(
       return { success: false, error: message };
     }
 
-    terminalProcess.stdout.on('data', (data: Buffer) => {
-      sendTerminalData(data.toString('utf-8'));
+    terminalProcess.onData((data: string) => {
+      sendTerminalData(data);
     });
 
-    terminalProcess.stderr.on('data', (data: Buffer) => {
-      sendTerminalData(data.toString('utf-8'));
-    });
-
-    terminalProcess.on('close', (code: number | null, signal: NodeJS.Signals | null) => {
-      sendTerminalExit(code, signal);
+    terminalProcess.onExit(({ exitCode, signal }) => {
+      sendTerminalExit(exitCode, signal !== undefined && signal !== null ? String(signal) : null);
       terminalProcess = null;
     });
 
-    terminalProcess.on('error', (error: Error) => {
-      sendTerminalData(`\n[terminal error] ${error.message}\n`);
-    });
-
-    sendTerminalData(`\n[terminal] started with ${shell.command}\n`);
+    sendTerminalData(`\r\n[terminal] started with ${shell.command}\r\n`);
     return { success: true, shell: shell.command };
   });
 
   ipcMain.handle('terminal:input', async (_, value: string) => {
-    if (!terminalProcess || terminalProcess.killed) {
+    if (!terminalProcess) {
       return { success: false, error: 'terminal not running' };
     }
 
-    terminalProcess.stdin.write(value);
+    terminalProcess.write(value);
     return { success: true };
   });
 
+  ipcMain.handle('terminal:resize', async (_, cols: number, rows: number) => {
+    if (!terminalProcess) {
+      return { success: false, error: 'terminal not running' };
+    }
+    if (cols > 0 && rows > 0) {
+      terminalProcess.resize(cols, rows);
+      return { success: true };
+    }
+    return { success: false, error: 'invalid cols/rows' };
+  });
+
   ipcMain.handle('terminal:stop', async () => {
-    if (terminalProcess && !terminalProcess.killed) {
+    if (terminalProcess) {
       terminalProcess.kill();
       terminalProcess = null;
     }

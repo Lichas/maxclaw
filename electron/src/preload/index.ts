@@ -74,8 +74,9 @@ const electronAPI = {
   },
 
   terminal: {
-    start: () => ipcRenderer.invoke('terminal:start'),
+    start: (options?: { cols?: number; rows?: number }) => ipcRenderer.invoke('terminal:start', options),
     input: (value: string) => ipcRenderer.invoke('terminal:input', value),
+    resize: (cols: number, rows: number) => ipcRenderer.invoke('terminal:resize', cols, rows),
     stop: () => ipcRenderer.invoke('terminal:stop'),
     onData: (callback: (chunk: string) => void) => {
       const listener = (_: unknown, chunk: string) => callback(chunk);

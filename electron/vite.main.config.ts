@@ -12,7 +12,7 @@ export default defineConfig({
     outDir: 'dist/main',
     emptyOutDir: false,
     rollupOptions: {
-      external: ['electron', 'electron-log', 'electron-store', 'electron-updater', 'auto-launch', 'child_process', 'path', 'os', 'fs', 'http']
+      external: ['electron', 'electron-log', 'electron-store', 'electron-updater', 'auto-launch', 'node-pty', 'path', 'os', 'fs', 'http']
     }
   },
   resolve: {

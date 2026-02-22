@@ -46,8 +46,9 @@ export interface ElectronAPI {
   };
 
   terminal: {
-    start: () => Promise<{ success: boolean; shell?: string; alreadyRunning?: boolean; error?: string }>;
+    start: (options?: { cols?: number; rows?: number }) => Promise<{ success: boolean; shell?: string; alreadyRunning?: boolean; error?: string }>;
     input: (value: string) => Promise<{ success: boolean; error?: string }>;
+    resize: (cols: number, rows: number) => Promise<{ success: boolean; error?: string }>;
     stop: () => Promise<{ success: boolean }>;
     onData: (callback: (chunk: string) => void) => () => void;
     onExit: (callback: (code: number | null, signal: string | null) => void) => () => void;

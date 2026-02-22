@@ -4,9 +4,9 @@
 
 ### 变更
 
-#### 新增可切换内置终端：右上角按钮 + 聊天输入下方 shell 面板
-- **变更**：聊天页右上角新增 `Terminal` toggle 按钮；点击后在聊天输入框下方展开 shell 面板，支持输入命令、回车执行、流式输出、清空输出与停止终端；新增主进程终端 IPC（start/input/stop/data/exit）并通过 preload 暴露给渲染层。
-- **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/main/ipc.ts`、`electron/src/preload/index.ts`、`electron/src/renderer/store/index.ts`、`electron/src/renderer/types/electron.d.ts`。
+#### 终端实现升级为 VS Code/Codex 同类方案（node-pty + xterm）
+- **变更**：聊天页右上角 `Terminal` toggle 保留，但底部终端面板从简化 shell 输出升级为 `node-pty` 伪终端 + `@xterm/xterm` 终端仿真，支持真实终端输入、ANSI 控制序列、窗口自适应 resize；新增 `terminal:resize` IPC 与专用 `TerminalPanel` 组件。
+- **位置**：`electron/src/renderer/components/TerminalPanel.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/main/ipc.ts`、`electron/src/preload/index.ts`、`electron/src/renderer/types/electron.d.ts`、`electron/vite.main.config.ts`、`electron/package.json`。
 - **验证**：`cd electron && npm run build`、`make build`。
 
 #### 移除聊天信息流与输入区之间的横向分割线
