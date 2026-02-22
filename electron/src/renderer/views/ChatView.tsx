@@ -141,7 +141,7 @@ export function ChatView() {
   const [currentModel, setCurrentModel] = useState<string>('');
   const [modelsLoading, setModelsLoading] = useState(false);
   const [workspacePath, setWorkspacePath] = useState('');
-  const [previewSidebarCollapsed, setPreviewSidebarCollapsed] = useState(false);
+  const [previewSidebarCollapsed, setPreviewSidebarCollapsed] = useState(true);
   const [previewSidebarWidth, setPreviewSidebarWidth] = useState(460);
   const [selectedFileRef, setSelectedFileRef] = useState<FileReference | null>(null);
   const [previewData, setPreviewData] = useState<PreviewPayload | null>(null);
@@ -173,7 +173,7 @@ export function ChatView() {
           dispatch(setCurrentSessionKey(newSessionKey));
           setMessages([]);
           setSessionTitle('New thread');
-          setPreviewSidebarCollapsed(false);
+          setPreviewSidebarCollapsed(true);
           resetTypingState();
         }
       },
@@ -183,7 +183,7 @@ export function ChatView() {
         description: '清空当前会话消息',
         action: () => {
           setMessages([]);
-          setPreviewSidebarCollapsed(false);
+          setPreviewSidebarCollapsed(true);
           resetTypingState();
         }
       },
@@ -730,7 +730,7 @@ export function ChatView() {
 
   useEffect(() => {
     let cancelled = false;
-    setPreviewSidebarCollapsed(false);
+    setPreviewSidebarCollapsed(true);
     setSelectedFileRef(null);
     setPreviewData(null);
     setPreviewLoading(false);
@@ -755,7 +755,7 @@ export function ChatView() {
         setMessages(restored);
         const fallbackTitle = resolveTitleFromMessages(restored);
         setSessionTitle(fallbackTitle);
-        setPreviewSidebarCollapsed(false);
+        setPreviewSidebarCollapsed(true);
 
         try {
           const sessions = await getSessions();
@@ -779,7 +779,7 @@ export function ChatView() {
         if (!cancelled) {
           setMessages([]);
           setSessionTitle('New thread');
-          setPreviewSidebarCollapsed(false);
+          setPreviewSidebarCollapsed(true);
           resetTypingState();
         }
       }
@@ -798,7 +798,7 @@ export function ChatView() {
     if (!input.trim() || isLoading) {
       return;
     }
-    setPreviewSidebarCollapsed(false);
+    setPreviewSidebarCollapsed(true);
 
     const userMessage: Message = {
       id: `${Date.now()}`,
@@ -860,7 +860,7 @@ export function ChatView() {
           timeline: streamingTimelineRef.current.length > 0 ? [...streamingTimelineRef.current] : undefined
         }
       ]);
-      setPreviewSidebarCollapsed(false);
+      setPreviewSidebarCollapsed(true);
       resetTypingState();
     } catch (err) {
       const errorTimeline = streamingTimelineRef.current.length > 0 ? [...streamingTimelineRef.current] : undefined;
@@ -875,7 +875,7 @@ export function ChatView() {
           timeline: errorTimeline
         }
       ]);
-      setPreviewSidebarCollapsed(false);
+      setPreviewSidebarCollapsed(true);
     }
   };
 
