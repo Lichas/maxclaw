@@ -12,17 +12,22 @@
   - 在 Sidebar 的"新建任务"按钮中使用图标，带渐变边框效果
   - 更新应用标题栏显示名称为 "nanobot-go"
   - 更新 `electron-builder.yml` 中的 `productName` 和各平台图标配置
+  - 创建 `electron/public/` 文件夹存放静态资源，配置 `vite.renderer.config.ts` 的 `publicDir`
+  - 修复图标路径为相对路径 `./icon.png`，确保 Electron 打包后能正确加载
 - **验证**
   - `cd electron && npm run build` 成功
   - 所有平台图标文件生成正常
+  - 图标正确显示在"新建任务"按钮中
 - **文件**
   - `electron/assets/icon.png` - 应用图标
   - `electron/assets/icon.icns` - macOS 图标
   - `electron/assets/icon.ico` - Windows 图标
+  - `electron/public/icon.png` - 静态资源图标（用于 UI 显示）
   - `electron/src/renderer/components/Sidebar.tsx` - 集成图标按钮
   - `electron/src/renderer/components/TitleBar.tsx` - 更新标题
   - `electron/src/main/window.ts` - 更新窗口标题
   - `electron/electron-builder.yml` - 更新配置
+  - `electron/vite.renderer.config.ts` - 配置 publicDir
 
 #### Mermaid 图表渲染支持（`electron/src/renderer/components/MermaidRenderer.tsx`）
 - **功能**：聊天界面支持渲染 Mermaid 图表（流程图、时序图、类图等）
