@@ -20,6 +20,7 @@ import (
 	"github.com/Lichas/maxclaw/internal/config"
 	"github.com/Lichas/maxclaw/internal/cron"
 	"github.com/Lichas/maxclaw/internal/logging"
+	"github.com/Lichas/maxclaw/internal/providers"
 	"github.com/Lichas/maxclaw/internal/session"
 	workspaceSkills "github.com/Lichas/maxclaw/internal/skills"
 )
@@ -922,10 +923,47 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 			writeError(w, err)
 			return
 		}
+		s.cfg = updated
+		if err := s.applyRuntimeModelConfig(updated); err != nil {
+			if lg := logging.Get(); lg != nil && lg.Web != nil {
+				lg.Web.Printf("apply runtime model config failed: %v", err)
+			}
+		}
 		writeJSON(w, updated)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
+}
+
+func (s *Server) applyRuntimeModelConfig(cfg *config.Config) error {
+	if s.agentLoop == nil || cfg == nil {
+		return nil
+	}
+
+	model := cfg.Agents.Defaults.Model
+	if model == "" {
+		return nil
+	}
+
+	apiKey := cfg.GetAPIKey(model)
+	if apiKey == "" {
+		return fmt.Errorf("no API key configured for model %s", model)
+	}
+	apiBase := cfg.GetAPIBase(model)
+
+	provider, err := providers.NewOpenAIProvider(
+		apiKey,
+		apiBase,
+		model,
+		cfg.Agents.Defaults.MaxTokens,
+		cfg.Agents.Defaults.Temperature,
+	)
+	if err != nil {
+		return err
+	}
+
+	s.agentLoop.UpdateRuntimeModel(provider, model)
+	return nil
 }
 
 func (s *Server) handleGatewayRestart(w http.ResponseWriter, r *http.Request) {

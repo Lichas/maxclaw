@@ -45,6 +45,7 @@ type AgentLoop struct {
 
 	mcpConnector   *tools.MCPConnector
 	mcpConnectOnce sync.Once
+	runtimeMu      sync.RWMutex
 }
 
 // StreamEvent is a structured event for UI streaming consumers.
@@ -308,6 +309,13 @@ func (a *AgentLoop) processMessageWithCallbacks(
 	var finalContent string
 	maxIterationReached := true
 	toolDefs := a.tools.GetDefinitions()
+	_, activeModel := a.runtimeSnapshot()
+	if activeModel != "" {
+		emitEvent(StreamEvent{
+			Type:    "status",
+			Message: fmt.Sprintf("Using model: %s", activeModel),
+		})
+	}
 
 	for i := 0; i < a.MaxIterations; i++ {
 		iteration := i + 1
@@ -336,8 +344,12 @@ func (a *AgentLoop) processMessageWithCallbacks(
 
 		// 流式调用 LLM
 		handler := newStreamHandler(msg.Channel, msg.ChatID, a.Bus, streamCallback)
+		provider, model := a.runtimeSnapshot()
+		if provider == nil {
+			return nil, fmt.Errorf("LLM provider is not configured")
+		}
 
-		err := a.Provider.ChatStream(ctx, messages, toolDefs, a.Model, handler)
+		err := provider.ChatStream(ctx, messages, toolDefs, model, handler)
 		if err != nil {
 			return nil, fmt.Errorf("LLM stream error: %w", err)
 		}
@@ -446,6 +458,24 @@ func (a *AgentLoop) processMessageWithCallbacks(
 	a.sessions.Save(sess)
 
 	return bus.NewOutboundMessage(msg.Channel, msg.ChatID, finalContent), nil
+}
+
+func (a *AgentLoop) runtimeSnapshot() (providers.LLMProvider, string) {
+	a.runtimeMu.RLock()
+	defer a.runtimeMu.RUnlock()
+	return a.Provider, a.Model
+}
+
+// UpdateRuntimeModel updates the active provider/model used by new requests.
+func (a *AgentLoop) UpdateRuntimeModel(provider providers.LLMProvider, model string) {
+	a.runtimeMu.Lock()
+	defer a.runtimeMu.Unlock()
+	if provider != nil {
+		a.Provider = provider
+	}
+	if model != "" {
+		a.Model = model
+	}
 }
 
 // ProcessDirect 直接处理消息（用于 CLI）

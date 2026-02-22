@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 会话可见并可验证当前生效模型（模型切换即时应用）
+- **变更**：后端在 `PUT /api/config` 后即时应用新的 `agents.defaults.model` 到运行中的 Agent（同步更新运行时 provider + model，无需重启）；流式会话新增状态事件 `Using model: ...`，可在会话中直接确认本轮请求实际使用模型。
+- **位置**：`internal/webui/server.go`、`internal/agent/loop.go`。
+- **验证**：`go test ./internal/agent`、`make build`。
+
 #### 修复模型下拉菜单边缘遮挡（自动向上展开）
 - **变更**：`CustomSelect` 增加菜单智能定位逻辑；当触发器下方空间不足时自动改为向上展开，并根据可用空间动态限制菜单最大高度，避免在窗口下边缘被裁切。
 - **位置**：`electron/src/renderer/components/CustomSelect.tsx`。
