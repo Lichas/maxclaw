@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="${NANOBOT_GITHUB_REPO:-Lichas/nanobot-go}"
-VERSION="${NANOBOT_VERSION:-latest}"
-INSTALL_DIR="${NANOBOT_INSTALL_DIR:-$HOME/.local/share/nanobot-go}"
+REPO="${MAXCLAW_GITHUB_REPO:-${NANOBOT_GITHUB_REPO:-Lichas/maxclaw}}"
+VERSION="${MAXCLAW_VERSION:-${NANOBOT_VERSION:-latest}}"
+INSTALL_DIR="${MAXCLAW_INSTALL_DIR:-${NANOBOT_INSTALL_DIR:-$HOME/.local/share/maxclaw}}"
 SETUP_LAUNCHD=1
 BRIDGE_PORT="${BRIDGE_PORT:-3001}"
 GATEWAY_PORT="${GATEWAY_PORT:-18890}"
@@ -11,13 +11,13 @@ BRIDGE_PROXY="${BRIDGE_PROXY:-}"
 
 usage() {
   cat <<USAGE
-nanobot-go macOS installer
+maxclaw macOS installer
 
 Usage: ./install_mac.sh [options]
 
 Options:
   --version <tag|latest>    Release version (default: latest)
-  --dir <path>              Install directory (default: ~/.local/share/nanobot-go)
+  --dir <path>              Install directory (default: ~/.local/share/maxclaw)
   --bridge-port <port>      Bridge port (default: 3001)
   --gateway-port <port>     Gateway port (default: 18890)
   --bridge-proxy <url>      Bridge proxy url (optional)
@@ -77,7 +77,7 @@ case "$ARCH_RAW" in
     exit 1 ;;
 esac
 
-ASSET="nanobot-go_darwin_${ARCH}.tar.gz"
+ASSET="maxclaw_darwin_${ARCH}.tar.gz"
 if [ "$VERSION" = "latest" ]; then
   URL="https://github.com/${REPO}/releases/latest/download/${ASSET}"
 else
@@ -116,12 +116,12 @@ if [ "$SETUP_LAUNCHD" -eq 1 ]; then
   LAUNCH_DIR="$HOME/Library/LaunchAgents"
   mkdir -p "$LAUNCH_DIR"
 
-  cat > "$LAUNCH_DIR/com.nanobot.bridge.plist" <<PLIST
+  cat > "$LAUNCH_DIR/com.maxclaw.bridge.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key><string>com.nanobot.bridge</string>
+  <key>Label</key><string>com.maxclaw.bridge</string>
   <key>ProgramArguments</key>
   <array><string>$INSTALL_DIR/scripts/run_bridge.sh</string></array>
   <key>RunAtLoad</key><true/>
@@ -131,18 +131,18 @@ if [ "$SETUP_LAUNCHD" -eq 1 ]; then
     <key>BRIDGE_PORT</key><string>$BRIDGE_PORT</string>
     <key>BRIDGE_PROXY</key><string>$BRIDGE_PROXY</string>
   </dict>
-  <key>StandardOutPath</key><string>$HOME/Library/Logs/nanobot-bridge.log</string>
-  <key>StandardErrorPath</key><string>$HOME/Library/Logs/nanobot-bridge.log</string>
+  <key>StandardOutPath</key><string>$HOME/Library/Logs/maxclaw-bridge.log</string>
+  <key>StandardErrorPath</key><string>$HOME/Library/Logs/maxclaw-bridge.log</string>
 </dict>
 </plist>
 PLIST
 
-  cat > "$LAUNCH_DIR/com.nanobot.gateway.plist" <<PLIST
+  cat > "$LAUNCH_DIR/com.maxclaw.gateway.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>Label</key><string>com.nanobot.gateway</string>
+  <key>Label</key><string>com.maxclaw.gateway</string>
   <key>ProgramArguments</key>
   <array><string>$INSTALL_DIR/scripts/run_gateway.sh</string></array>
   <key>RunAtLoad</key><true/>
@@ -151,21 +151,21 @@ PLIST
   <dict>
     <key>GATEWAY_PORT</key><string>$GATEWAY_PORT</string>
   </dict>
-  <key>StandardOutPath</key><string>$HOME/Library/Logs/nanobot-gateway.log</string>
-  <key>StandardErrorPath</key><string>$HOME/Library/Logs/nanobot-gateway.log</string>
+  <key>StandardOutPath</key><string>$HOME/Library/Logs/maxclaw-gateway.log</string>
+  <key>StandardErrorPath</key><string>$HOME/Library/Logs/maxclaw-gateway.log</string>
 </dict>
 </plist>
 PLIST
 
-  launchctl bootout "gui/$(id -u)/com.nanobot.bridge" >/dev/null 2>&1 || true
-  launchctl bootout "gui/$(id -u)/com.nanobot.gateway" >/dev/null 2>&1 || true
-  launchctl bootstrap "gui/$(id -u)" "$LAUNCH_DIR/com.nanobot.bridge.plist"
-  launchctl bootstrap "gui/$(id -u)" "$LAUNCH_DIR/com.nanobot.gateway.plist"
+  launchctl bootout "gui/$(id -u)/com.maxclaw.bridge" >/dev/null 2>&1 || true
+  launchctl bootout "gui/$(id -u)/com.maxclaw.gateway" >/dev/null 2>&1 || true
+  launchctl bootstrap "gui/$(id -u)" "$LAUNCH_DIR/com.maxclaw.bridge.plist"
+  launchctl bootstrap "gui/$(id -u)" "$LAUNCH_DIR/com.maxclaw.gateway.plist"
 
   echo "Installed launchd agents:"
-  echo "  com.nanobot.bridge"
-  echo "  com.nanobot.gateway"
-  echo "Status: launchctl print gui/$(id -u)/com.nanobot.gateway"
+  echo "  com.maxclaw.bridge"
+  echo "  com.maxclaw.gateway"
+  echo "Status: launchctl print gui/$(id -u)/com.maxclaw.gateway"
 else
   echo "Installed at $INSTALL_DIR"
   echo "Run manually:"

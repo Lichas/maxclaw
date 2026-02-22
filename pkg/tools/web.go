@@ -411,7 +411,15 @@ func defaultChromeUserDataDir(profileName string) string {
 	if strings.TrimSpace(profileName) == "" {
 		profileName = defaultChromeProfileName
 	}
-	return filepath.Join(home, ".nanobot", "browser", profileName, "user-data")
+
+	baseDir := filepath.Join(home, ".maxclaw")
+	legacyDir := filepath.Join(home, ".nanobot")
+	if info, statErr := os.Stat(baseDir); statErr != nil || !info.IsDir() {
+		if legacyInfo, legacyErr := os.Stat(legacyDir); legacyErr == nil && legacyInfo.IsDir() {
+			baseDir = legacyDir
+		}
+	}
+	return filepath.Join(baseDir, "browser", profileName, "user-data")
 }
 
 func resolveScriptPath(path string) string {

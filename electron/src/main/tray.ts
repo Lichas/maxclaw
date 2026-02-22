@@ -21,7 +21,7 @@ export function initializeTray(mainWindow: BrowserWindow): void {
     }
 
     tray = new Tray(trayIcon);
-    tray.setToolTip('Nanobot AI Assistant');
+    tray.setToolTip('Maxclaw AI Assistant');
 
     updateTrayMenu(mainWindow);
 
@@ -44,7 +44,7 @@ export function initializeTray(mainWindow: BrowserWindow): void {
 function updateTrayMenu(mainWindow: BrowserWindow): void {
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Open Nanobot',
+      label: 'Open Maxclaw',
       click: () => showWindow(mainWindow)
     },
     { type: 'separator' },
@@ -110,6 +110,6 @@ export function destroyTray(): void {
 
 export function updateTrayTooltip(status: string): void {
   if (tray) {
-    tray.setToolTip(`Nanobot AI Assistant\n${status}`);
+    tray.setToolTip(`Maxclaw AI Assistant\n${status}`);
   }
 }

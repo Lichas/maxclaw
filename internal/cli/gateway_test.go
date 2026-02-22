@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Lichas/nanobot-go/internal/bus"
-	"github.com/Lichas/nanobot-go/internal/channels"
+	"github.com/Lichas/maxclaw/internal/bus"
+	"github.com/Lichas/maxclaw/internal/channels"
 )
 
 type mockChannel struct {

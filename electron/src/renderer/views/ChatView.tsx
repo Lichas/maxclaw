@@ -961,7 +961,7 @@ export function ChatView() {
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary p-1 shadow-md">
               <img
                 src="./icon.png"
-                alt="nanobot-go"
+                alt="maxclaw"
                 className="h-full w-full rounded-xl object-cover"
               />
             </div>

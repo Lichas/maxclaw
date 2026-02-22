@@ -1,7 +1,7 @@
 {
-  "name": "nanobot-desktop",
+  "name": "maxclaw-desktop",
   "version": "1.0.0",
-  "description": "Nanobot AI Assistant Desktop App",
+  "description": "Maxclaw AI Assistant Desktop App",
   "type": "module",
   "main": "./dist/main/index.cjs",
   "scripts": {

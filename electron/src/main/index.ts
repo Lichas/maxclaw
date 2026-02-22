@@ -59,7 +59,7 @@ async function ensureMainWindow(): Promise<void> {
 }
 
 async function initializeApp(): Promise<void> {
-  log.info('Initializing Nanobot Desktop App');
+  log.info('Initializing Maxclaw Desktop App');
 
   // Initialize Gateway Manager
   gatewayManager = new GatewayManager();

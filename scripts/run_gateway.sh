@@ -4,13 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GATEWAY_PORT="${GATEWAY_PORT:-18890}"
 
-BIN="$ROOT_DIR/nanobot-go"
+BIN="$ROOT_DIR/maxclaw"
 if [ ! -x "$BIN" ]; then
-  BIN="$ROOT_DIR/build/nanobot-go"
+  BIN="$ROOT_DIR/build/maxclaw"
 fi
 
 if [ ! -x "$BIN" ]; then
-  echo "Error: nanobot-go binary not found in $ROOT_DIR/nanobot-go or $ROOT_DIR/build/nanobot-go" >&2
+  echo "Error: maxclaw binary not found in $ROOT_DIR/maxclaw or $ROOT_DIR/build/maxclaw" >&2
   exit 1
 fi
 

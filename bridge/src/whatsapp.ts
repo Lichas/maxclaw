@@ -65,7 +65,7 @@ export class WhatsAppClient {
       version,
       logger,
       printQRInTerminal: false,
-      browser: ['nanobot', 'cli', VERSION],
+      browser: ['maxclaw', 'cli', VERSION],
       syncFullHistory: false,
       markOnlineOnConnect: false,
       agent: wsAgent,

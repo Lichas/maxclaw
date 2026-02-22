@@ -10,10 +10,10 @@
 **ChatID**: {{CHAT_ID}}
 **Workspace**: {{WORKSPACE}}
 **Skills Directory**: {{SKILLS_DIR}}
-**Nanobot Source Marker File**: {{NANOBOT_SOURCE_MARKER_FILE}}
-**Nanobot Source Marker Path**: {{NANOBOT_SOURCE_MARKER_PATH}}
-**Nanobot Source Directory**: {{NANOBOT_SOURCE_DIR}}
-**Nanobot Source Marker Found**: {{NANOBOT_SOURCE_MARKER_FOUND}}
+**Maxclaw Source Marker File**: {{MAXCLAW_SOURCE_MARKER_FILE}}
+**Maxclaw Source Marker Path**: {{MAXCLAW_SOURCE_MARKER_PATH}}
+**Maxclaw Source Directory**: {{MAXCLAW_SOURCE_DIR}}
+**Maxclaw Source Marker Found**: {{MAXCLAW_SOURCE_MARKER_FOUND}}
 
 ---
 

@@ -92,7 +92,7 @@ export function createWindow(): BrowserWindow {
     y: windowY,
     minWidth: 900,
     minHeight: 600,
-    title: 'nanobot-go',
+    title: 'maxclaw',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     trafficLightPosition: { x: 16, y: 16 },
     webPreferences: {

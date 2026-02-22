@@ -145,7 +145,7 @@ func (e *EmailChannel) SendMessage(chatID string, text string) error {
 		from = strings.TrimSpace(e.config.IMAPUsername)
 	}
 
-	msg := buildEmailMessage(from, chatID, "Re: nanobot reply", text)
+	msg := buildEmailMessage(from, chatID, "Re: maxclaw reply", text)
 	return sendSMTP(e.config, from, chatID, msg)
 }
 

@@ -1,9 +1,9 @@
 .PHONY: build test clean install fmt vet lint coverage bridge bridge-install bridge-build bridge-run webui-install webui-build webui-dev webfetch-install up up-daemon down-daemon restart-daemon docker-build docker-run
 
 # 变量
-BINARY_NAME=nanobot-go
+BINARY_NAME=maxclaw
 BUILD_DIR=build
-MAIN_FILE=cmd/nanobot/main.go
+MAIN_FILE=cmd/maxclaw/main.go
 BRIDGE_DIR=bridge
 BRIDGE_PORT?=3001
 WEBFETCH_DIR=webfetcher
@@ -63,10 +63,10 @@ restart-daemon:
 	./scripts/restart_daemon.sh
 
 docker-build:
-	docker build -t nanobot-go .
+	docker build -t maxclaw .
 
 docker-run:
-	docker run --rm -v ~/.nanobot:/home/nanobot/.nanobot -p 18890:18890 nanobot-go gateway
+	docker run --rm -v ~/.maxclaw:/home/maxclaw/.maxclaw -p 18890:18890 maxclaw gateway
 
 # 运行测试并生成覆盖率报告
 coverage:

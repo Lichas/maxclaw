@@ -40,7 +40,7 @@ func TestContextBuilderHeartbeatPrefersMemoryFile(t *testing.T) {
 
 func TestContextBuilderIncludesWorkspaceAndSkillsDir(t *testing.T) {
 	workspace := t.TempDir()
-	t.Setenv("NANOBOT_SOURCE_DIR", workspace)
+	t.Setenv("MAXCLAW_SOURCE_DIR", workspace)
 	builder := NewContextBuilder(workspace)
 
 	messages := builder.BuildMessages(nil, "hello", nil, "telegram", "123")
@@ -50,31 +50,47 @@ func TestContextBuilderIncludesWorkspaceAndSkillsDir(t *testing.T) {
 	assert.Contains(t, systemPrompt, "Workspace")
 	assert.Contains(t, systemPrompt, workspace)
 	assert.Contains(t, systemPrompt, filepath.Join(workspace, "skills"))
-	assert.Contains(t, systemPrompt, nanobotSourceMarkerFile)
-	assert.Contains(t, systemPrompt, filepath.Join(workspace, nanobotSourceMarkerFile))
-	assert.Contains(t, systemPrompt, "**Nanobot Source Marker Found**: no")
+	assert.Contains(t, systemPrompt, maxclawSourceMarkerFile)
+	assert.Contains(t, systemPrompt, filepath.Join(workspace, maxclawSourceMarkerFile))
+	assert.Contains(t, systemPrompt, "**Maxclaw Source Marker Found**: no")
 }
 
 func TestContextBuilderFindsSourceMarkerInParentDir(t *testing.T) {
 	sourceRoot := t.TempDir()
 	workspace := filepath.Join(sourceRoot, "sub", "project")
 	require.NoError(t, os.MkdirAll(workspace, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(sourceRoot, nanobotSourceMarkerFile), []byte("marker"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(sourceRoot, maxclawSourceMarkerFile), []byte("marker"), 0644))
 
 	builder := NewContextBuilder(workspace)
 	messages := builder.BuildMessages(nil, "hello", nil, "telegram", "123")
 	require.NotEmpty(t, messages)
 
 	systemPrompt := messages[0].Content
-	assert.Contains(t, systemPrompt, "**Nanobot Source Directory**: "+sourceRoot)
-	assert.Contains(t, systemPrompt, filepath.Join(sourceRoot, nanobotSourceMarkerFile))
-	assert.Contains(t, systemPrompt, "**Nanobot Source Marker Found**: yes")
+	assert.Contains(t, systemPrompt, "**Maxclaw Source Directory**: "+sourceRoot)
+	assert.Contains(t, systemPrompt, filepath.Join(sourceRoot, maxclawSourceMarkerFile))
+	assert.Contains(t, systemPrompt, "**Maxclaw Source Marker Found**: yes")
 }
 
-func TestContextBuilderUsesEnvNanobotSourceDir(t *testing.T) {
+func TestContextBuilderUsesEnvMaxclawSourceDir(t *testing.T) {
 	workspace := t.TempDir()
 	sourceRoot := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(sourceRoot, nanobotSourceMarkerFile), []byte("marker"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(sourceRoot, maxclawSourceMarkerFile), []byte("marker"), 0644))
+	t.Setenv("MAXCLAW_SOURCE_DIR", sourceRoot)
+
+	builder := NewContextBuilder(workspace)
+	messages := builder.BuildMessages(nil, "hello", nil, "telegram", "123")
+	require.NotEmpty(t, messages)
+
+	systemPrompt := messages[0].Content
+	assert.Contains(t, systemPrompt, "**Maxclaw Source Directory**: "+sourceRoot)
+	assert.Contains(t, systemPrompt, filepath.Join(sourceRoot, maxclawSourceMarkerFile))
+	assert.Contains(t, systemPrompt, "**Maxclaw Source Marker Found**: yes")
+}
+
+func TestContextBuilderSupportsLegacyEnvSourceDir(t *testing.T) {
+	workspace := t.TempDir()
+	sourceRoot := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(sourceRoot, legacySourceMarkerFile), []byte("marker"), 0644))
 	t.Setenv("NANOBOT_SOURCE_DIR", sourceRoot)
 
 	builder := NewContextBuilder(workspace)
@@ -82,27 +98,27 @@ func TestContextBuilderUsesEnvNanobotSourceDir(t *testing.T) {
 	require.NotEmpty(t, messages)
 
 	systemPrompt := messages[0].Content
-	assert.Contains(t, systemPrompt, "**Nanobot Source Directory**: "+sourceRoot)
-	assert.Contains(t, systemPrompt, filepath.Join(sourceRoot, nanobotSourceMarkerFile))
-	assert.Contains(t, systemPrompt, "**Nanobot Source Marker Found**: yes")
+	assert.Contains(t, systemPrompt, "**Maxclaw Source Directory**: "+sourceRoot)
+	assert.Contains(t, systemPrompt, filepath.Join(sourceRoot, legacySourceMarkerFile))
+	assert.Contains(t, systemPrompt, "**Maxclaw Source Marker Found**: yes")
 }
 
 func TestContextBuilderFindsSourceMarkerFromSearchRootsEnv(t *testing.T) {
 	workspace := t.TempDir()
 	searchRoot := t.TempDir()
-	sourceRoot := filepath.Join(searchRoot, "repos", "nanobot-go")
+	sourceRoot := filepath.Join(searchRoot, "repos", "maxclaw")
 	require.NoError(t, os.MkdirAll(sourceRoot, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(sourceRoot, nanobotSourceMarkerFile), []byte("marker"), 0644))
-	t.Setenv(nanobotSourceSearchRootsEnv, searchRoot)
+	require.NoError(t, os.WriteFile(filepath.Join(sourceRoot, maxclawSourceMarkerFile), []byte("marker"), 0644))
+	t.Setenv(maxclawSourceSearchRootsEnv, searchRoot)
 
 	builder := NewContextBuilder(workspace)
 	messages := builder.BuildMessages(nil, "hello", nil, "telegram", "123")
 	require.NotEmpty(t, messages)
 
 	systemPrompt := messages[0].Content
-	assert.Contains(t, systemPrompt, "**Nanobot Source Directory**: "+sourceRoot)
-	assert.Contains(t, systemPrompt, filepath.Join(sourceRoot, nanobotSourceMarkerFile))
-	assert.Contains(t, systemPrompt, "**Nanobot Source Marker Found**: yes")
+	assert.Contains(t, systemPrompt, "**Maxclaw Source Directory**: "+sourceRoot)
+	assert.Contains(t, systemPrompt, filepath.Join(sourceRoot, maxclawSourceMarkerFile))
+	assert.Contains(t, systemPrompt, "**Maxclaw Source Marker Found**: yes")
 }
 
 func TestContextBuilderSystemPromptMentionsSelfImproveCommands(t *testing.T) {
@@ -115,7 +131,7 @@ func TestContextBuilderSystemPromptMentionsSelfImproveCommands(t *testing.T) {
 	systemPrompt := messages[0].Content
 	assert.Contains(t, systemPrompt, "`claude`")
 	assert.Contains(t, systemPrompt, "`codex`")
-	assert.Contains(t, systemPrompt, nanobotSourceMarkerFile)
+	assert.Contains(t, systemPrompt, maxclawSourceMarkerFile)
 }
 
 func TestContextBuilderIncludesTwoLayerMemoryHints(t *testing.T) {

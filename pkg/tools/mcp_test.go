@@ -110,12 +110,12 @@ func TestMCPConnectorRegistersRemoteTools(t *testing.T) {
 	assert.Equal(t, []string{"mcp_docs_search_web"}, connector.RegisteredTools())
 
 	result, err := reg.Execute(context.Background(), "mcp_docs_search_web", map[string]interface{}{
-		"query": "nanobot",
+		"query": "maxclaw",
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "result line 1\nresult line 2", result)
 	assert.Equal(t, "search-web", client.lastCallName)
-	assert.Equal(t, "nanobot", client.lastCallArgs["query"])
+	assert.Equal(t, "maxclaw", client.lastCallArgs["query"])
 }
 
 func TestMCPConnectorContinuesWhenServerFails(t *testing.T) {

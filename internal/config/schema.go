@@ -1,12 +1,10 @@
 package config
 
 import (
-	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 
-	"github.com/Lichas/nanobot-go/internal/providers"
+	"github.com/Lichas/maxclaw/internal/providers"
 )
 
 // ProviderConfig  LLM 提供商配置
@@ -244,8 +242,7 @@ type Config struct {
 
 // DefaultConfig 返回默认配置
 func DefaultConfig() *Config {
-	homeDir, _ := os.UserHomeDir()
-	workspace := filepath.Join(homeDir, ".nanobot", "workspace")
+	workspace := GetWorkspacePath()
 
 	return &Config{
 		Agents: AgentsConfig{

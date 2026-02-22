@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Lichas/nanobot-go/internal/cron"
+	"github.com/Lichas/maxclaw/internal/cron"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

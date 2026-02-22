@@ -15,13 +15,13 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/Lichas/nanobot-go/internal/agent"
-	"github.com/Lichas/nanobot-go/internal/channels"
-	"github.com/Lichas/nanobot-go/internal/config"
-	"github.com/Lichas/nanobot-go/internal/cron"
-	"github.com/Lichas/nanobot-go/internal/logging"
-	"github.com/Lichas/nanobot-go/internal/session"
-	workspaceSkills "github.com/Lichas/nanobot-go/internal/skills"
+	"github.com/Lichas/maxclaw/internal/agent"
+	"github.com/Lichas/maxclaw/internal/channels"
+	"github.com/Lichas/maxclaw/internal/config"
+	"github.com/Lichas/maxclaw/internal/cron"
+	"github.com/Lichas/maxclaw/internal/logging"
+	"github.com/Lichas/maxclaw/internal/session"
+	workspaceSkills "github.com/Lichas/maxclaw/internal/skills"
 )
 
 type Server struct {
@@ -866,11 +866,11 @@ func wantsStreamResponse(r *http.Request, payload messagePayload) bool {
 
 // configUpdateRequest 配置更新请求，支持动态 providers
 type configUpdateRequest struct {
-	Agents    *config.AgentsConfig              `json:"agents,omitempty"`
-	Channels  *config.ChannelsConfig            `json:"channels,omitempty"`
-	Providers map[string]config.ProviderConfig  `json:"providers,omitempty"`
-	Gateway   *config.GatewayConfig             `json:"gateway,omitempty"`
-	Tools     *config.ToolsConfig               `json:"tools,omitempty"`
+	Agents    *config.AgentsConfig             `json:"agents,omitempty"`
+	Channels  *config.ChannelsConfig           `json:"channels,omitempty"`
+	Providers map[string]config.ProviderConfig `json:"providers,omitempty"`
+	Gateway   *config.GatewayConfig            `json:"gateway,omitempty"`
+	Tools     *config.ToolsConfig              `json:"tools,omitempty"`
 }
 
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
@@ -963,24 +963,24 @@ func (s *Server) handleGatewayRestart(w http.ResponseWriter, r *http.Request) {
 type cronRequest struct {
 	Title   string `json:"title"`
 	Prompt  string `json:"prompt"`
-	Cron    string `json:"cron,omitempty"`    // cron 表达式
-	Every   string `json:"every,omitempty"`   // 毫秒间隔
-	At      string `json:"at,omitempty"`      // ISO8601 时间
+	Cron    string `json:"cron,omitempty"`  // cron 表达式
+	Every   string `json:"every,omitempty"` // 毫秒间隔
+	At      string `json:"at,omitempty"`    // ISO8601 时间
 	WorkDir string `json:"workDir,omitempty"`
 }
 
 // cronJobResponse 定时任务响应格式（与前端对齐）
 type cronJobResponse struct {
-	ID            string `json:"id"`
-	Title         string `json:"title"`
-	Prompt        string `json:"prompt"`
-	Schedule      string `json:"schedule"`
-	ScheduleType  string `json:"scheduleType"`
-	WorkDir       string `json:"workDir,omitempty"`
-	Enabled       bool   `json:"enabled"`
-	CreatedAt     string `json:"createdAt"`
-	LastRun       string `json:"lastRun,omitempty"`
-	NextRun       string `json:"nextRun,omitempty"`
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	Prompt       string `json:"prompt"`
+	Schedule     string `json:"schedule"`
+	ScheduleType string `json:"scheduleType"`
+	WorkDir      string `json:"workDir,omitempty"`
+	Enabled      bool   `json:"enabled"`
+	CreatedAt    string `json:"createdAt"`
+	LastRun      string `json:"lastRun,omitempty"`
+	NextRun      string `json:"nextRun,omitempty"`
 }
 
 func (s *Server) handleCron(w http.ResponseWriter, r *http.Request) {
@@ -1566,9 +1566,9 @@ func testFeishuConnection(cfg config.FeishuConfig) error {
 	defer resp.Body.Close()
 
 	var result struct {
-		Code          int    `json:"code"`
-		Msg           string `json:"msg"`
-		TenantToken   string `json:"tenant_access_token"`
+		Code        int    `json:"code"`
+		Msg         string `json:"msg"`
+		TenantToken string `json:"tenant_access_token"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -1693,6 +1693,9 @@ func findUIDir() string {
 
 func findRestartScript() (string, string, error) {
 	var roots []string
+	if envRoot := os.Getenv("MAXCLAW_ROOT"); envRoot != "" {
+		roots = append(roots, envRoot)
+	}
 	if envRoot := os.Getenv("NANOBOT_ROOT"); envRoot != "" {
 		roots = append(roots, envRoot)
 	}

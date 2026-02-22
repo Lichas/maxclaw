@@ -29,7 +29,7 @@ export class GatewayManager {
     log.info('Starting Gateway...');
 
     const binaryPath = this.getBinaryPath();
-    const configPath = path.join(os.homedir(), '.nanobot', 'config.json');
+    const configPath = this.getConfigPath();
 
     if (!fs.existsSync(binaryPath)) {
       const message = `Gateway binary not found: ${binaryPath}. Run "make build" in repository root first.`;
@@ -47,6 +47,7 @@ export class GatewayManager {
         stdio: ['ignore', 'pipe', 'pipe'],
         env: {
           ...process.env,
+          MAXCLAW_ELECTRON: '1',
           NANOBOT_ELECTRON: '1'
         }
       });
@@ -173,13 +174,13 @@ export class GatewayManager {
   private getBinaryPath(): string {
     const platform = os.platform();
     const ext = platform === 'win32' ? '.exe' : '';
-    const binaryName = `nanobot-go${ext}`;
+    const binaryName = `maxclaw${ext}`;
 
     if (app.isPackaged) {
       return path.join(process.resourcesPath, 'bin', binaryName);
     }
 
-    const overrideBinaryPath = process.env.NANOBOT_BINARY_PATH;
+    const overrideBinaryPath = process.env.MAXCLAW_BINARY_PATH || process.env.NANOBOT_BINARY_PATH;
     const appPath = app.getAppPath();
     const candidates = [
       overrideBinaryPath,
@@ -196,6 +197,23 @@ export class GatewayManager {
 
     log.warn('Gateway binary was not found in expected locations:', candidates);
     return candidates[0];
+  }
+
+  private getConfigPath(): string {
+    const maxclawDir = process.env.MAXCLAW_HOME || path.join(os.homedir(), '.maxclaw');
+    const legacyDir = process.env.NANOBOT_HOME || path.join(os.homedir(), '.nanobot');
+
+    const maxclawConfigPath = path.join(maxclawDir, 'config.json');
+    if (fs.existsSync(maxclawConfigPath)) {
+      return maxclawConfigPath;
+    }
+
+    const legacyConfigPath = path.join(legacyDir, 'config.json');
+    if (fs.existsSync(legacyConfigPath)) {
+      return legacyConfigPath;
+    }
+
+    return maxclawConfigPath;
   }
 
   private attemptRestart(): void {
@@ -227,7 +245,7 @@ export class GatewayManager {
       return;
     }
 
-    const pgrepResult = spawnSync('pgrep', ['-f', 'nanobot-go gateway -p 18890'], {
+    const pgrepResult = spawnSync('pgrep', ['-f', 'maxclaw gateway -p 18890'], {
       encoding: 'utf8'
     });
 

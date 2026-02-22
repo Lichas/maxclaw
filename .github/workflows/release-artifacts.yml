@@ -55,14 +55,14 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir -p dist release
-          go build -trimpath -ldflags "-s -w" -o release/nanobot-go ./cmd/nanobot
+          go build -trimpath -ldflags "-s -w" -o release/maxclaw ./cmd/maxclaw
 
       - name: Assemble package
         run: |
           PKG_DIR="release/package"
           mkdir -p "$PKG_DIR"
 
-          cp release/nanobot-go "$PKG_DIR/"
+          cp release/maxclaw "$PKG_DIR/"
           cp README.md LICENSE "$PKG_DIR/"
           cp install.sh install_linux.sh install_mac.sh "$PKG_DIR/"
 
@@ -77,13 +77,13 @@ jobs:
 
           cp webfetcher/fetch.mjs webfetcher/package.json webfetcher/package-lock.json "$PKG_DIR/webfetcher/"
 
-          tar -C "$PKG_DIR" -czf "dist/nanobot-go_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz" .
+          tar -C "$PKG_DIR" -czf "dist/maxclaw_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz" .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: nanobot-go_${{ matrix.goos }}_${{ matrix.goarch }}
-          path: dist/nanobot-go_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz
+          name: maxclaw_${{ matrix.goos }}_${{ matrix.goarch }}
+          path: dist/maxclaw_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz
 
   release:
     name: Publish GitHub Release

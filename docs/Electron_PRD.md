@@ -71,10 +71,10 @@
 
 ### 1. 项目概述
 
-**核心定位**：Electron Desktop App 作为 **nanobot-go Gateway 的桌面端封装**，提供原生桌面体验，而非重写 Agent 逻辑。
+**核心定位**：Electron Desktop App 作为 **maxclaw Gateway 的桌面端封装**，提供原生桌面体验，而非重写 Agent 逻辑。
 
 **架构原则**：
-- **复用现有能力**：nanobot-go Gateway 提供完整的 Agent Loop、WebUI Server、Cron Service、Channels
+- **复用现有能力**：maxclaw Gateway 提供完整的 Agent Loop、WebUI Server、Cron Service、Channels
 - **桌面增强**：Electron 提供系统级能力（托盘、自启动、通知、文件系统访问）
 - **UI 升级**：基于现有 webui 进行桌面化改造，提供更丰富的交互体验
 
@@ -117,7 +117,7 @@
 | **react-syntax-highlighter** | 代码语法高亮 |
 | **DOMPurify** | HTML/SVG 内容消毒，防止 XSS |
 
-#### 2.6 IM Bot 集成（复用 nanobot-go，Electron 侧仅配置 UI）
+#### 2.6 IM Bot 集成（复用 maxclaw，Electron 侧仅配置 UI）
 | 技术 | 平台 | 用途 |
 |------|------|------|
 | **dingtalk-stream** | 钉钉 | 钉钉机器人流式网关 |
@@ -151,7 +151,7 @@
 │  • 系统托盘 (Tray)                                               │
 │  • 自动启动 (Auto Launcher)                                      │
 │  • Gateway 进程管理 (Child Process)                              │
-│    - 启动/停止 nanobot-go gateway                                │
+│    - 启动/停止 maxclaw gateway                                │
 │    - 健康检查与自动重启                                          │
 │  • 本地 SQLite 缓存 (UI 状态、离线队列)                          │
 │  • IPC 桥接 (上下文隔离)                                         │
@@ -172,7 +172,7 @@
                             │ HTTP / WebSocket
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│              nanobot-go Gateway (Child Process)                  │
+│              maxclaw Gateway (Child Process)                  │
 │  ─────────────────────────────────────────────────────────────  │
 │  • Web UI Server (port 18890)                                    │
 │  • Agent Loop (对话处理、工具调用)                               │
@@ -193,7 +193,7 @@
                               ▼                       ▼
                       Gateway Client             SQLite Cache
                               ↓
-                     nanobot-go Gateway
+                     maxclaw Gateway
                               ↓
               ┌───────────────┼───────────────┐
               ▼               ▼               ▼
@@ -202,7 +202,7 @@
          LLM Provider    Job Handler    IM Platforms
 ```
 
-### 4. 与 nanobot-go 集成方案
+### 4. 与 maxclaw 集成方案
 
 #### 4.1 Gateway 进程管理
 
@@ -226,7 +226,7 @@ interface GatewayManager {
 }
 
 // 实现细节
-// - 通过 child_process.spawn 启动 nanobot-go gateway
+// - 通过 child_process.spawn 启动 maxclaw gateway
 // - 监听 stdout/stderr 进行日志收集
 // - 轮询 http://localhost:18890/api/status 进行健康检查
 // - 崩溃时自动重启（带指数退避）
@@ -276,9 +276,9 @@ interface WebSocketClient {
 #### 4.4 配置同步机制
 
 ```typescript
-// Electron App 配置与 nanobot-go 配置的映射
+// Electron App 配置与 maxclaw 配置的映射
 
-// ~/.nanobot/config.json (nanobot-go 配置)
+// ~/.maxclaw/config.json (maxclaw 配置)
 interface NanobotConfig {
   agents: {
     defaults: {
@@ -403,7 +403,7 @@ interface AppConfig {
 
 #### Phase 1: 基础框架 (2周)
 - Electron + React + TypeScript + Vite 项目搭建
-- 与 nanobot-go Gateway 集成（进程管理、健康检查）
+- 与 maxclaw Gateway 集成（进程管理、健康检查）
 - 基础窗口管理（托盘、自启动）
 - 复用现有 webui 作为初始界面
 
@@ -432,7 +432,7 @@ interface AppConfig {
 ```typescript
 // Main Process
 async function startApp() {
-  // 1. 检查 nanobot-go 二进制文件
+  // 1. 检查 maxclaw 二进制文件
   const gatewayBinary = await findGatewayBinary();
   
   // 2. 确保配置文件存在
@@ -484,15 +484,15 @@ async function sendStreamMessage(content: string) {
 
 ### 8. 参考资源
 
-- **nanobot-go 架构**: `ARCHITECTURE.md`
-- **nanobot-go Gateway**: `internal/cli/gateway.go`, `internal/webui/server.go`
-- **nanobot-go Agent**: `internal/agent/loop.go`
+- **maxclaw 架构**: `ARCHITECTURE.md`
+- **maxclaw Gateway**: `internal/cli/gateway.go`, `internal/webui/server.go`
+- **maxclaw Agent**: `internal/agent/loop.go`
 - **UI 参考**: 竞品截图设计系统（浅色主题、圆角、卡片式布局）
 - **竞品参考**: DeepSeek Chat、Cursor、Claude Desktop、LobsterAI
 
 ---
 
-## 附录：nanobot-go Gateway API 清单
+## 附录：maxclaw Gateway API 清单
 
 | 端点 | 方法 | 用途 |
 |------|------|------|

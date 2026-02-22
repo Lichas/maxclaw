@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="${NANOBOT_GITHUB_REPO:-Lichas/nanobot-go}"
-VERSION="${NANOBOT_VERSION:-latest}"
-INSTALL_DIR="${NANOBOT_INSTALL_DIR:-/opt/nanobot-go}"
-SERVICE_USER="${NANOBOT_SERVICE_USER:-$(id -un)}"
+REPO="${MAXCLAW_GITHUB_REPO:-${NANOBOT_GITHUB_REPO:-Lichas/maxclaw}}"
+VERSION="${MAXCLAW_VERSION:-${NANOBOT_VERSION:-latest}}"
+INSTALL_DIR="${MAXCLAW_INSTALL_DIR:-${NANOBOT_INSTALL_DIR:-/opt/maxclaw}}"
+SERVICE_USER="${MAXCLAW_SERVICE_USER:-${NANOBOT_SERVICE_USER:-$(id -un)}}"
 SETUP_SERVICE=1
 BRIDGE_PORT="${BRIDGE_PORT:-3001}"
 GATEWAY_PORT="${GATEWAY_PORT:-18890}"
@@ -12,13 +12,13 @@ BRIDGE_PROXY="${BRIDGE_PROXY:-}"
 
 usage() {
   cat <<USAGE
-nanobot-go Linux installer
+maxclaw Linux installer
 
 Usage: ./install_linux.sh [options]
 
 Options:
   --version <tag|latest>    Release version (default: latest)
-  --dir <path>              Install directory (default: /opt/nanobot-go)
+  --dir <path>              Install directory (default: /opt/maxclaw)
   --user <name>             Service user (default: current user)
   --bridge-port <port>      Bridge port (default: 3001)
   --gateway-port <port>     Gateway port (default: 18890)
@@ -83,7 +83,7 @@ case "$ARCH_RAW" in
     exit 1 ;;
 esac
 
-ASSET="nanobot-go_linux_${ARCH}.tar.gz"
+ASSET="maxclaw_linux_${ARCH}.tar.gz"
 if [ "$VERSION" = "latest" ]; then
   URL="https://github.com/${REPO}/releases/latest/download/${ASSET}"
 else
@@ -143,14 +143,14 @@ if [ "$SETUP_SERVICE" -eq 1 ]; then
     fi
   fi
 
-  ENV_FILE="/etc/default/nanobot-go"
+  ENV_FILE="/etc/default/maxclaw"
   $SUDO bash -lc "cat > '$ENV_FILE' <<ENV
 BRIDGE_PORT=$BRIDGE_PORT
 GATEWAY_PORT=$GATEWAY_PORT
 BRIDGE_PROXY=$BRIDGE_PROXY
 ENV"
 
-  for svc in nanobot-bridge nanobot-gateway; do
+  for svc in maxclaw-bridge maxclaw-gateway; do
     src="$INSTALL_DIR/deploy/systemd/${svc}.service"
     dst="/etc/systemd/system/${svc}.service"
     $SUDO sed \
@@ -161,13 +161,13 @@ ENV"
   done
 
   $SUDO systemctl daemon-reload
-  $SUDO systemctl enable --now nanobot-bridge.service
-  $SUDO systemctl enable --now nanobot-gateway.service
+  $SUDO systemctl enable --now maxclaw-bridge.service
+  $SUDO systemctl enable --now maxclaw-gateway.service
 
   echo "Installed with systemd services:"
-  echo "  nanobot-bridge.service"
-  echo "  nanobot-gateway.service"
-  echo "Status: systemctl status nanobot-gateway --no-pager"
+  echo "  maxclaw-bridge.service"
+  echo "  maxclaw-gateway.service"
+  echo "Status: systemctl status maxclaw-gateway --no-pager"
 else
   echo "Installed at $INSTALL_DIR"
   echo "Run manually:"

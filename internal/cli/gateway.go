@@ -9,15 +9,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Lichas/nanobot-go/internal/agent"
-	"github.com/Lichas/nanobot-go/internal/bus"
-	"github.com/Lichas/nanobot-go/internal/channels"
-	"github.com/Lichas/nanobot-go/internal/config"
-	"github.com/Lichas/nanobot-go/internal/cron"
-	"github.com/Lichas/nanobot-go/internal/logging"
-	"github.com/Lichas/nanobot-go/internal/memory"
-	"github.com/Lichas/nanobot-go/internal/providers"
-	"github.com/Lichas/nanobot-go/internal/webui"
+	"github.com/Lichas/maxclaw/internal/agent"
+	"github.com/Lichas/maxclaw/internal/bus"
+	"github.com/Lichas/maxclaw/internal/channels"
+	"github.com/Lichas/maxclaw/internal/config"
+	"github.com/Lichas/maxclaw/internal/cron"
+	"github.com/Lichas/maxclaw/internal/logging"
+	"github.com/Lichas/maxclaw/internal/memory"
+	"github.com/Lichas/maxclaw/internal/providers"
+	"github.com/Lichas/maxclaw/internal/webui"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +30,7 @@ func init() {
 // gatewayCmd 网关命令
 var gatewayCmd = &cobra.Command{
 	Use:   "gateway",
-	Short: "Start the nanobot gateway",
+	Short: "Start the maxclaw gateway",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.LoadConfig()
 		if err != nil {
@@ -49,10 +49,10 @@ var gatewayCmd = &cobra.Command{
 		apiKey := cfg.GetAPIKey("")
 		apiBase := cfg.GetAPIBase("")
 		if apiKey == "" {
-			return fmt.Errorf("no API key configured. Set one in ~/.nanobot/config.json")
+			return fmt.Errorf("no API key configured. Set one in ~/.maxclaw/config.json")
 		}
 
-		fmt.Printf("%s Starting nanobot gateway on port %d...\n\n", logo, gatewayPort)
+		fmt.Printf("%s Starting maxclaw gateway on port %d...\n\n", logo, gatewayPort)
 
 		// 创建 Provider
 		provider, err := providers.NewOpenAIProvider(

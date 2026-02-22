@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Lichas/nanobot-go/internal/logging"
-	"github.com/Lichas/nanobot-go/internal/session"
+	"github.com/Lichas/maxclaw/internal/logging"
+	"github.com/Lichas/maxclaw/internal/session"
 )
 
 const (

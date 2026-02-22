@@ -12,7 +12,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Lichas/nanobot-go/internal/config"
+	"github.com/Lichas/maxclaw/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -207,7 +207,7 @@ func cleanRepoSubPath(path string) string {
 }
 
 func cloneRepo(src *githubSkillSource) (string, error) {
-	tmpDir, err := os.MkdirTemp("", "nanobot-skills-*")
+	tmpDir, err := os.MkdirTemp("", "maxclaw-skills-*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp dir: %w", err)
 	}

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Lichas/nanobot-go/internal/config"
-	workspaceSkills "github.com/Lichas/nanobot-go/internal/skills"
+	"github.com/Lichas/maxclaw/internal/config"
+	workspaceSkills "github.com/Lichas/maxclaw/internal/skills"
 	"github.com/spf13/cobra"
 )
 

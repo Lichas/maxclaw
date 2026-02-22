@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Lichas/nanobot-go/internal/session"
+	"github.com/Lichas/maxclaw/internal/session"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

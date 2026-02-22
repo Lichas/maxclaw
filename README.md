@@ -1,4 +1,4 @@
-# nanobot-go
+# maxclaw
 
 轻量级的个人 AI 助手框架（Go）。支持多渠道消息、工具调用、Web UI、定时任务与可选浏览器抓取。
 
@@ -13,14 +13,14 @@
 - Heartbeat 上下文（`memory/heartbeat.md`）
 - 每日 Memory 汇总（自动写入 `memory/MEMORY.md`）
 - 可选浏览器抓取（Node + Playwright）
-- 完整日志：`~/.nanobot/logs`
+- 完整日志：`~/.maxclaw/logs`
 
 ## 快速开始
 1. 安装依赖：Go 1.21+，Node.js 18+
 2. 构建：`make build`
-3. 初始化：`./build/nanobot-go onboard`
-4. 配置：编辑 `~/.nanobot/config.json`
-5. 启动：`./build/nanobot-go gateway`
+3. 初始化：`./build/maxclaw onboard`
+4. 配置：编辑 `~/.maxclaw/config.json`
+5. 启动：`./build/maxclaw gateway`
 
 Agent CLI 常用参数：
 - `--session/-s` 指定会话 ID（默认 `cli:direct`）
@@ -31,30 +31,30 @@ Agent CLI 常用参数：
 可直接用自动分流安装器（会按系统选择 `install_linux.sh` 或 `install_mac.sh`）：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Lichas/maxclaw/main/install.sh | bash
 ```
 
 常用参数示例：
 
 ```bash
 # 指定版本
-curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash -s -- --version v0.1.0
+curl -fsSL https://raw.githubusercontent.com/Lichas/maxclaw/main/install.sh | bash -s -- --version v0.1.0
 
 # Linux 指定安装目录和端口
-curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash -s -- --dir /opt/nanobot-go --bridge-port 3001 --gateway-port 18890
+curl -fsSL https://raw.githubusercontent.com/Lichas/maxclaw/main/install.sh | bash -s -- --dir /opt/maxclaw --bridge-port 3001 --gateway-port 18890
 
 # macOS 不安装 launchd（仅拷贝文件）
-curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash -s -- --no-launchd
+curl -fsSL https://raw.githubusercontent.com/Lichas/maxclaw/main/install.sh | bash -s -- --no-launchd
 ```
 
 Linux 默认会安装并启动：
-- `nanobot-bridge.service`
-- `nanobot-gateway.service`
+- `maxclaw-bridge.service`
+- `maxclaw-gateway.service`
 
-安装后请编辑 `~/.nanobot/config.json` 填写 API Key 与模型。
+安装后请编辑 `~/.maxclaw/config.json` 填写 API Key 与模型。
 
 ## 配置文件
-路径：`~/.nanobot/config.json`
+路径：`~/.maxclaw/config.json`
 
 最小示例：
 ```json
@@ -72,7 +72,7 @@ Linux 默认会安装并启动：
 ```
 
 ### MiniMax 配置示例
-`nanobot-go` 通过 OpenAI 兼容接口使用 MiniMax：
+`maxclaw` 通过 OpenAI 兼容接口使用 MiniMax：
 
 ```json
 {
@@ -121,14 +121,14 @@ Linux 默认会安装并启动：
 ```
 
 ### Workspace 设置
-默认工作区：`~/.nanobot/workspace`
+默认工作区：`~/.maxclaw/workspace`
 
 建议使用绝对路径，也支持 `~` 或 `$HOME` 自动展开：
 ```json
 {
   "agents": {
     "defaults": {
-      "workspace": "~/nanobot-workspace"
+      "workspace": "~/maxclaw-workspace"
     }
   }
 }
@@ -144,7 +144,7 @@ Linux 默认会安装并启动：
 ```
 
 ### Heartbeat（短周期状态）
-受 OpenClaw 的 `heartbeat.md` 思路启发，nanobot 会在每轮对话自动加载：
+受 OpenClaw 的 `heartbeat.md` 思路启发，maxclaw 会在每轮对话自动加载：
 - `<workspace>/memory/heartbeat.md`（优先）
 - `<workspace>/heartbeat.md`（兼容）
 
@@ -180,20 +180,20 @@ Gateway 启动后会开启每日汇总器（每小时检查一次），自动把
 
 管理命令：
 ```bash
-./build/nanobot-go skills list
-./build/nanobot-go skills show <name>
-./build/nanobot-go skills validate
-./build/nanobot-go skills add https://github.com/vercel-labs/agent-skills --path skills --skill react-best-practices
-./build/nanobot-go browser login https://x.com
+./build/maxclaw skills list
+./build/maxclaw skills show <name>
+./build/maxclaw skills validate
+./build/maxclaw skills add https://github.com/vercel-labs/agent-skills --path skills --skill react-best-practices
+./build/maxclaw browser login https://x.com
 ```
 
-在聊天里让 Agent 安装 skills 时，请明确说“调用 `exec` 执行 `nanobot-go skills add ...`”；skills 安装位置固定为 `<workspace>/skills`，不是 Python 包安装。
+在聊天里让 Agent 安装 skills 时，请明确说“调用 `exec` 执行 `maxclaw skills add ...`”；skills 安装位置固定为 `<workspace>/skills`，不是 Python 包安装。
 
 ## Web UI
 Web UI 与 API 同端口，默认 `18890`：
 
 1. 构建：`make webui-install && make webui-build`
-2. 启动：`./build/nanobot-go gateway`
+2. 启动：`./build/maxclaw gateway`
 3. 访问：`http://localhost:18890`
 
 如果访问显示 `Web UI not built`，请先运行 `make webui-build`。
@@ -205,7 +205,7 @@ WhatsApp 通过 `bridge/`（Baileys）接入，Go 侧通过 WebSocket 连接 Bri
 2. 启动 Bridge：`BRIDGE_PORT=3001 BRIDGE_TOKEN=your-secret make bridge-run`
 3. 绑定（命令行扫码）：
 ```bash
-./build/nanobot-go whatsapp bind --bridge ws://localhost:3001
+./build/maxclaw whatsapp bind --bridge ws://localhost:3001
 ```
 4. Web UI：状态页显示二维码
 
@@ -229,7 +229,7 @@ WhatsApp 通过 `bridge/`（Baileys）接入，Go 侧通过 WebSocket 连接 Bri
 1. 使用 @BotFather 创建 Bot，获取 Token
 2. 绑定（命令行输出 QR）：
 ```bash
-./build/nanobot-go telegram bind --token "123456:AA..."
+./build/maxclaw telegram bind --token "123456:AA..."
 ```
 3. Web UI：状态页显示打开聊天的二维码
 4. 如网络需要代理，可在配置中设置 `channels.telegram.proxy`（例如 `http://127.0.0.1:7897`）
@@ -320,14 +320,14 @@ make docker-run
     "web": {
       "fetch": {
         "mode": "chrome",
-        "scriptPath": "/absolute/path/to/nanobot-go/webfetcher/fetch.mjs",
+        "scriptPath": "/absolute/path/to/maxclaw/webfetcher/fetch.mjs",
         "nodePath": "node",
         "timeout": 30,
         "waitUntil": "domcontentloaded",
         "chrome": {
           "cdpEndpoint": "http://127.0.0.1:9222",
           "profileName": "chrome",
-          "userDataDir": "~/.nanobot/browser/chrome/user-data",
+          "userDataDir": "~/.maxclaw/browser/chrome/user-data",
           "channel": "chrome",
           "headless": true,
           "autoStartCDP": true,
@@ -344,7 +344,7 @@ make docker-run
 - `chrome.autoStartCDP=true`：`cdpEndpoint` 不可用时自动拉起 Host Chrome 并重连。
 - 若要复用你正在使用的 Chrome 登录态，请先以远程调试端口启动 Chrome（示例：`--remote-debugging-port=9222`）。
 - 推荐登录流程（X/Twitter 等需登录站点）：
-  - 先运行 `nanobot browser login https://x.com`，在打开的受管 profile 里手动登录一次。
+  - 先运行 `maxclaw browser login https://x.com`，在打开的受管 profile 里手动登录一次。
   - 登录完成后返回对话，继续使用 `web_fetch`（`mode=chrome`）即可复用该 profile 登录态。
 - `chrome.takeoverExisting` 已废弃，不再用于 AppleScript 接管本地标签页。
 安装 Playwright：`make webfetch-install`
@@ -358,7 +358,7 @@ make docker-run
 - `screenshot`：保存截图
 
 推荐流程（X/Twitter）：
-1. 先执行 `./build/nanobot-go browser login https://x.com` 并手动登录受管 profile。
+1. 先执行 `./build/maxclaw browser login https://x.com` 并手动登录受管 profile。
 2. 在聊天中让 agent 使用 `browser` 工具：
    - `action="navigate", url="https://x.com/home"`
    - `action="snapshot"`
@@ -417,7 +417,7 @@ make down-daemon
 - `BRIDGE_PROXY`（代理）
 
 ## 日志
-日志目录：`~/.nanobot/logs`
+日志目录：`~/.maxclaw/logs`
 
 文件包括：
 - `gateway.log`
@@ -446,43 +446,43 @@ make down-daemon
 - Heartbeat context (`memory/heartbeat.md`)
 - Daily memory digest written to `memory/MEMORY.md`
 - Optional browser fetch (Node + Playwright)
-- Structured logs in `~/.nanobot/logs`
+- Structured logs in `~/.maxclaw/logs`
 
 ## Quick Start
 1. Install Go 1.21+ and Node.js 18+
 2. Build: `make build`
-3. Init: `./build/nanobot-go onboard`
-4. Configure: edit `~/.nanobot/config.json`
-5. Run: `./build/nanobot-go gateway`
+3. Init: `./build/maxclaw onboard`
+4. Configure: edit `~/.maxclaw/config.json`
+5. Run: `./build/maxclaw gateway`
 
 ## One-Command Install (Linux / macOS)
 Use the auto-switch installer (it dispatches to `install_linux.sh` or `install_mac.sh`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Lichas/maxclaw/main/install.sh | bash
 ```
 
 Common examples:
 
 ```bash
 # Pin a specific release tag
-curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash -s -- --version v0.1.0
+curl -fsSL https://raw.githubusercontent.com/Lichas/maxclaw/main/install.sh | bash -s -- --version v0.1.0
 
 # Linux custom install dir and ports
-curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash -s -- --dir /opt/nanobot-go --bridge-port 3001 --gateway-port 18890
+curl -fsSL https://raw.githubusercontent.com/Lichas/maxclaw/main/install.sh | bash -s -- --dir /opt/maxclaw --bridge-port 3001 --gateway-port 18890
 
 # macOS install files only (skip launchd)
-curl -fsSL https://raw.githubusercontent.com/Lichas/nanobot-go/main/install.sh | bash -s -- --no-launchd
+curl -fsSL https://raw.githubusercontent.com/Lichas/maxclaw/main/install.sh | bash -s -- --no-launchd
 ```
 
 On Linux, installer enables and starts:
-- `nanobot-bridge.service`
-- `nanobot-gateway.service`
+- `maxclaw-bridge.service`
+- `maxclaw-gateway.service`
 
-After install, edit `~/.nanobot/config.json` and set your API key/model.
+After install, edit `~/.maxclaw/config.json` and set your API key/model.
 
 ## Config File
-Path: `~/.nanobot/config.json`
+Path: `~/.maxclaw/config.json`
 
 Minimal example:
 ```json
@@ -500,14 +500,14 @@ Minimal example:
 ```
 
 ### Workspace
-Default workspace: `~/.nanobot/workspace`
+Default workspace: `~/.maxclaw/workspace`
 
 Absolute paths are recommended; `~` and `$HOME` are expanded automatically:
 ```json
 {
   "agents": {
     "defaults": {
-      "workspace": "~/nanobot-workspace"
+      "workspace": "~/maxclaw-workspace"
     }
   }
 }
@@ -523,7 +523,7 @@ Restrict tools to workspace only:
 ```
 
 ### Heartbeat (Short-Cycle Status)
-Inspired by OpenClaw's `heartbeat.md`, nanobot auto-loads heartbeat context on each turn:
+Inspired by OpenClaw's `heartbeat.md`, maxclaw auto-loads heartbeat context on each turn:
 - `<workspace>/memory/heartbeat.md` (preferred)
 - `<workspace>/heartbeat.md` (fallback)
 
@@ -551,20 +551,20 @@ Selectors:
 
 Management commands:
 ```bash
-./build/nanobot-go skills list
-./build/nanobot-go skills show <name>
-./build/nanobot-go skills validate
-./build/nanobot-go skills add https://github.com/vercel-labs/agent-skills --path skills --skill react-best-practices
-./build/nanobot-go browser login https://x.com
+./build/maxclaw skills list
+./build/maxclaw skills show <name>
+./build/maxclaw skills validate
+./build/maxclaw skills add https://github.com/vercel-labs/agent-skills --path skills --skill react-best-practices
+./build/maxclaw browser login https://x.com
 ```
 
-When asking the agent in chat to install skills, explicitly request `exec` with `nanobot-go skills add ...`. Skills are installed into `<workspace>/skills` (not Python package installs).
+When asking the agent in chat to install skills, explicitly request `exec` with `maxclaw skills add ...`. Skills are installed into `<workspace>/skills` (not Python package installs).
 
 ## Web UI
 Web UI and API share the same port (default `18890`).
 
 1. Build: `make webui-install && make webui-build`
-2. Run: `./build/nanobot-go gateway`
+2. Run: `./build/maxclaw gateway`
 3. Visit: `http://localhost:18890`
 
 If you see `Web UI not built`, run `make webui-build` first.
@@ -576,7 +576,7 @@ WhatsApp is connected via a Node.js Bridge (Baileys) and a WebSocket link to Go.
 2. Run Bridge: `BRIDGE_PORT=3001 BRIDGE_TOKEN=your-secret make bridge-run`
 3. Bind (CLI QR):
 ```bash
-./build/nanobot-go whatsapp bind --bridge ws://localhost:3001
+./build/maxclaw whatsapp bind --bridge ws://localhost:3001
 ```
 4. Web UI shows QR on the status page
 
@@ -601,7 +601,7 @@ If you use a personal WhatsApp account and want phone messages to trigger replie
 1. Create a bot with @BotFather and get the token
 2. Bind (CLI outputs QR):
 ```bash
-./build/nanobot-go telegram bind --token "123456:AA..."
+./build/maxclaw telegram bind --token "123456:AA..."
 ```
 3. Web UI shows a QR that opens the bot chat
 4. If your network requires a proxy, set `channels.telegram.proxy` (for example `http://127.0.0.1:7897`)
@@ -647,14 +647,14 @@ For sites that need real browser behavior or authenticated Chrome sessions:
     "web": {
       "fetch": {
         "mode": "chrome",
-        "scriptPath": "/absolute/path/to/nanobot-go/webfetcher/fetch.mjs",
+        "scriptPath": "/absolute/path/to/maxclaw/webfetcher/fetch.mjs",
         "nodePath": "node",
         "timeout": 30,
         "waitUntil": "domcontentloaded",
         "chrome": {
           "cdpEndpoint": "http://127.0.0.1:9222",
           "profileName": "chrome",
-          "userDataDir": "~/.nanobot/browser/chrome/user-data",
+          "userDataDir": "~/.maxclaw/browser/chrome/user-data",
           "channel": "chrome",
           "headless": true,
           "autoStartCDP": true,
@@ -671,7 +671,7 @@ Notes:
 - `chrome.autoStartCDP=true`: auto-launch host Chrome and retry CDP when endpoint is unavailable.
 - To reuse your live Chrome login state, start Chrome with remote debugging enabled (for example, `--remote-debugging-port=9222`).
 - Recommended login flow for X/Twitter and similar sites:
-  - Run `nanobot browser login https://x.com` and complete manual login once in the managed profile.
+  - Run `maxclaw browser login https://x.com` and complete manual login once in the managed profile.
   - Then continue with `web_fetch` in `mode=chrome` to reuse that managed profile state.
 - `chrome.takeoverExisting` is deprecated and no longer used for AppleScript tab takeover.
 Install Playwright: `make webfetch-install`
@@ -685,7 +685,7 @@ The `browser` tool supports multi-step page control:
 - `screenshot`: save screenshot to file
 
 Recommended flow for X/Twitter:
-1. Run `./build/nanobot-go browser login https://x.com` and finish manual login in managed profile.
+1. Run `./build/maxclaw browser login https://x.com` and finish manual login in managed profile.
 2. In chat, ask agent to use `browser` tool:
    - `action="navigate", url="https://x.com/home"`
    - `action="snapshot"`
@@ -695,7 +695,7 @@ Recommended flow for X/Twitter:
 Full runbook: `BROWSER_OPS.md`
 
 ## MCP (Model Context Protocol)
-nanobot-go can connect external MCP servers and expose their tools as native agent tools.
+maxclaw can connect external MCP servers and expose their tools as native agent tools.
 The server entry format is compatible with Claude Desktop / Cursor `mcpServers` blocks.
 
 ```json
@@ -745,7 +745,7 @@ Env vars:
 - `BRIDGE_PROXY` (proxy)
 
 ## Logs
-Logs directory: `~/.nanobot/logs`
+Logs directory: `~/.maxclaw/logs`
 
 Files:
 - `gateway.log`

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/Lichas/nanobot-go/internal/skills"
+	"github.com/Lichas/maxclaw/internal/skills"
 )
 
 const (

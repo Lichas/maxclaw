@@ -43,7 +43,7 @@ if [ -n "$PROXY_RESOLVED" ]; then
   echo "==> Bridge proxy enabled: $PROXY_RESOLVED"
 fi
 
-echo "==> Building nanobot"
+echo "==> Building maxclaw"
 make build
 
 echo "==> Building web UI"
@@ -79,7 +79,7 @@ should_kill_pid() {
   fi
   case "$cmd" in
     *"/bridge/dist/index.js"*) return 0 ;;
-    *"nanobot-whatsapp-bridge"*) return 0 ;;
+    *"maxclaw-whatsapp-bridge"*) return 0 ;;
     *"node dist/index.js"*"/bridge"*) return 0 ;;
   esac
   return 1
@@ -96,9 +96,9 @@ should_kill_gateway_pid() {
     return 0
   fi
   case "$cmd" in
-    *"/nanobot-go gateway"*) return 0 ;;
-    *"/build/nanobot-go gateway"*) return 0 ;;
-    *"nanobot-go gateway -p"*) return 0 ;;
+    *"/maxclaw gateway"*) return 0 ;;
+    *"/build/maxclaw gateway"*) return 0 ;;
+    *"maxclaw gateway -p"*) return 0 ;;
   esac
   return 1
 }
@@ -152,7 +152,7 @@ echo "==> Starting WhatsApp bridge on port $BRIDGE_PORT"
 make bridge-run BRIDGE_PORT="$BRIDGE_PORT" &
 BRIDGE_PID=$!
 
-echo "==> Starting nanobot gateway"
+echo "==> Starting maxclaw gateway"
 cleanup() {
   if [ -n "$BRIDGE_PID" ] && kill -0 "$BRIDGE_PID" >/dev/null 2>&1; then
     kill "$BRIDGE_PID" >/dev/null 2>&1 || true
@@ -160,4 +160,4 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-./build/nanobot-go gateway -p "$GATEWAY_PORT"
+./build/maxclaw gateway -p "$GATEWAY_PORT"

@@ -1,4 +1,4 @@
-module github.com/Lichas/nanobot-go
+module github.com/Lichas/maxclaw
 
 go 1.22
 

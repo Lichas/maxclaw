@@ -2,8 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="${NANOBOT_GITHUB_REPO:-Lichas/nanobot-go}"
-REF="${NANOBOT_INSTALL_REF:-main}"
+REPO="${MAXCLAW_GITHUB_REPO:-${NANOBOT_GITHUB_REPO:-Lichas/maxclaw}}"
+REF="${MAXCLAW_INSTALL_REF:-${NANOBOT_INSTALL_REF:-main}}"
 
 run_local() {
   local script_name="$1"

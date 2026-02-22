@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Lichas/nanobot-go/internal/bus"
-	"github.com/Lichas/nanobot-go/internal/providers"
+	"github.com/Lichas/maxclaw/internal/bus"
+	"github.com/Lichas/maxclaw/internal/providers"
 )
 
 //go:embed prompts/system_prompt.md
@@ -21,11 +21,13 @@ var systemPromptTemplate string
 //go:embed prompts/environment.md
 var environmentTemplate string
 
-const nanobotSourceMarkerFile = ".nanobot-source-root"
-const nanobotSourceSearchRootsEnv = "NANOBOT_SOURCE_SEARCH_ROOTS"
-const nanobotSourceSearchMaxDepth = 5
+const maxclawSourceMarkerFile = ".maxclaw-source-root"
+const legacySourceMarkerFile = ".nanobot-source-root"
+const maxclawSourceSearchRootsEnv = "MAXCLAW_SOURCE_SEARCH_ROOTS"
+const legacySourceSearchRootsEnv = "NANOBOT_SOURCE_SEARCH_ROOTS"
+const maxclawSourceSearchMaxDepth = 5
 
-var errNanobotSourceMarkerFound = errors.New("nanobot source marker found")
+var errMaxclawSourceMarkerFound = errors.New("maxclaw source marker found")
 
 // ContextBuilder 上下文构建器
 type ContextBuilder struct {
@@ -180,7 +182,7 @@ func (b *ContextBuilder) buildEnvironmentSection(channel, chatID string) string 
 	year, month, day := now.Date()
 	hour, min, _ := now.Clock()
 	weekday := now.Weekday().String()
-	sourceDir, markerPath, markerFound := b.resolveNanobotSource()
+	sourceDir, markerPath, markerFound := b.resolveMaxclawSource()
 
 	// 替换模板变量
 	result := environmentTemplate
@@ -195,32 +197,35 @@ func (b *ContextBuilder) buildEnvironmentSection(channel, chatID string) string 
 	result = strings.ReplaceAll(result, "{{CHAT_ID}}", chatID)
 	result = strings.ReplaceAll(result, "{{WORKSPACE}}", b.workspace)
 	result = strings.ReplaceAll(result, "{{SKILLS_DIR}}", filepath.Join(b.workspace, "skills"))
-	result = strings.ReplaceAll(result, "{{NANOBOT_SOURCE_MARKER_FILE}}", nanobotSourceMarkerFile)
-	result = strings.ReplaceAll(result, "{{NANOBOT_SOURCE_MARKER_PATH}}", markerPath)
-	result = strings.ReplaceAll(result, "{{NANOBOT_SOURCE_DIR}}", sourceDir)
-	result = strings.ReplaceAll(result, "{{NANOBOT_SOURCE_MARKER_FOUND}}", boolYesNo(markerFound))
+	result = strings.ReplaceAll(result, "{{MAXCLAW_SOURCE_MARKER_FILE}}", maxclawSourceMarkerFile)
+	result = strings.ReplaceAll(result, "{{MAXCLAW_SOURCE_MARKER_PATH}}", markerPath)
+	result = strings.ReplaceAll(result, "{{MAXCLAW_SOURCE_DIR}}", sourceDir)
+	result = strings.ReplaceAll(result, "{{MAXCLAW_SOURCE_MARKER_FOUND}}", boolYesNo(markerFound))
 
 	return result
 }
 
-func (b *ContextBuilder) resolveNanobotSource() (sourceDir, markerPath string, markerFound bool) {
+func (b *ContextBuilder) resolveMaxclawSource() (sourceDir, markerPath string, markerFound bool) {
 	b.sourceOnce.Do(func() {
-		b.sourceDir, b.sourceMarkerPath, b.sourceMarkerFound = b.resolveNanobotSourceUncached()
+		b.sourceDir, b.sourceMarkerPath, b.sourceMarkerFound = b.resolveMaxclawSourceUncached()
 	})
 	return b.sourceDir, b.sourceMarkerPath, b.sourceMarkerFound
 }
 
-func (b *ContextBuilder) resolveNanobotSourceUncached() (sourceDir, markerPath string, markerFound bool) {
-	if envSource := strings.TrimSpace(os.Getenv("NANOBOT_SOURCE_DIR")); envSource != "" {
+func (b *ContextBuilder) resolveMaxclawSourceUncached() (sourceDir, markerPath string, markerFound bool) {
+	envSource := strings.TrimSpace(os.Getenv("MAXCLAW_SOURCE_DIR"))
+	if envSource == "" {
+		envSource = strings.TrimSpace(os.Getenv("NANOBOT_SOURCE_DIR"))
+	}
+	if envSource != "" {
 		sourceDir = envSource
 		if abs, err := filepath.Abs(sourceDir); err == nil {
 			sourceDir = abs
 		}
-		markerPath = filepath.Join(sourceDir, nanobotSourceMarkerFile)
-		if info, err := os.Stat(markerPath); err == nil && !info.IsDir() {
-			return sourceDir, markerPath, true
+		if resolvedMarker, found := resolveSourceMarkerPath(sourceDir); found {
+			return sourceDir, resolvedMarker, true
 		}
-		return sourceDir, markerPath, false
+		return sourceDir, filepath.Join(sourceDir, maxclawSourceMarkerFile), false
 	}
 
 	start := b.workspace
@@ -234,9 +239,8 @@ func (b *ContextBuilder) resolveNanobotSourceUncached() (sourceDir, markerPath s
 
 	dir := absStart
 	for {
-		candidate := filepath.Join(dir, nanobotSourceMarkerFile)
-		if info, statErr := os.Stat(candidate); statErr == nil && !info.IsDir() {
-			return dir, candidate, true
+		if resolvedMarker, found := resolveSourceMarkerPath(dir); found {
+			return dir, resolvedMarker, true
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
@@ -246,12 +250,12 @@ func (b *ContextBuilder) resolveNanobotSourceUncached() (sourceDir, markerPath s
 	}
 
 	for _, root := range b.sourceSearchRoots(absStart) {
-		if foundDir, foundMarker, found := findSourceMarkerUnder(root, nanobotSourceSearchMaxDepth); found {
+		if foundDir, foundMarker, found := findSourceMarkerUnder(root, maxclawSourceSearchMaxDepth); found {
 			return foundDir, foundMarker, true
 		}
 	}
 
-	return absStart, filepath.Join(absStart, nanobotSourceMarkerFile), false
+	return absStart, filepath.Join(absStart, maxclawSourceMarkerFile), false
 }
 
 func boolYesNo(v bool) string {
@@ -301,13 +305,18 @@ func (b *ContextBuilder) sourceSearchRoots(absWorkspace string) []string {
 		roots = append(roots, abs)
 	}
 
-	for _, raw := range parseSourceSearchRoots(os.Getenv(nanobotSourceSearchRootsEnv)) {
+	searchRootsEnvValue := firstNonEmptyString(
+		os.Getenv(maxclawSourceSearchRootsEnv),
+		os.Getenv(legacySourceSearchRootsEnv),
+	)
+	for _, raw := range parseSourceSearchRoots(searchRootsEnvValue) {
 		addRoot(raw)
 	}
 
 	if home, err := os.UserHomeDir(); err == nil {
 		home = filepath.Clean(home)
-		if filepath.Clean(absWorkspace) == filepath.Join(home, ".nanobot", "workspace") {
+		if filepath.Clean(absWorkspace) == filepath.Join(home, ".maxclaw", "workspace") ||
+			filepath.Clean(absWorkspace) == filepath.Join(home, ".nanobot", "workspace") {
 			addRoot(filepath.Join(home, "git"))
 			addRoot(filepath.Join(home, "src"))
 			addRoot(filepath.Join(home, "code"))
@@ -371,9 +380,8 @@ func findSourceMarkerUnder(root string, maxDepth int) (sourceDir, markerPath str
 		return "", "", false
 	}
 
-	directMarker := filepath.Join(root, nanobotSourceMarkerFile)
-	if markerInfo, markerErr := os.Stat(directMarker); markerErr == nil && !markerInfo.IsDir() {
-		return root, directMarker, true
+	if resolvedMarker, found := resolveSourceMarkerPath(root); found {
+		return root, resolvedMarker, true
 	}
 
 	var found string
@@ -397,17 +405,40 @@ func findSourceMarkerUnder(root string, maxDepth int) (sourceDir, markerPath str
 			return nil
 		}
 
-		if d.Name() == nanobotSourceMarkerFile {
+		if isSourceMarkerFileName(d.Name()) {
 			found = path
-			return errNanobotSourceMarkerFound
+			return errMaxclawSourceMarkerFound
 		}
 		return nil
 	})
 
-	if errors.Is(walkErr, errNanobotSourceMarkerFound) {
+	if errors.Is(walkErr, errMaxclawSourceMarkerFound) {
 		return filepath.Dir(found), found, true
 	}
 	return "", "", false
+}
+
+func resolveSourceMarkerPath(dir string) (string, bool) {
+	for _, markerFile := range []string{maxclawSourceMarkerFile, legacySourceMarkerFile} {
+		candidate := filepath.Join(dir, markerFile)
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return candidate, true
+		}
+	}
+	return "", false
+}
+
+func isSourceMarkerFileName(name string) bool {
+	return name == maxclawSourceMarkerFile || name == legacySourceMarkerFile
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 func pathDepth(root, path string) int {

@@ -19,7 +19,7 @@ export function TitleBar() {
     // macOS: Hidden title bar with traffic lights, show custom title area
     return (
       <div className="h-9 bg-background border-b border-border flex items-center justify-center draggable">
-        <span className="text-sm font-medium text-foreground/80">nanobot-go</span>
+        <span className="text-sm font-medium text-foreground/80">maxclaw</span>
       </div>
     );
   }
@@ -28,7 +28,7 @@ export function TitleBar() {
   return (
     <div className="h-9 bg-background border-b border-border flex items-center justify-between draggable">
       <div className="flex items-center gap-2 px-4">
-        <span className="text-sm font-medium text-foreground/80">nanobot-go</span>
+        <span className="text-sm font-medium text-foreground/80">maxclaw</span>
       </div>
       <div className="flex items-center no-drag">
         <button

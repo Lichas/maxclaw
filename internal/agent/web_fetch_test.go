@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"github.com/Lichas/nanobot-go/internal/config"
+	"github.com/Lichas/maxclaw/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 

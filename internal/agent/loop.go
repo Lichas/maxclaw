@@ -8,15 +8,15 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Lichas/nanobot-go/internal/bus"
-	"github.com/Lichas/nanobot-go/internal/config"
-	"github.com/Lichas/nanobot-go/internal/cron"
-	"github.com/Lichas/nanobot-go/internal/logging"
-	"github.com/Lichas/nanobot-go/internal/memory"
-	"github.com/Lichas/nanobot-go/internal/providers"
-	"github.com/Lichas/nanobot-go/internal/session"
-	"github.com/Lichas/nanobot-go/internal/skills"
-	"github.com/Lichas/nanobot-go/pkg/tools"
+	"github.com/Lichas/maxclaw/internal/bus"
+	"github.com/Lichas/maxclaw/internal/config"
+	"github.com/Lichas/maxclaw/internal/cron"
+	"github.com/Lichas/maxclaw/internal/logging"
+	"github.com/Lichas/maxclaw/internal/memory"
+	"github.com/Lichas/maxclaw/internal/providers"
+	"github.com/Lichas/maxclaw/internal/session"
+	"github.com/Lichas/maxclaw/internal/skills"
+	"github.com/Lichas/maxclaw/pkg/tools"
 )
 
 const (
@@ -293,7 +293,7 @@ func (a *AgentLoop) processMessageWithCallbacks(
 		return bus.NewOutboundMessage(
 			msg.Channel,
 			msg.ChatID,
-			"nanobot commands:\n/new - Start a new conversation\n/help - Show available commands",
+			"maxclaw commands:\n/new - Start a new conversation\n/help - Show available commands",
 		), nil
 	}
 

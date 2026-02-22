@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# nanobot-go 端到端测试脚本
+# maxclaw 端到端测试脚本
 #
 
 set -e
@@ -40,13 +40,13 @@ skip() {
 }
 
 # 构建项目
-echo "=== Building nanobot ==="
+echo "=== Building maxclaw ==="
 cd "$PROJECT_DIR"
 mkdir -p "$BUILD_DIR"
-go build -o "$BUILD_DIR/nanobot" cmd/nanobot/main.go
+go build -o "$BUILD_DIR/maxclaw" cmd/maxclaw/main.go
 pass "Build successful"
 
-NANOBOT="$BUILD_DIR/nanobot"
+NANOBOT="$BUILD_DIR/maxclaw"
 
 # 设置测试环境
 export HOME="$TEST_HOME"
@@ -58,7 +58,7 @@ echo ""
 
 # Test 1: 版本命令
 echo "Test 1: Version command"
-if $NANOBOT version | grep -q "nanobot"; then
+if $NANOBOT version | grep -q "maxclaw"; then
     pass "Version command works"
 else
     fail "Version command failed"
@@ -67,19 +67,19 @@ fi
 # Test 2: Onboard 初始化
 echo "Test 2: Onboard initialization"
 echo "y" | $NANOBOT onboard > /dev/null 2>&1
-if [ -f "$TEST_HOME/.nanobot/config.json" ]; then
+if [ -f "$TEST_HOME/.maxclaw/config.json" ]; then
     pass "Config file created"
 else
     fail "Config file not created"
 fi
 
-if [ -d "$TEST_HOME/.nanobot/workspace" ]; then
+if [ -d "$TEST_HOME/.maxclaw/workspace" ]; then
     pass "Workspace created"
 else
     fail "Workspace not created"
 fi
 
-if [ -f "$TEST_HOME/.nanobot/workspace/AGENTS.md" ]; then
+if [ -f "$TEST_HOME/.maxclaw/workspace/AGENTS.md" ]; then
     pass "Template files created"
 else
     fail "Template files not created"
@@ -87,7 +87,7 @@ fi
 
 # Test 3: Status 命令
 echo "Test 3: Status command"
-if $NANOBOT status | grep -q "nanobot Status"; then
+if $NANOBOT status | grep -q "maxclaw Status"; then
     pass "Status command works"
 else
     fail "Status command failed"
@@ -96,11 +96,11 @@ fi
 # Test 4: 配置加载
 echo "Test 4: Config loading"
 # 修改配置
-cat > "$TEST_HOME/.nanobot/config.json" << 'EOF'
+cat > "$TEST_HOME/.maxclaw/config.json" << 'EOF'
 {
   "agents": {
     "defaults": {
-      "workspace": "'$TEST_HOME'/.nanobot/workspace",
+      "workspace": "'$TEST_HOME'/.maxclaw/workspace",
       "model": "deepseek-chat",
       "maxTokens": 8192,
       "temperature": 0.7,
@@ -151,7 +151,7 @@ fi
 
 # Test 7: 网关命令检查
 echo "Test 7: Gateway command"
-if $NANOBOT gateway --help | grep -q "Start the nanobot gateway"; then
+if $NANOBOT gateway --help | grep -q "Start the maxclaw gateway"; then
     pass "Gateway command available"
 else
     fail "Gateway command not available"
@@ -159,7 +159,7 @@ fi
 
 # Test 8: 配置文件结构验证
 echo "Test 8: Config structure validation"
-if python3 -c "import json; json.load(open('$TEST_HOME/.nanobot/config.json'))" 2>/dev/null; then
+if python3 -c "import json; json.load(open('$TEST_HOME/.maxclaw/config.json'))" 2>/dev/null; then
     pass "Config is valid JSON"
 else
     fail "Config is invalid JSON"
@@ -168,10 +168,10 @@ fi
 # Test 9: 多会话隔离测试
 echo "Test 9: Session isolation"
 # 创建会话目录
-mkdir -p "$TEST_HOME/.nanobot/workspace/.sessions"
-echo '{"key":"test:1","messages":[{"role":"user","content":"hello","timestamp":"2024-01-01T00:00:00Z"}]}' > "$TEST_HOME/.nanobot/workspace/.sessions/test_1.json"
+mkdir -p "$TEST_HOME/.maxclaw/workspace/.sessions"
+echo '{"key":"test:1","messages":[{"role":"user","content":"hello","timestamp":"2024-01-01T00:00:00Z"}]}' > "$TEST_HOME/.maxclaw/workspace/.sessions/test_1.json"
 
-if [ -f "$TEST_HOME/.nanobot/workspace/.sessions/test_1.json" ]; then
+if [ -f "$TEST_HOME/.maxclaw/workspace/.sessions/test_1.json" ]; then
     pass "Session file created"
 else
     fail "Session file not created"

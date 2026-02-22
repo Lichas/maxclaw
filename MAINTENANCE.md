@@ -1,6 +1,6 @@
 # MAINTENANCE.md
 
-nanobot-go 维护与排障手册（供 code agent / 运维使用）。
+maxclaw 维护与排障手册（供 code agent / 运维使用）。
 
 ## 1. 目标
 - 快速判断“服务是否活着”。
@@ -10,7 +10,7 @@ nanobot-go 维护与排障手册（供 code agent / 运维使用）。
 ## 2. 标准运行模型
 - Bridge: `3001`（Node）
 - Gateway: `18890`（Go）
-- 日志目录: `~/.nanobot/logs`
+- 日志目录: `~/.maxclaw/logs`
 - PID 文件: `<repo>/.pids/bridge.pid` / `<repo>/.pids/gateway.pid`
 
 ## 3. 30 秒健康检查
@@ -45,7 +45,7 @@ make up-daemon
 
 ### 5.1 快速判断是否“消息积压在 Telegram 服务器”
 ```bash
-TOKEN=$(jq -r '.channels.telegram.token' ~/.nanobot/config.json)
+TOKEN=$(jq -r '.channels.telegram.token' ~/.maxclaw/config.json)
 curl -sS "https://api.telegram.org/bot${TOKEN}/getWebhookInfo"
 ```
 
@@ -54,7 +54,7 @@ curl -sS "https://api.telegram.org/bot${TOKEN}/getWebhookInfo"
 
 ### 5.2 检查本地是否收到与发送
 ```bash
-tail -n 200 /Users/lua/.nanobot/logs/channels.log
+tail -n 200 /Users/lua/.maxclaw/logs/channels.log
 ```
 
 关键日志：
@@ -86,8 +86,8 @@ export NO_PROXY=localhost,127.0.0.1,0.0.0.0,::1
 
 ## 6. WhatsApp 无回复排障
 ```bash
-tail -n 200 /Users/lua/.nanobot/logs/bridge.log
-tail -n 200 /Users/lua/.nanobot/logs/channels.log
+tail -n 200 /Users/lua/.maxclaw/logs/bridge.log
+tail -n 200 /Users/lua/.maxclaw/logs/channels.log
 ```
 
 检查：
@@ -98,7 +98,7 @@ tail -n 200 /Users/lua/.nanobot/logs/channels.log
 ## 7. 常见误区
 - `0.0.0.0:18890` 在代理环境可能返回 502；访问请用 `localhost:18890`。
 - PID 文件存在不等于进程还活着；必须以端口监听和 `/api/status` 为准。
-- `ps aux | grep nano` 里的 `git-remote-https` 不是 nanobot 运行进程。
+- `ps aux | grep nano` 里的 `git-remote-https` 不是 maxclaw 运行进程。
 
 ## 8. 事故记录要求（必须）
 每次修复生产可见问题后，必须在 `BUGFIX.md` 追加：

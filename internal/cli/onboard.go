@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Lichas/nanobot-go/internal/config"
+	"github.com/Lichas/maxclaw/internal/config"
 	"github.com/spf13/cobra"
 )
 
 // onboardCmd 初始化命令
 var onboardCmd = &cobra.Command{
 	Use:   "onboard",
-	Short: "Initialize nanobot configuration and workspace",
+	Short: "Initialize maxclaw configuration and workspace",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		configPath := config.GetConfigPath()
 
@@ -51,12 +51,12 @@ var onboardCmd = &cobra.Command{
 		fmt.Println("  Created memory/MEMORY.md")
 		fmt.Println("  Created memory/heartbeat.md")
 
-		fmt.Printf("\n%s nanobot is ready!\n\n", logo)
+		fmt.Printf("\n%s maxclaw is ready!\n\n", logo)
 		fmt.Println("Next steps:")
-		fmt.Println("  1. Add your API key to ~/.nanobot/config.json")
+		fmt.Println("  1. Add your API key to ~/.maxclaw/config.json")
 		fmt.Println("     Get one at: https://openrouter.ai/keys")
-		fmt.Println("  2. Chat: nanobot agent -m \"Hello!\"")
-		fmt.Println("\nWant Telegram/WhatsApp? See: https://github.com/HKUDS/nanobot")
+		fmt.Println("  2. Chat: maxclaw agent -m \"Hello!\"")
+		fmt.Println("\nWant Telegram/WhatsApp? See: https://github.com/Lichas/maxclaw")
 
 		return nil
 	},

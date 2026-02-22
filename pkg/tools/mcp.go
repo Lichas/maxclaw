@@ -24,7 +24,7 @@ import (
 const (
 	mcpJSONRPCVersion  = "2.0"
 	mcpProtocolVersion = "2024-11-05"
-	mcpClientName      = "nanobot-go"
+	mcpClientName      = "maxclaw"
 	mcpClientVersion   = "0.1.0"
 	maxToolNameLength  = 64
 )

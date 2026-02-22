@@ -1,6 +1,6 @@
 # Browser Tool Operations Runbook
 
-本手册用于 nanobot-go 的浏览器能力落地，目标是稳定处理 X/Twitter 这类强 JS、需要登录的站点。
+本手册用于 maxclaw 的浏览器能力落地，目标是稳定处理 X/Twitter 这类强 JS、需要登录的站点。
 
 ## 1. 适用范围
 
@@ -14,13 +14,13 @@
    ```bash
    make webfetch-install
    ```
-2. 配置 `~/.nanobot/config.json`：
+2. 配置 `~/.maxclaw/config.json`：
    - `tools.web.fetch.mode = "chrome"`
-   - `tools.web.fetch.scriptPath = "/absolute/path/to/nanobot-go/webfetcher/fetch.mjs"`
+   - `tools.web.fetch.scriptPath = "/absolute/path/to/maxclaw/webfetcher/fetch.mjs"`
    - `tools.web.fetch.nodePath = "node"`
 3. 启动网关：
    ```bash
-   ./build/nanobot-go gateway
+   ./build/maxclaw gateway
    ```
 
 ## 3. 登录态初始化（一次性）
@@ -28,10 +28,10 @@
 首次使用某个 profile 前，必须手动登录一次：
 
 ```bash
-./build/nanobot-go browser login https://x.com
+./build/maxclaw browser login https://x.com
 ```
 
-执行后会打开受管 profile（默认目录：`~/.nanobot/browser/chrome/user-data`）：
+执行后会打开受管 profile（默认目录：`~/.maxclaw/browser/chrome/user-data`）：
 - 在弹出的浏览器中完成登录
 - 回到终端按 Enter 结束登录会话
 
@@ -73,7 +73,7 @@
   - 当前活动标签页索引
   - 最近一次 `snapshot` 的引用表（`ref -> selector`）
 - 状态文件路径：
-  - `~/.nanobot/browser/sessions/<session>.json`
+  - `~/.maxclaw/browser/sessions/<session>.json`
 
 ## 6. 常见问题排查
 
@@ -103,7 +103,7 @@
 ### 6.4 截图找不到文件
 
 默认输出目录：
-- `~/.nanobot/browser/screenshots/`
+- `~/.maxclaw/browser/screenshots/`
 
 建议：
 - 在 `screenshot` 时显式传 `path` 到你可控目录

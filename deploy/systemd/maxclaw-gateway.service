@@ -1,7 +1,7 @@
 [Unit]
-Description=nanobot-go Gateway
-After=network-online.target nanobot-bridge.service
-Wants=network-online.target nanobot-bridge.service
+Description=maxclaw Gateway
+After=network-online.target maxclaw-bridge.service
+Wants=network-online.target maxclaw-bridge.service
 
 [Service]
 Type=simple
@@ -9,7 +9,7 @@ User=__SERVICE_USER__
 Group=__SERVICE_USER__
 WorkingDirectory=__APP_DIR__
 Environment=HOME=__HOME_DIR__
-EnvironmentFile=-/etc/default/nanobot-go
+EnvironmentFile=-/etc/default/maxclaw
 ExecStart=__APP_DIR__/scripts/run_gateway.sh
 Restart=always
 RestartSec=5

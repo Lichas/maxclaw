@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Lichas/nanobot-go/internal/logging"
+	"github.com/Lichas/maxclaw/internal/logging"
 )
 
 // TelegramConfig Telegram 配置

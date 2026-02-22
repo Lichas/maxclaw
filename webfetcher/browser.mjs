@@ -84,7 +84,7 @@ function resolveChromeUserDataDir(userDataDir, profileName) {
   if (expanded) {
     return path.resolve(expanded);
   }
-  return path.join(os.homedir(), '.nanobot', 'browser', profileName, 'user-data');
+  return path.join(os.homedir(), '.maxclaw', 'browser', profileName, 'user-data');
 }
 
 function resolveHostChromeUserDataDir(userDataDir, channel) {
@@ -290,7 +290,7 @@ function sanitizeSessionId(input) {
 }
 
 function sessionStatePath(sessionId) {
-  return path.join(os.homedir(), '.nanobot', 'browser', 'sessions', `${sanitizeSessionId(sessionId)}.json`);
+  return path.join(os.homedir(), '.maxclaw', 'browser', 'sessions', `${sanitizeSessionId(sessionId)}.json`);
 }
 
 async function readSessionState(sessionId) {
@@ -579,7 +579,7 @@ async function runAction(req, context, state, warnings) {
     }
     const outputPath = req.path
       ? path.resolve(expandUserPath(req.path))
-      : path.join(os.homedir(), '.nanobot', 'browser', 'screenshots', `${req.sessionId}-${Date.now()}.png`);
+      : path.join(os.homedir(), '.maxclaw', 'browser', 'screenshots', `${req.sessionId}-${Date.now()}.png`);
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await page.screenshot({ path: outputPath, fullPage: req.fullPage });
     const summary = `Screenshot saved: ${outputPath}`;

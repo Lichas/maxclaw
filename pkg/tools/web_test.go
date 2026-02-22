@@ -8,7 +8,7 @@ import (
 )
 
 func TestNormalizeWebFetchOptionsChromeDefaults(t *testing.T) {
-	t.Setenv("HOME", "/tmp/nanobot-home")
+	t.Setenv("HOME", "/tmp/maxclaw-home")
 
 	opts := normalizeWebFetchOptions(WebFetchOptions{
 		Mode: "chrome",
@@ -19,7 +19,7 @@ func TestNormalizeWebFetchOptionsChromeDefaults(t *testing.T) {
 	assert.Equal(t, 15000, opts.Chrome.LaunchTimeoutMs)
 	assert.Equal(
 		t,
-		filepath.Join("/tmp/nanobot-home", ".nanobot", "browser", "chrome", "user-data"),
+		filepath.Join("/tmp/maxclaw-home", ".maxclaw", "browser", "chrome", "user-data"),
 		opts.Chrome.UserDataDir,
 	)
 }

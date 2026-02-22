@@ -4,8 +4,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Lichas/nanobot-go/internal/config"
-	"github.com/Lichas/nanobot-go/pkg/tools"
+	"github.com/Lichas/maxclaw/internal/config"
+	"github.com/Lichas/maxclaw/pkg/tools"
 )
 
 // BuildWebFetchOptions converts config to tool options and resolves default script path.

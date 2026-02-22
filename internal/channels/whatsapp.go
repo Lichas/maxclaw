@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Lichas/nanobot-go/internal/logging"
+	"github.com/Lichas/maxclaw/internal/logging"
 	"github.com/gorilla/websocket"
 )
 
@@ -24,7 +24,7 @@ type WhatsAppConfig struct {
 
 // WhatsAppChannel WhatsApp 频道
 // 通过 WebSocket 与桥接服务通信
-// 消息协议参考 nanobot Python 版 whatsapp.py 与 bridge/src
+// 消息协议参考 maxclaw Python 版 whatsapp.py 与 bridge/src
 type WhatsAppChannel struct {
 	config         *WhatsAppConfig
 	messageHandler func(msg *Message)

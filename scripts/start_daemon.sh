@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PID_DIR="$ROOT_DIR/.pids"
-LOG_DIR="${LOG_DIR:-$HOME/.nanobot/logs}"
+LOG_DIR="${LOG_DIR:-$HOME/.maxclaw/logs}"
 BRIDGE_PORT="${BRIDGE_PORT:-3001}"
 GATEWAY_PORT="${GATEWAY_PORT:-18890}"
 BRIDGE_PROXY="${BRIDGE_PROXY:-}"
@@ -126,7 +126,7 @@ should_kill_pid() {
   fi
   case "$cmd" in
     *"/bridge/dist/index.js"*) return 0 ;;
-    *"nanobot-whatsapp-bridge"*) return 0 ;;
+    *"maxclaw-whatsapp-bridge"*) return 0 ;;
     *"node dist/index.js"*"/bridge"*) return 0 ;;
   esac
   return 1
@@ -143,9 +143,9 @@ should_kill_gateway_pid() {
     return 0
   fi
   case "$cmd" in
-    *"/nanobot-go gateway"*) return 0 ;;
-    *"/build/nanobot-go gateway"*) return 0 ;;
-    *"nanobot-go gateway -p"*) return 0 ;;
+    *"/maxclaw gateway"*) return 0 ;;
+    *"/build/maxclaw gateway"*) return 0 ;;
+    *"maxclaw gateway -p"*) return 0 ;;
   esac
   return 1
 }
@@ -232,7 +232,7 @@ fi
 gateway_pid="$(read_pid_file "$PID_DIR/gateway.pid" || true)"
 if [ -z "$gateway_pid" ] || ! is_pid_running "$gateway_pid"; then
   stop_existing_gateway
-  echo "==> Building nanobot"
+  echo "==> Building maxclaw"
   make build >/dev/null
 
   echo "==> Building web UI"
@@ -248,7 +248,7 @@ if [ -z "$gateway_pid" ] || ! is_pid_running "$gateway_pid"; then
     https_proxy="${https_proxy:-}" \
     http_proxy="${http_proxy:-}" \
     all_proxy="${all_proxy:-}" \
-    "$ROOT_DIR/build/nanobot-go" gateway -p "$GATEWAY_PORT" > "$LOG_DIR/gateway.log" 2>&1 &
+    "$ROOT_DIR/build/maxclaw" gateway -p "$GATEWAY_PORT" > "$LOG_DIR/gateway.log" 2>&1 &
   echo $! > "$PID_DIR/gateway.pid"
   echo "Gateway PID: $(cat "$PID_DIR/gateway.pid")"
   wait_service_ready "gateway" "$(cat "$PID_DIR/gateway.pid")" "$GATEWAY_PORT" "$LOG_DIR/gateway.log"

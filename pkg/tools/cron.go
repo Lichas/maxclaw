@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Lichas/nanobot-go/internal/cron"
+	"github.com/Lichas/maxclaw/internal/cron"
 )
 
 // CronService 定时任务服务接口

@@ -2,7 +2,7 @@
 
 ## 概述
 
-本文档记录 nanobot-go 项目开发过程中发现的关键 bug 及其修复方案。
+本文档记录 maxclaw 项目开发过程中发现的关键 bug 及其修复方案。
 
 ---
 
@@ -129,7 +129,7 @@ if len(tools) > 0 {  // ✅ 所有模型都传递工具
 **验证结果**:
 
 ```
-$ ./nanobot agent -m "搜索今日AI新闻"
+$ ./maxclaw agent -m "搜索今日AI新闻"
 [Agent] Executing tool: web_search (id: call_00_xxx, args: {"query": "AI 新闻 今日"})
 ```
 
@@ -164,7 +164,7 @@ DeepSeek 模型成功调用了 web_search 工具。
 "You have access to various tools... Always prefer using tools over guessing..."
 
 // 修复后的提示（强制性）
-`You are nanobot, a lightweight AI assistant with access to tools.
+`You are maxclaw, a lightweight AI assistant with access to tools.
 
 ABSOLUTE REQUIREMENT: You MUST use tools when they are available.
 
@@ -219,16 +219,16 @@ DeepSeek 可正常返回工具调用（web_search / exec / read_file 等）。
 
 ```bash
 # 测试 web_search（需要配置 BRAVE_API_KEY）
-./nanobot agent -m "搜索今日AI新闻"
+./maxclaw agent -m "搜索今日AI新闻"
 
 # 测试 list_dir
-./nanobot agent -m "列出当前目录"
+./maxclaw agent -m "列出当前目录"
 
 # 测试 read_file
-./nanobot agent -m "查看 README.md 内容"
+./maxclaw agent -m "查看 README.md 内容"
 
 # 测试 exec
-./nanobot agent -m "运行 pwd 命令"
+./maxclaw agent -m "运行 pwd 命令"
 ```
 
 ---
@@ -337,7 +337,7 @@ make restart-daemon
 lsof -nP -iTCP:3001 -sTCP:LISTEN
 lsof -nP -iTCP:18890 -sTCP:LISTEN
 curl -sS http://127.0.0.1:18890/api/status
-tail -f /Users/lua/.nanobot/logs/channels.log
+tail -f /Users/lua/.maxclaw/logs/channels.log
 ```
 预期：`channels` 包含 `telegram`，`telegram.status=ready`，并能看到 `telegram inbound` 与 `telegram send`。
 
@@ -373,7 +373,7 @@ tail -f /Users/lua/.nanobot/logs/channels.log
 ## 2026-02-17 - Cron 已触发但 Telegram 未收到（`chat_id` 丢失 + 出站错误静默）
 
 **问题**：用户在 Telegram 里设置 `18:00` 提醒后，没有收到消息，看起来像“定时任务没执行”。  
-**关键证据**（`/Users/lua/.nanobot/logs/session.log`）：
+**关键证据**（`/Users/lua/.maxclaw/logs/session.log`）：
 - `2026/02/17 18:00:00.007320 inbound channel=telegram chat= sender=cron content="[telegram] [Cron Job: hello] hello"`
 - `2026/02/17 18:00:02.019950 outbound channel=telegram chat= content="..."`
 

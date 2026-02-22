@@ -13,9 +13,9 @@ var (
 
 // rootCmd 根命令
 var rootCmd = &cobra.Command{
-	Use:   "nanobot",
-	Short: "nanobot - Personal AI Assistant",
-	Long:  fmt.Sprintf("%s nanobot - Ultra-Lightweight Personal AI Assistant", logo),
+	Use:   "maxclaw",
+	Short: "maxclaw - Personal AI Assistant",
+	Long:  fmt.Sprintf("%s maxclaw - Ultra-Lightweight Personal AI Assistant", logo),
 }
 
 // Execute 执行根命令
@@ -40,6 +40,6 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s nanobot v%s\n", logo, version)
+		fmt.Printf("%s maxclaw v%s\n", logo, version)
 	},
 }

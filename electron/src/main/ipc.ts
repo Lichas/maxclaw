@@ -28,7 +28,7 @@ const configStore = new Store<AppConfig>({
 });
 
 const autoLauncher = new AutoLaunch({
-  name: 'Nanobot',
+  name: 'Maxclaw',
   path: app.getPath('exe')
 });
 

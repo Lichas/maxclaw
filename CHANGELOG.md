@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### 变更
+
+#### 项目统一更名为 `maxclaw`（Go CLI / Desktop / 文档与安装脚本）
+- **变更**：统一模块与品牌命名，CLI 命令、桌面应用标识、安装/发布脚本、Web UI 与主页文案改为 `maxclaw`；默认数据目录切换到 `~/.maxclaw`，并兼容旧 `~/.nanobot` 与 `NANOBOT_*` 环境变量。
+- **位置**：`cmd/maxclaw/main.go`、`internal/config/loader.go`、`internal/cli/root.go`、`internal/agent/context.go`、`electron/src/main/gateway.ts`、`electron/electron-builder.yml`、`deploy/systemd/maxclaw-*.service`、`install*.sh`、`README.md`、`homepage/index.html`。
+- **验证**：`go test ./...`、`make build`、`cd electron && npm run build`、`cd webui && npm run build`、`cd bridge && npm run build`。
+
 ### 新增功能
 
 #### Electron App 品牌更新（`electron/assets/`, `electron/src/renderer/components/`）

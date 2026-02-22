@@ -9,12 +9,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Lichas/nanobot-go/internal/agent"
-	"github.com/Lichas/nanobot-go/internal/bus"
-	"github.com/Lichas/nanobot-go/internal/config"
-	"github.com/Lichas/nanobot-go/internal/cron"
-	"github.com/Lichas/nanobot-go/internal/logging"
-	"github.com/Lichas/nanobot-go/internal/providers"
+	"github.com/Lichas/maxclaw/internal/agent"
+	"github.com/Lichas/maxclaw/internal/bus"
+	"github.com/Lichas/maxclaw/internal/config"
+	"github.com/Lichas/maxclaw/internal/cron"
+	"github.com/Lichas/maxclaw/internal/logging"
+	"github.com/Lichas/maxclaw/internal/providers"
 	"github.com/spf13/cobra"
 )
 

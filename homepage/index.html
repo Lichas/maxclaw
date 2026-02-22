@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>nanobot — ultra-lightweight AI assistant</title>
+    <title>maxclaw — ultra-lightweight AI assistant</title>
     <meta
       name="description"
-      content="nanobot is a lightweight, tool-augmented AI assistant built for personal automation."
+      content="maxclaw is a lightweight, tool-augmented AI assistant built for personal automation."
     />
     <link
       rel="preload"
@@ -27,12 +27,12 @@
   <body>
     <div class="bg"></div>
     <header class="nav">
-      <div class="logo">nanobot</div>
+      <div class="logo">maxclaw</div>
       <nav>
         <a href="#features" data-i18n="nav_features">Features</a>
         <a href="#workflow" data-i18n="nav_workflow">Workflow</a>
         <a href="#quickstart" data-i18n="nav_quickstart">Quickstart</a>
-        <a class="cta" href="https://github.com/HKUDS/nanobot" data-i18n="nav_github">GitHub</a>
+        <a class="cta" href="https://github.com/Lichas/maxclaw" data-i18n="nav_github">GitHub</a>
         <button class="lang-toggle" id="lang-toggle" type="button">中文</button>
       </nav>
     </header>
@@ -46,12 +46,12 @@
             <span data-i18n="hero_title_line2">that actually ships.</span>
           </h1>
           <p class="lead" data-i18n="hero_lead">
-            nanobot is a Go-first, tool-augmented agent that stays close to your
+            maxclaw is a Go-first, tool-augmented agent that stays close to your
             workspace. Fast loops, clear logs, and channels that fit your flow.
           </p>
           <div class="hero-actions">
             <a class="button primary" href="#quickstart" data-i18n="hero_cta_start">Get started</a>
-            <a class="button ghost" href="https://github.com/HKUDS/nanobot" data-i18n="hero_cta_github">
+            <a class="button ghost" href="https://github.com/Lichas/maxclaw" data-i18n="hero_cta_github">
               View GitHub
             </a>
           </div>
@@ -75,14 +75,14 @@
             <strong>Gateway + Bridge</strong>
           </div>
           <div class="card-terminal">
-            <code>$ ./nanobot gateway</code>
+            <code>$ ./maxclaw gateway</code>
             <code>✓ Channels enabled: [telegram whatsapp websocket]</code>
           </div>
         </div>
       </section>
 
       <section id="features" class="section">
-        <h2 data-i18n="features_title">Why nanobot</h2>
+        <h2 data-i18n="features_title">Why maxclaw</h2>
         <div class="feature-grid">
           <div class="feature">
             <h3 data-i18n="feature1_title">Tool-native by default</h3>
@@ -112,7 +112,7 @@
         <div>
           <h2 data-i18n="workflow_title">Designed for operators</h2>
           <p data-i18n="workflow_body">
-            nanobot keeps runtime concerns visible: tool execution logs, session
+            maxclaw keeps runtime concerns visible: tool execution logs, session
             history, and workspace boundaries are always explicit.
           </p>
           <ul>
@@ -132,10 +132,10 @@
       <section id="quickstart" class="section quickstart">
         <h2 data-i18n="quickstart_title">Quickstart</h2>
         <div class="code">
-          <code>git clone https://github.com/HKUDS/nanobot.git</code>
-          <code>cd nanobot/nanobot-go</code>
+          <code>git clone https://github.com/Lichas/maxclaw.git</code>
+          <code>cd maxclaw</code>
           <code>make build</code>
-          <code>./build/nanobot-go gateway</code>
+          <code>./build/maxclaw gateway</code>
         </div>
         <div class="note" data-i18n="quickstart_note">
           Want WhatsApp? Run the Bridge (Baileys) and scan the QR code. The
@@ -145,8 +145,8 @@
     </main>
 
     <footer>
-      <p data-i18n="footer_tagline">nanobot — lightweight, extensible, and built for clarity.</p>
-      <a href="https://github.com/HKUDS/nanobot" data-i18n="footer_github">GitHub</a>
+      <p data-i18n="footer_tagline">maxclaw — lightweight, extensible, and built for clarity.</p>
+      <a href="https://github.com/Lichas/maxclaw" data-i18n="footer_github">GitHub</a>
     </footer>
 
     <script>
@@ -160,7 +160,7 @@
           hero_title_line1: 'A tiny AI assistant',
           hero_title_line2: 'that actually ships.',
           hero_lead:
-            'nanobot is a Go-first, tool-augmented agent that stays close to your workspace. Fast loops, clear logs, and channels that fit your flow.',
+            'maxclaw is a Go-first, tool-augmented agent that stays close to your workspace. Fast loops, clear logs, and channels that fit your flow.',
           hero_cta_start: 'Get started',
           hero_cta_github: 'View GitHub',
           hero_meta_channels: 'Channels: Telegram, WhatsApp, Discord, WebSocket',
@@ -169,7 +169,7 @@
           card_workspace: 'Workspace',
           card_model: 'Model',
           card_active: 'Active',
-          features_title: 'Why nanobot',
+          features_title: 'Why maxclaw',
           feature1_title: 'Tool-native by default',
           feature1_body:
             'Shell, file system, and web access are first-class tools. You get real execution rather than hallucinated output.',
@@ -181,7 +181,7 @@
             'Sessions live in JSON on disk. Cron jobs are plain files. Every action is easy to trace and debug.',
           workflow_title: 'Designed for operators',
           workflow_body:
-            'nanobot keeps runtime concerns visible: tool execution logs, session history, and workspace boundaries are always explicit.',
+            'maxclaw keeps runtime concerns visible: tool execution logs, session history, and workspace boundaries are always explicit.',
           workflow_item1: 'Fast CLI loop for local execution',
           workflow_item2: 'Gateway mode for always-on assistants',
           workflow_item3: 'Web UI for status, sessions, and config',
@@ -192,7 +192,7 @@
           quickstart_title: 'Quickstart',
           quickstart_note:
             'Want WhatsApp? Run the Bridge (Baileys) and scan the QR code. The `make bridge` target handles install/build/run in one command.',
-          footer_tagline: 'nanobot — lightweight, extensible, and built for clarity.',
+          footer_tagline: 'maxclaw — lightweight, extensible, and built for clarity.',
           footer_github: 'GitHub',
         },
         zh: {
@@ -204,7 +204,7 @@
           hero_title_line1: '一个小而强的 AI 助手',
           hero_title_line2: '专注把事做成。',
           hero_lead:
-            'nanobot 是 Go 优先的工具增强型智能体，贴近你的工作区。快速循环、清晰日志、顺手的多渠道接入。',
+            'maxclaw 是 Go 优先的工具增强型智能体，贴近你的工作区。快速循环、清晰日志、顺手的多渠道接入。',
           hero_cta_start: '立即开始',
           hero_cta_github: '查看 GitHub',
           hero_meta_channels: '渠道：Telegram、WhatsApp、Discord、WebSocket',
@@ -213,7 +213,7 @@
           card_workspace: '工作区',
           card_model: '模型',
           card_active: '运行中',
-          features_title: '为什么选择 nanobot',
+          features_title: '为什么选择 maxclaw',
           feature1_title: '工具原生',
           feature1_body:
             'Shell、文件系统与 Web 访问是第一优先级工具。真正执行，而不是臆测结果。',
@@ -225,7 +225,7 @@
             '会话以 JSON 落盘，Cron 任务是明文文件，所有动作都易于追踪与排错。',
           workflow_title: '为操作者而生',
           workflow_body:
-            'nanobot 把运行细节保持可见：工具执行日志、会话历史与工作区边界一目了然。',
+            'maxclaw 把运行细节保持可见：工具执行日志、会话历史与工作区边界一目了然。',
           workflow_item1: '本地快速 CLI 循环',
           workflow_item2: 'Gateway 常驻模式',
           workflow_item3: 'Web UI 查看状态、会话与配置',
@@ -236,13 +236,13 @@
           quickstart_title: '快速开始',
           quickstart_note:
             '需要 WhatsApp？启动 Bridge（Baileys）并扫码登录。`make bridge` 一条命令完成安装/构建/运行。',
-          footer_tagline: 'nanobot —— 轻量、可扩展、为清晰而生。',
+          footer_tagline: 'maxclaw —— 轻量、可扩展、为清晰而生。',
           footer_github: 'GitHub',
         },
       };
 
       const toggle = document.getElementById('lang-toggle');
-      const stored = localStorage.getItem('nanobot_lang');
+      const stored = localStorage.getItem('maxclaw_lang');
       const initial =
         stored === 'en' || stored === 'zh'
           ? stored
@@ -262,12 +262,12 @@
         if (toggle) {
           toggle.textContent = lang === 'en' ? '中文' : 'EN';
         }
-        localStorage.setItem('nanobot_lang', lang);
+        localStorage.setItem('maxclaw_lang', lang);
       }
 
       if (toggle) {
         toggle.addEventListener('click', () => {
-          const current = localStorage.getItem('nanobot_lang') || initial;
+          const current = localStorage.getItem('maxclaw_lang') || initial;
           applyLang(current === 'en' ? 'zh' : 'en');
         });
       }

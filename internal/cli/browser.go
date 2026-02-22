@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Lichas/nanobot-go/internal/config"
+	"github.com/Lichas/maxclaw/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -128,14 +128,10 @@ func expandCLIPath(input string) string {
 }
 
 func defaultBrowserLoginUserDataDir(profileName string) string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
 	if strings.TrimSpace(profileName) == "" {
 		profileName = "chrome"
 	}
-	return filepath.Join(home, ".nanobot", "browser", profileName, "user-data")
+	return filepath.Join(config.GetConfigDir(), "browser", profileName, "user-data")
 }
 
 func resolveBrowserLoginScriptPath(configScriptPath string) string {

@@ -1,5 +1,5 @@
-appId: com.nanobot.desktop
-productName: nanobot-go
+appId: com.maxclaw.desktop
+productName: maxclaw
 directories:
   output: release
   buildResources: build
@@ -8,8 +8,8 @@ files:
   - assets/**/*
   - package.json
 extraResources:
-  - from: ../build/nanobot-go${ext}
-    to: bin/nanobot-go${ext}
+  - from: ../build/maxclaw${ext}
+    to: bin/maxclaw${ext}
 mac:
   icon: assets/icon.icns
   category: public.app-category.productivity
@@ -30,4 +30,4 @@ linux:
 publish:
   provider: github
   owner: Lichas
-  repo: nanobot-go
+  repo: maxclaw

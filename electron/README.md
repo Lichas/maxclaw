@@ -1,6 +1,6 @@
-# Nanobot Desktop
+# Maxclaw Desktop
 
-Electron desktop app for nanobot-go.
+Electron desktop app for maxclaw.
 
 ## Development
 
@@ -27,7 +27,7 @@ npm run dist
 
 ## Architecture
 
-The desktop app wraps the nanobot-go Gateway:
+The desktop app wraps the maxclaw Gateway:
 1. Main process starts Gateway as a child process
 2. Renderer communicates with Gateway via HTTP/WebSocket
 3. Main process provides system integrations (tray, notifications, etc.)

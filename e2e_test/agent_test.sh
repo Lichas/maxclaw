@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# nanobot-go Agent 功能 E2E 测试
+# maxclaw Agent 功能 E2E 测试
 # 测试 Agent 的对话、记忆、工具调用等功能
 #
 
@@ -43,13 +43,13 @@ info() {
 }
 
 # 构建项目
-echo "=== Building nanobot ==="
+echo "=== Building maxclaw ==="
 cd "$PROJECT_DIR"
 mkdir -p "$BUILD_DIR"
-go build -o "$BUILD_DIR/nanobot-go" cmd/nanobot/main.go
+go build -o "$BUILD_DIR/maxclaw" cmd/maxclaw/main.go
 pass "Build successful"
 
-NANOBOT="$BUILD_DIR/nanobot-go"
+NANOBOT="$BUILD_DIR/maxclaw"
 
 # 设置测试环境
 export HOME="$TEST_HOME"
@@ -79,11 +79,11 @@ elif [ -n "$OPENROUTER_API_KEY" ]; then
 fi
 
 # 创建测试配置
-cat > "$TEST_HOME/.nanobot/config.json" << EOF
+cat > "$TEST_HOME/.maxclaw/config.json" << EOF
 {
   "agents": {
     "defaults": {
-      "workspace": "$TEST_HOME/.nanobot/workspace",
+      "workspace": "$TEST_HOME/.maxclaw/workspace",
       "model": "$MODEL",
       "maxTokens": 4096,
       "temperature": 0.7,
@@ -117,7 +117,7 @@ echo ""
 # Test 1: 基础对话
 echo "Test 1: Basic greeting"
 RESPONSE=$($NANOBOT agent -m "你好" 2>&1)
-if echo "$RESPONSE" | grep -qi "你好\|nanobot\|助手"; then
+if echo "$RESPONSE" | grep -qi "你好\|maxclaw\|助手"; then
     pass "Agent responds to greeting"
 else
     fail "Agent did not respond properly"
@@ -126,7 +126,7 @@ fi
 # Test 2: 自我介绍
 echo "Test 2: Self introduction"
 RESPONSE=$($NANOBOT agent -m "请介绍一下你自己" 2>&1)
-if echo "$RESPONSE" | grep -qi "nanobot\|助手\|工具"; then
+if echo "$RESPONSE" | grep -qi "maxclaw\|助手\|工具"; then
     pass "Agent can introduce itself"
 else
     fail "Agent self-introduction failed"

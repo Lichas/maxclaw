@@ -26,7 +26,7 @@ var (
 	initErr error
 )
 
-// Init sets up ~/.nanobot/logs files. Safe to call multiple times.
+// Init sets up ~/.maxclaw/logs files. Safe to call multiple times.
 func Init(baseDir string) (*Loggers, error) {
 	once.Do(func() {
 		if baseDir == "" {

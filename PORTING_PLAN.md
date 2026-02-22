@@ -1,6 +1,6 @@
-# nanobot-go Feature Porting Plan
+# maxclaw Feature Porting Plan
 
-This plan tracks parity work against the Python `nanobot` milestones.
+This plan tracks parity work against the Python `maxclaw` milestones.
 
 ## Scope
 

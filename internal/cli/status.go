@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Lichas/nanobot-go/internal/config"
+	"github.com/Lichas/maxclaw/internal/config"
 	"github.com/spf13/cobra"
 )
 
 // statusCmd 状态命令
 var statusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Show nanobot status",
+	Short: "Show maxclaw status",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		configPath := config.GetConfigPath()
 		cfg, err := config.LoadConfig()
@@ -19,7 +19,7 @@ var statusCmd = &cobra.Command{
 			return fmt.Errorf("failed to load config: %w", err)
 		}
 
-		fmt.Printf("%s nanobot Status\n\n", logo)
+		fmt.Printf("%s maxclaw Status\n\n", logo)
 
 		// 配置文件状态
 		if _, err := os.Stat(configPath); err == nil {

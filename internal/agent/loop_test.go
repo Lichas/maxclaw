@@ -8,12 +8,12 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/Lichas/nanobot-go/internal/bus"
-	"github.com/Lichas/nanobot-go/internal/config"
-	"github.com/Lichas/nanobot-go/internal/cron"
-	"github.com/Lichas/nanobot-go/internal/providers"
-	"github.com/Lichas/nanobot-go/internal/session"
-	"github.com/Lichas/nanobot-go/pkg/tools"
+	"github.com/Lichas/maxclaw/internal/bus"
+	"github.com/Lichas/maxclaw/internal/config"
+	"github.com/Lichas/maxclaw/internal/cron"
+	"github.com/Lichas/maxclaw/internal/providers"
+	"github.com/Lichas/maxclaw/internal/session"
+	"github.com/Lichas/maxclaw/pkg/tools"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

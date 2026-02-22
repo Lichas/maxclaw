@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Lichas/nanobot-go/internal/cli"
+	"github.com/Lichas/maxclaw/internal/cli"
 )
 
 func main() {

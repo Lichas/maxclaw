@@ -8,13 +8,38 @@ import (
 	"strings"
 )
 
+const (
+	maxclawConfigDirEnv = "MAXCLAW_HOME"
+	legacyConfigDirEnv  = "NANOBOT_HOME"
+	maxclawConfigDir    = ".maxclaw"
+	legacyConfigDir     = ".nanobot"
+)
+
 // GetConfigDir 返回配置目录
 func GetConfigDir() string {
+	if envDir := strings.TrimSpace(os.Getenv(maxclawConfigDirEnv)); envDir != "" {
+		return expandPath(envDir)
+	}
+	if envDir := strings.TrimSpace(os.Getenv(legacyConfigDirEnv)); envDir != "" {
+		return expandPath(envDir)
+	}
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return ".nanobot"
+		return maxclawConfigDir
 	}
-	return filepath.Join(homeDir, ".nanobot")
+
+	maxclawDirPath := filepath.Join(homeDir, maxclawConfigDir)
+	legacyDirPath := filepath.Join(homeDir, legacyConfigDir)
+
+	if dirExists(maxclawDirPath) {
+		return maxclawDirPath
+	}
+	if dirExists(legacyDirPath) {
+		return legacyDirPath
+	}
+
+	return maxclawDirPath
 }
 
 // GetConfigPath 返回配置文件路径
@@ -100,6 +125,11 @@ func expandPath(path string) string {
 	return path
 }
 
+func dirExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
 // SaveConfig 保存配置到文件
 func SaveConfig(config *Config) error {
 	configDir := GetConfigDir()
@@ -147,7 +177,7 @@ You are a helpful AI assistant. Be concise, accurate, and friendly.
 `,
 		"SOUL.md": `# Soul
 
-I am nanobot, a lightweight AI assistant.
+I am maxclaw, a lightweight AI assistant.
 
 ## Personality
 

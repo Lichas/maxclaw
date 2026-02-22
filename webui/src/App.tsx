@@ -71,7 +71,7 @@ type Lang = 'en' | 'zh';
 
 const translations = {
   en: {
-    heroBadge: 'nanobot control',
+    heroBadge: 'maxclaw control',
     heroTitle: 'Command the swarm.',
     heroSubtitle:
       'Real-time status, sessions, and configuration in one place. Built for operators who want clarity and speed.',
@@ -95,7 +95,7 @@ const translations = {
     telegramQrWaiting: 'QR appears after token is verified',
     sessionLabel: 'Session',
     noMessages: 'No messages yet.',
-    sendPlaceholder: 'Send a message to nanobot...',
+    sendPlaceholder: 'Send a message to maxclaw...',
     send: 'Send',
     noSessions: 'No sessions found.',
     messages: 'messages',
@@ -116,7 +116,7 @@ const translations = {
     telegramPlaceholder: '123456:AAE...',
   },
   zh: {
-    heroBadge: 'nanobot 控制台',
+    heroBadge: 'maxclaw 控制台',
     heroTitle: '指挥你的智能体群。',
     heroSubtitle: '状态、会话与配置一屏掌控。面向效率与清晰度的操作台。',
     refresh: '刷新',
@@ -139,7 +139,7 @@ const translations = {
     telegramQrWaiting: 'Token 验证后显示二维码',
     sessionLabel: '会话',
     noMessages: '暂无消息。',
-    sendPlaceholder: '发送消息给 nanobot...',
+    sendPlaceholder: '发送消息给 maxclaw...',
     send: '发送',
     noSessions: '暂无会话记录。',
     messages: '条消息',

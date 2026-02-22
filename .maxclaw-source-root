@@ -1,0 +1,3 @@
+project: maxclaw
+marker: maxclaw-source-root
+meaning: the directory containing this file is the maxclaw source root

@@ -49,7 +49,7 @@ function resolveUserDataDir(userDataDir, profileName) {
     .replace(/[^a-zA-Z0-9._-]+/g, '-')
     .replace(/^-+|-+$/g, '') || DEFAULT_PROFILE_NAME;
 
-  return path.join(os.homedir(), '.nanobot', 'browser', profile, 'user-data');
+  return path.join(os.homedir(), '.maxclaw', 'browser', profile, 'user-data');
 }
 
 function parseArgs(argv) {
@@ -110,7 +110,7 @@ function waitForDone(timeoutSec) {
       timer = setTimeout(() => finish('timeout'), timeoutSec * 1000);
     }
 
-    rl.question('[nanobot] Login complete? Press Enter to close this browser session...\n', () => {
+    rl.question('[maxclaw] Login complete? Press Enter to close this browser session...\n', () => {
       if (timer) {
         clearTimeout(timer);
       }
@@ -138,9 +138,9 @@ async function main() {
     }
     await page.goto(opts.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-    process.stdout.write(`[nanobot] Opened ${opts.url}\n`);
-    process.stdout.write(`[nanobot] Managed profile directory: ${userDataDir}\n`);
-    process.stdout.write('[nanobot] Please log in manually in this browser window.\n');
+    process.stdout.write(`[maxclaw] Opened ${opts.url}\n`);
+    process.stdout.write(`[maxclaw] Managed profile directory: ${userDataDir}\n`);
+    process.stdout.write('[maxclaw] Please log in manually in this browser window.\n');
 
     await waitForDone(opts.timeoutSec);
   } finally {
@@ -150,6 +150,6 @@ async function main() {
 
 main().catch((err) => {
   const message = err && typeof err.message === 'string' ? err.message : String(err);
-  process.stderr.write(`[nanobot] browser login failed: ${message}\n`);
+  process.stderr.write(`[maxclaw] browser login failed: ${message}\n`);
   process.exitCode = 1;
 });

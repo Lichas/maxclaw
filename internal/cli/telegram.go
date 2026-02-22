@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Lichas/nanobot-go/internal/config"
+	"github.com/Lichas/maxclaw/internal/config"
 	"github.com/mdp/qrterminal/v3"
 	"github.com/spf13/cobra"
 )

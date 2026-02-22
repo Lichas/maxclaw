@@ -90,7 +90,7 @@ function resolveChromeUserDataDir(userDataDir, profileName) {
   if (expanded) {
     return path.resolve(expanded);
   }
-  return path.join(os.homedir(), '.nanobot', 'browser', profileName, 'user-data');
+  return path.join(os.homedir(), '.maxclaw', 'browser', profileName, 'user-data');
 }
 
 function resolveHostChromeUserDataDir(userDataDir, channel) {
@@ -455,7 +455,7 @@ async function fetchWithChromeMode(req) {
   }
 
   if (chrome.takeoverExisting) {
-    warnings.push('takeoverExisting is deprecated; use managed profile login (`nanobot browser login`) instead');
+    warnings.push('takeoverExisting is deprecated; use managed profile login (`maxclaw browser login`) instead');
   }
 
   if (chrome.cdpEndpoint && chrome.autoStartCDP) {

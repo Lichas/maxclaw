@@ -1,7 +1,6 @@
 # Build artifacts
 /build/
-/nanobot
-/nanobot-go
+/maxclaw
 *.exe
 *.out
 

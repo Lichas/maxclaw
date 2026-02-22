@@ -1,8 +1,8 @@
-# nanobot-go 架构概览
+# maxclaw 架构概览
 
 ## 组件分层
 
-- **CLI (`cmd/nanobot`)**：统一命令行入口（agent / gateway / cron / bind 等）。
+- **CLI (`cmd/maxclaw`)**：统一命令行入口（agent / gateway / cron / bind 等）。
 - **Gateway (`internal/cli/gateway`)**：
   - 加载配置、创建 Provider、初始化 Agent Loop
   - 初始化 Message Bus / Channel Registry
@@ -50,7 +50,7 @@
 
 ### 配置入口
 
-`~/.nanobot/config.json`：
+`~/.maxclaw/config.json`：
 
 ```json
 {
@@ -58,7 +58,7 @@
     "web": {
       "fetch": {
         "mode": "browser",
-        "scriptPath": "/absolute/path/to/nanobot-go/webfetcher/fetch.mjs",
+        "scriptPath": "/absolute/path/to/maxclaw/webfetcher/fetch.mjs",
         "nodePath": "node",
         "timeout": 30,
         "userAgent": "Mozilla/5.0 ...",
@@ -80,14 +80,14 @@
   - `@skill:all` / `$all`：加载全部
   - `@skill:none` / `$none`：本轮不加载
 - **管理命令**：
-  - `nanobot skills list`
-  - `nanobot skills show <name>`
-  - `nanobot skills validate`
+  - `maxclaw skills list`
+  - `maxclaw skills show <name>`
+  - `maxclaw skills validate`
 
 ## WhatsApp / Telegram 绑定
 
 - **WhatsApp**：由 `bridge/` (Baileys) 维护登录态，Gateway 通过 WebSocket 接入。
-  - CLI：`nanobot whatsapp bind --bridge ws://localhost:3001`
+  - CLI：`maxclaw whatsapp bind --bridge ws://localhost:3001`
   - Web UI：状态页显示二维码
 - **Telegram**：使用 Bot Token，Web UI 显示 Bot 链接二维码用于快速打开聊天。
 

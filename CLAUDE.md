@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**nanobot-go** is an ultra-lightweight personal AI assistant framework written in Go (~3,500 lines of core code). It provides core agent functionality including tool use, multi-channel chat integrations, and scheduled tasks.
+**maxclaw** is an ultra-lightweight personal AI assistant framework written in Go (~3,500 lines of core code). It provides core agent functionality including tool use, multi-channel chat integrations, and scheduled tasks.
 
 - **Language**: Go 1.21+
-- **Module**: `github.com/Lichas/nanobot-go`
-- **Entry point**: `cmd/nanobot/main.go`
-- **Binary name**: `nanobot-go`
+- **Module**: `github.com/Lichas/maxclaw`
+- **Entry point**: `cmd/maxclaw/main.go`
+- **Binary name**: `maxclaw`
 
 ## Operating Rules (Must Follow)
 
@@ -26,7 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Build & Run
 ```bash
-make build          # Build to build/nanobot-go
+make build          # Build to build/maxclaw
 make install        # Install to GOPATH/bin
 make run            # Build and run
 make dev            # Hot reload (requires air)
@@ -85,7 +85,7 @@ cd e2e_test
 
 **Configuration** (`internal/config/`)
 - Schema: `schema.go` - structs with mapstructure tags
-- Loader: `loader.go` - JSON config at `~/.nanobot/config.json`
+- Loader: `loader.go` - JSON config at `~/.maxclaw/config.json`
 - Key config sections: `providers`, `agents`, `channels`, `tools`, `gateway`
 
 **LLM Provider** (`internal/providers/openai.go`)
@@ -94,7 +94,7 @@ cd e2e_test
 
 **Cron Service** (`internal/cron/`)
 - Three schedule types: Every (ms), Cron (expression), Once (datetime)
-- Persistent JSON storage at `~/.nanobot/workspace/.cron/jobs.json`
+- Persistent JSON storage at `~/.maxclaw/workspace/.cron/jobs.json`
 - Thread-safe job management
 
 **Channel System** (`internal/channels/`)
@@ -113,7 +113,7 @@ cd e2e_test
 
 ## Configuration File
 
-Location: `~/.nanobot/config.json`
+Location: `~/.maxclaw/config.json`
 
 Key structure:
 ```json
@@ -125,7 +125,7 @@ Key structure:
   "agents": {
     "defaults": {
       "model": "anthropic/claude-opus-4-5",
-      "workspace": "~/.nanobot/workspace",
+      "workspace": "~/.maxclaw/workspace",
       "maxToolIterations": 20
     }
   },
@@ -148,12 +148,12 @@ Key structure:
 ## CLI Commands
 
 ```bash
-nanobot-go onboard                    # Initialize config and workspace
-nanobot-go agent [-m "message"]       # Run agent (interactive or single message)
-nanobot-go gateway                    # Start gateway server
-nanobot-go status                     # Show configuration status
-nanobot-go cron add [flags]           # Add scheduled job
-nanobot-go cron list                  # List all jobs
-nanobot-go cron remove <job-id>       # Remove job
-nanobot-go cron run                   # Start cron scheduler daemon
+maxclaw onboard                    # Initialize config and workspace
+maxclaw agent [-m "message"]       # Run agent (interactive or single message)
+maxclaw gateway                    # Start gateway server
+maxclaw status                     # Show configuration status
+maxclaw cron add [flags]           # Add scheduled job
+maxclaw cron list                  # List all jobs
+maxclaw cron remove <job-id>       # Remove job
+maxclaw cron run                   # Start cron scheduler daemon
 ```
