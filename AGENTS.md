@@ -23,7 +23,7 @@ This file provides guidance to coding agents (Codex, Claude, and similar) when w
   - `git fetch origin`
   - `git switch main`
   - `git pull --ff-only`
-  - `git worktree add ../nanobot-go-wt-<task> -b codex/<task> main`
+  - `git worktree add ../maxclaw-wt-<task> -b codex/<task> main`
 - Do all edits, validation, and commit in that task worktree.
 - Merge back to `main` only after verification passes (relevant tests + `make build`).
 - After merge, clean up the worktree and merged task branch.
