@@ -139,6 +139,11 @@ func TestReadFileTool(t *testing.T) {
 	// 创建临时目录
 	tmpDir := t.TempDir()
 	SetAllowedDir(tmpDir)
+	SetWorkspaceDir(tmpDir)
+	t.Cleanup(func() {
+		SetAllowedDir("")
+		SetWorkspaceDir("")
+	})
 
 	// 创建测试文件
 	testFile := filepath.Join(tmpDir, "test.txt")
@@ -188,11 +193,29 @@ func TestReadFileTool(t *testing.T) {
 		})
 		assert.Error(t, err)
 	})
+
+	t.Run("read relative path from session directory", func(t *testing.T) {
+		sessionCtx := WithRuntimeContextWithSession(ctx, "desktop", "ignored-chat", "desktop:task-42")
+		sessionDir := filepath.Join(tmpDir, ".sessions", "desktop_task-42")
+		require.NoError(t, os.MkdirAll(sessionDir, 0755))
+		require.NoError(t, os.WriteFile(filepath.Join(sessionDir, "notes.md"), []byte("session scoped"), 0644))
+
+		result, err := tool.Execute(sessionCtx, map[string]interface{}{
+			"path": "notes.md",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "session scoped", result)
+	})
 }
 
 func TestWriteFileTool(t *testing.T) {
 	tmpDir := t.TempDir()
 	SetAllowedDir(tmpDir)
+	SetWorkspaceDir(tmpDir)
+	t.Cleanup(func() {
+		SetAllowedDir("")
+		SetWorkspaceDir("")
+	})
 
 	tool := NewWriteFileTool()
 	ctx := context.Background()
@@ -222,6 +245,30 @@ func TestWriteFileTool(t *testing.T) {
 		content, err := os.ReadFile(testFile)
 		require.NoError(t, err)
 		assert.Equal(t, "nested content", string(content))
+	})
+
+	t.Run("write relative path into current session directory", func(t *testing.T) {
+		sessionCtx := WithRuntimeContextWithSession(ctx, "desktop", "ignored-chat", "desktop:1771671668841")
+		_, err := tool.Execute(sessionCtx, map[string]interface{}{
+			"path":    "draft/report.md",
+			"content": "# report",
+		})
+		require.NoError(t, err)
+
+		expectedPath := filepath.Join(tmpDir, ".sessions", "desktop_1771671668841", "draft", "report.md")
+		body, err := os.ReadFile(expectedPath)
+		require.NoError(t, err)
+		assert.Equal(t, "# report", string(body))
+	})
+
+	t.Run("block parent escape for session-relative path", func(t *testing.T) {
+		sessionCtx := WithRuntimeContextWithSession(ctx, "desktop", "ignored-chat", "desktop:1771671668841")
+		_, err := tool.Execute(sessionCtx, map[string]interface{}{
+			"path":    "../escape.md",
+			"content": "nope",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "escapes current session directory")
 	})
 }
 

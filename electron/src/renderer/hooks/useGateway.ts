@@ -56,6 +56,7 @@ interface GatewayConfigResponse {
   agents?: {
     defaults?: {
       model?: string;
+      workspace?: string;
     };
   };
   providers?: Record<

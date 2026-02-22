@@ -85,6 +85,7 @@ func NewAgentLoop(
 	if restrictToWorkspace {
 		tools.SetAllowedDir(workspace)
 	}
+	tools.SetWorkspaceDir(workspace)
 
 	loop := &AgentLoop{
 		Bus:                 bus,
@@ -389,7 +390,7 @@ func (a *AgentLoop) processMessageWithCallbacks(
 					args = map[string]interface{}{}
 				}
 
-				toolCtx := tools.WithRuntimeContext(ctx, msg.Channel, msg.ChatID)
+				toolCtx := tools.WithRuntimeContextWithSession(ctx, msg.Channel, msg.ChatID, msg.SessionKey)
 				result, execErr := a.tools.Execute(toolCtx, tc.Function.Name, args)
 				if execErr != nil {
 					result = fmt.Sprintf("Error: %v", execErr)

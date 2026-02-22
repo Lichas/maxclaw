@@ -10,9 +10,20 @@ import { MermaidRenderer } from './MermaidRenderer';
 interface MarkdownRendererProps {
   content: string;
   className?: string;
+  onFileLinkClick?: (href: string) => boolean;
 }
 
-export function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
+function isPreviewableLocalLink(href: string): boolean {
+  if (!href) {
+    return false;
+  }
+  if (/^https?:\/\//i.test(href) || /^mailto:/i.test(href)) {
+    return false;
+  }
+  return true;
+}
+
+export function MarkdownRenderer({ content, className = '', onFileLinkClick }: MarkdownRendererProps) {
   const { theme } = useSelector((state: RootState) => state.ui);
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
@@ -125,12 +136,22 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
             );
           },
           a({ href, children }: { href?: string; children?: React.ReactNode }) {
+            const isLocal = Boolean(href && isPreviewableLocalLink(href));
             return (
               <a
                 href={href}
-                target="_blank"
-                rel="noopener noreferrer"
+                target={isLocal ? undefined : '_blank'}
+                rel={isLocal ? undefined : 'noopener noreferrer'}
                 className="text-primary hover:underline"
+                onClick={(event) => {
+                  if (!href || !isLocal || !onFileLinkClick) {
+                    return;
+                  }
+                  const handled = onFileLinkClick(href);
+                  if (handled) {
+                    event.preventDefault();
+                  }
+                }}
               >
                 {children}
               </a>

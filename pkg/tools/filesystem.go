@@ -10,10 +10,16 @@ import (
 
 // allowedDir 全局允许的目录（用于沙箱）
 var allowedDir string
+var workspaceDir string
 
 // SetAllowedDir 设置允许访问的目录
 func SetAllowedDir(dir string) {
 	allowedDir = dir
+}
+
+// SetWorkspaceDir 设置工作区目录（用于会话文件默认路径）
+func SetWorkspaceDir(dir string) {
+	workspaceDir = strings.TrimSpace(dir)
 }
 
 // isPathAllowed 检查路径是否允许访问
@@ -43,7 +49,12 @@ func isPathAllowed(path string) error {
 }
 
 // resolvePath 解析并验证路径
-func resolvePath(path string) (string, error) {
+func resolvePath(ctx context.Context, path string) (string, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return "", fmt.Errorf("path is required")
+	}
+
 	// 展开 ~
 	if strings.HasPrefix(path, "~/") {
 		homeDir, err := os.UserHomeDir()
@@ -51,6 +62,33 @@ func resolvePath(path string) (string, error) {
 			return "", err
 		}
 		path = filepath.Join(homeDir, path[2:])
+	}
+
+	if !filepath.IsAbs(path) {
+		if sessionBase, ok := sessionBaseDirFromContext(ctx); ok {
+			absBase, err := filepath.Abs(sessionBase)
+			if err != nil {
+				return "", fmt.Errorf("invalid session base path: %w", err)
+			}
+
+			absPath, err := filepath.Abs(filepath.Join(absBase, path))
+			if err != nil {
+				return "", err
+			}
+
+			rel, err := filepath.Rel(absBase, absPath)
+			if err != nil {
+				return "", fmt.Errorf("failed to resolve path: %w", err)
+			}
+			if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+				return "", fmt.Errorf("path %q escapes current session directory", path)
+			}
+
+			if err := isPathAllowed(absPath); err != nil {
+				return "", err
+			}
+			return absPath, nil
+		}
 	}
 
 	absPath, err := filepath.Abs(path)
@@ -63,6 +101,53 @@ func resolvePath(path string) (string, error) {
 	}
 
 	return absPath, nil
+}
+
+func sessionBaseDirFromContext(ctx context.Context) (string, bool) {
+	root := strings.TrimSpace(workspaceDir)
+	if root == "" {
+		return "", false
+	}
+
+	sessionKey := strings.TrimSpace(RuntimeSessionKeyFrom(ctx))
+	if sessionKey == "" {
+		channel, chatID := RuntimeContextFrom(ctx)
+		chatID = strings.TrimSpace(chatID)
+		if chatID == "" {
+			return "", false
+		}
+		channel = strings.TrimSpace(channel)
+		if channel == "" {
+			sessionKey = chatID
+		} else {
+			sessionKey = channel + ":" + chatID
+		}
+	}
+
+	return filepath.Join(root, ".sessions", sanitizePathSegment(sessionKey)), true
+}
+
+func sanitizePathSegment(input string) string {
+	if input == "" {
+		return "default"
+	}
+
+	var b strings.Builder
+	b.Grow(len(input))
+	for _, c := range input {
+		if (c >= 'a' && c <= 'z') ||
+			(c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') ||
+			c == '-' || c == '_' {
+			b.WriteRune(c)
+		} else {
+			b.WriteByte('_')
+		}
+	}
+	if b.Len() == 0 {
+		return "default"
+	}
+	return b.String()
 }
 
 // ReadFileTool 读取文件工具
@@ -108,7 +193,7 @@ func (t *ReadFileTool) Execute(ctx context.Context, params map[string]interface{
 		return "", fmt.Errorf("path is required")
 	}
 
-	resolvedPath, err := resolvePath(path)
+	resolvedPath, err := resolvePath(ctx, path)
 	if err != nil {
 		return "", err
 	}
@@ -189,7 +274,7 @@ func (t *WriteFileTool) Execute(ctx context.Context, params map[string]interface
 		return "", fmt.Errorf("path is required")
 	}
 
-	resolvedPath, err := resolvePath(path)
+	resolvedPath, err := resolvePath(ctx, path)
 	if err != nil {
 		return "", err
 	}
@@ -250,7 +335,7 @@ func (t *EditFileTool) Execute(ctx context.Context, params map[string]interface{
 		return "", fmt.Errorf("path is required")
 	}
 
-	resolvedPath, err := resolvePath(path)
+	resolvedPath, err := resolvePath(ctx, path)
 	if err != nil {
 		return "", err
 	}
@@ -309,7 +394,7 @@ func (t *ListDirTool) Execute(ctx context.Context, params map[string]interface{}
 		path = "."
 	}
 
-	resolvedPath, err := resolvePath(path)
+	resolvedPath, err := resolvePath(ctx, path)
 	if err != nil {
 		return "", err
 	}

@@ -5,6 +5,8 @@ import { GatewayStreamEvent, SkillSummary, useGateway } from '../hooks/useGatewa
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import { FileAttachment, UploadedFile } from '../components/FileAttachment';
 import { CustomSelect } from '../components/CustomSelect';
+import { FilePreviewSidebar } from '../components/FilePreviewSidebar';
+import { extractFileReferences, FileReference } from '../utils/fileReferences';
 
 interface Message {
   id: string;
@@ -13,6 +15,16 @@ interface Message {
   timestamp: Date;
   timeline?: TimelineEntry[];
   attachments?: UploadedFile[];
+}
+
+interface PreviewPayload {
+  success: boolean;
+  resolvedPath?: string;
+  kind?: 'markdown' | 'text' | 'image' | 'pdf' | 'audio' | 'video' | 'office' | 'binary';
+  extension?: string;
+  fileUrl?: string;
+  content?: string;
+  error?: string;
 }
 
 interface StreamActivity {
@@ -114,7 +126,7 @@ export function ChatView() {
   const dispatch = useDispatch();
   const { currentSessionKey, sidebarCollapsed, terminalVisible } = useSelector((state: RootState) => state.ui);
   const isMac = window.electronAPI.platform.isMac;
-  const { sendMessage, getSession, getSessions, getSkills, getModels, updateConfig, isLoading } = useGateway();
+  const { sendMessage, getSession, getSessions, getSkills, getModels, getConfig, updateConfig, isLoading } = useGateway();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionTitle, setSessionTitle] = useState('New thread');
@@ -128,6 +140,11 @@ export function ChatView() {
   const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string; provider: string }>>([]);
   const [currentModel, setCurrentModel] = useState<string>('');
   const [modelsLoading, setModelsLoading] = useState(false);
+  const [workspacePath, setWorkspacePath] = useState('');
+  const [previewSidebarCollapsed, setPreviewSidebarCollapsed] = useState(false);
+  const [selectedFileRef, setSelectedFileRef] = useState<FileReference | null>(null);
+  const [previewData, setPreviewData] = useState<PreviewPayload | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // File attachments state
   const [attachedFiles, setAttachedFiles] = useState<UploadedFile[]>([]);
@@ -222,6 +239,7 @@ export function ChatView() {
   const typingTimerRef = useRef<number | null>(null);
   const entrySeqRef = useRef(0);
   const streamingTimelineRef = useRef<TimelineEntry[]>([]);
+  const previewRequestRef = useRef(0);
 
   const isStarterMode = messages.length === 0 && streamingTimeline.length === 0;
 
@@ -292,6 +310,29 @@ export function ChatView() {
       cancelled = true;
     };
   }, [getModels]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadWorkspace = async () => {
+      try {
+        const config = await getConfig() as { agents?: { defaults?: { workspace?: string } } };
+        if (cancelled) {
+          return;
+        }
+        setWorkspacePath(config.agents?.defaults?.workspace || '');
+      } catch {
+        if (!cancelled) {
+          setWorkspacePath('');
+        }
+      }
+    };
+
+    void loadWorkspace();
+    return () => {
+      cancelled = true;
+    };
+  }, [getConfig]);
 
   useEffect(() => {
     if (!skillsPickerOpen) {
@@ -686,6 +727,9 @@ export function ChatView() {
 
   useEffect(() => {
     let cancelled = false;
+    setSelectedFileRef(null);
+    setPreviewData(null);
+    setPreviewLoading(false);
 
     const loadSession = async () => {
       try {
@@ -884,7 +928,7 @@ export function ChatView() {
 
           {textItems.map((entry) => (
             <div key={entry.id} className="text-foreground">
-              <MarkdownRenderer content={entry.text} />
+              {renderMarkdownWithActions(entry.text, entry.id)}
             </div>
           ))}
         </div>
@@ -897,7 +941,7 @@ export function ChatView() {
           {items.map((entry, index) =>
             entry.kind === 'activity' ? renderActivityItem(entry, index === openIndex) : (
               <div key={entry.id} className="text-foreground">
-                <MarkdownRenderer content={entry.text} />
+                {renderMarkdownWithActions(entry.text, entry.id)}
               </div>
             )
           )}
@@ -920,6 +964,141 @@ export function ChatView() {
       console.error('Failed to switch model:', err);
     }
   };
+
+  const fallbackReferenceFromPath = (pathHint: string): FileReference | null => {
+    const trimmed = pathHint.trim();
+    if (!trimmed || /^https?:\/\//i.test(trimmed) || /^mailto:/i.test(trimmed)) {
+      return null;
+    }
+    const cleaned = trimmed.replace(/^file:\/\//i, '');
+    const normalized = cleaned.split('?')[0].split('#')[0];
+    const slashIndex = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));
+    const filename = slashIndex >= 0 ? normalized.slice(slashIndex + 1) : normalized;
+    const dotIndex = filename.lastIndexOf('.');
+    if (dotIndex <= 0) {
+      return null;
+    }
+
+    return {
+      id: cleaned.toLowerCase(),
+      pathHint: cleaned,
+      displayName: filename,
+      extension: filename.slice(dotIndex).toLowerCase(),
+      kind: 'binary'
+    };
+  };
+
+  const referenceFromHref = (href: string): FileReference | null => {
+    const parsed = extractFileReferences(`[preview](${href})`);
+    if (parsed.length > 0) {
+      return parsed[0];
+    }
+    return fallbackReferenceFromPath(href);
+  };
+
+  const previewReference = async (reference: FileReference) => {
+    setPreviewSidebarCollapsed(false);
+    setSelectedFileRef(reference);
+    setPreviewLoading(true);
+    setPreviewData(null);
+
+    previewRequestRef.current += 1;
+    const requestID = previewRequestRef.current;
+    try {
+      const result = await window.electronAPI.system.previewFile(reference.pathHint, {
+        workspace: workspacePath,
+        sessionKey: currentSessionKey
+      });
+      if (requestID !== previewRequestRef.current) {
+        return;
+      }
+      setPreviewData(result as PreviewPayload);
+    } catch (error) {
+      if (requestID !== previewRequestRef.current) {
+        return;
+      }
+      setPreviewData({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    } finally {
+      if (requestID === previewRequestRef.current) {
+        setPreviewLoading(false);
+      }
+    }
+  };
+
+  const handleFileLinkPreview = (href: string): boolean => {
+    const reference = referenceFromHref(href);
+    if (!reference) {
+      return false;
+    }
+    void previewReference(reference);
+    return true;
+  };
+
+  const handleOpenSelectedFile = async () => {
+    if (!selectedFileRef) {
+      return;
+    }
+    const result = await window.electronAPI.system.openPath(selectedFileRef.pathHint, {
+      workspace: workspacePath,
+      sessionKey: currentSessionKey
+    });
+    if (!result.success) {
+      setPreviewData({
+        success: false,
+        error: result.error || '打开文件失败'
+      });
+    }
+  };
+
+  const renderFileActions = (content: string, keyPrefix: string) => {
+    const references = extractFileReferences(content);
+    if (references.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="mt-2 flex flex-wrap gap-2">
+        {references.map((reference, index) => (
+          <div
+            key={`${keyPrefix}-${reference.id}-${index}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-secondary/50 px-2 py-1 text-xs text-foreground/80"
+          >
+            <DocumentIcon className="h-3.5 w-3.5 text-foreground/60" />
+            <span className="max-w-[190px] truncate">{reference.displayName}</span>
+            <button
+              type="button"
+              onClick={() => void previewReference(reference)}
+              className="rounded border border-border/80 bg-background px-1.5 py-0.5 text-[11px] text-foreground/75 transition-colors hover:bg-secondary"
+            >
+              渲染
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                void window.electronAPI.system.openPath(reference.pathHint, {
+                  workspace: workspacePath,
+                  sessionKey: currentSessionKey
+                })
+              }
+              className="rounded border border-border/80 bg-background px-1.5 py-0.5 text-[11px] text-foreground/65 transition-colors hover:bg-secondary"
+            >
+              打开
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderMarkdownWithActions = (content: string, keyPrefix: string) => (
+    <div className="space-y-1.5">
+      <MarkdownRenderer content={content} onFileLinkClick={handleFileLinkPreview} />
+      {renderFileActions(content, keyPrefix)}
+    </div>
+  );
 
   const renderComposer = (landing: boolean) => (
     <form
@@ -1165,68 +1344,83 @@ export function ChatView() {
   return (
     <div className="h-full flex flex-col bg-card">
       {renderThreadHeader()}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            {message.role === 'user' ? (
-              <div className="max-w-3xl space-y-2">
-                {message.attachments && message.attachments.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {message.attachments.map((file) => (
-                      <div
-                        key={file.id}
-                        className="flex items-center gap-1.5 rounded-lg bg-secondary px-2.5 py-1.5 text-xs text-foreground"
-                      >
-                        <DocumentIcon className="h-3.5 w-3.5 text-foreground/60" />
-                        <span className="max-w-[150px] truncate">{file.filename}</span>
+      <div className="min-h-0 flex flex-1">
+        <div className="min-w-0 flex flex-1 flex-col">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                {message.role === 'user' ? (
+                  <div className="max-w-3xl space-y-2">
+                    {message.attachments && message.attachments.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {message.attachments.map((file) => (
+                          <div
+                            key={file.id}
+                            className="flex items-center gap-1.5 rounded-lg bg-secondary px-2.5 py-1.5 text-xs text-foreground"
+                          >
+                            <DocumentIcon className="h-3.5 w-3.5 text-foreground/60" />
+                            <span className="max-w-[150px] truncate">{file.filename}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+                    <div className="rounded-2xl bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground">
+                      <pre className="whitespace-pre-wrap break-all font-sans">{message.content}</pre>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full px-1 py-1 text-foreground">
+                    {message.timeline && message.timeline.length > 0 ? (
+                      renderTimeline(message.timeline, false)
+                    ) : (
+                      renderMarkdownWithActions(message.content, message.id)
+                    )}
                   </div>
                 )}
-                <div className="rounded-2xl bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground">
-                  <pre className="whitespace-pre-wrap break-all font-sans">{message.content}</pre>
+              </div>
+            ))}
+
+            {streamingTimeline.length > 0 && (
+              <div className="flex justify-start">
+                <div className="w-full px-1 py-1 text-sm leading-7 text-foreground">
+                  {renderTimeline(streamingTimeline, true)}
+                  <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-primary" />
                 </div>
               </div>
-            ) : (
-              <div className="w-full px-1 py-1 text-foreground">
-                {message.timeline && message.timeline.length > 0 ? (
-                  renderTimeline(message.timeline, false)
-                ) : (
-                  <MarkdownRenderer content={message.content} />
-                )}
-              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          <div className="bg-card p-4 pt-3">
+            {renderComposer(false)}
+            {terminalVisible && (
+              <Suspense
+                fallback={
+                  <div className="mt-3 rounded-xl border border-border/70 bg-background/70 px-3 py-4 text-xs text-foreground/55">
+                    Loading terminal...
+                  </div>
+                }
+              >
+                <LazyTerminalPanel key={currentSessionKey} sessionKey={currentSessionKey} />
+              </Suspense>
             )}
           </div>
-        ))}
+        </div>
 
-        {streamingTimeline.length > 0 && (
-          <div className="flex justify-start">
-            <div className="w-full px-1 py-1 text-sm leading-7 text-foreground">
-              {renderTimeline(streamingTimeline, true)}
-              <span className="ml-1 inline-block h-4 w-2 animate-pulse bg-primary" />
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      <div className="bg-card p-4 pt-3">
-        {renderComposer(false)}
-        {terminalVisible && (
-          <Suspense
-            fallback={
-              <div className="mt-3 rounded-xl border border-border/70 bg-background/70 px-3 py-4 text-xs text-foreground/55">
-                Loading terminal...
-              </div>
-            }
-          >
-            <LazyTerminalPanel key={currentSessionKey} sessionKey={currentSessionKey} />
-          </Suspense>
-        )}
+        <FilePreviewSidebar
+          collapsed={previewSidebarCollapsed}
+          selected={selectedFileRef}
+          preview={previewData}
+          loading={previewLoading}
+          onToggle={() => setPreviewSidebarCollapsed((prev) => !prev)}
+          onOpenFile={() => {
+            void handleOpenSelectedFile();
+          }}
+        />
       </div>
     </div>
   );

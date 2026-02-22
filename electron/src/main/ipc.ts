@@ -1,8 +1,11 @@
 import { ipcMain, BrowserWindow, dialog, shell, app } from 'electron';
 import { spawn as spawnPty, type IPty } from 'node-pty';
+import { execFile } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { promisify } from 'node:util';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import Store from 'electron-store';
 import AutoLaunch from 'auto-launch';
 import log from 'electron-log';
@@ -36,11 +39,74 @@ const autoLauncher = new AutoLaunch({
   path: app.getPath('exe')
 });
 const nodeRequire = createRequire(import.meta.url);
+const execFileAsync = promisify(execFile);
 
 let handlersRegistered = false;
 let currentMainWindow: BrowserWindow | null = null;
 let gatewayStatusTimer: NodeJS.Timeout | null = null;
 const terminalProcesses = new Map<string, IPty>();
+
+const MAX_TEXT_PREVIEW_BYTES = 1024 * 1024;
+
+const markdownExtensions = new Set(['.md', '.markdown', '.mdown']);
+const textExtensions = new Set([
+  '.txt',
+  '.log',
+  '.csv',
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+  '.json',
+  '.jsonl',
+  '.yaml',
+  '.yml',
+  '.toml',
+  '.xml',
+  '.html',
+  '.css',
+  '.scss',
+  '.go',
+  '.py',
+  '.java',
+  '.rb',
+  '.rs',
+  '.c',
+  '.cc',
+  '.cpp',
+  '.h',
+  '.hpp',
+  '.sh',
+  '.zsh',
+  '.bash',
+  '.sql'
+]);
+const imageExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg']);
+const videoExtensions = new Set(['.mp4', '.webm', '.mov', '.m4v']);
+const audioExtensions = new Set(['.mp3', '.wav', '.m4a', '.ogg', '.flac']);
+const officeExtensions = new Set(['.docx', '.pptx', '.xlsx']);
+
+type PreviewKind = 'markdown' | 'text' | 'image' | 'pdf' | 'audio' | 'video' | 'office' | 'binary';
+
+interface FileResolveOptions {
+  workspace?: string;
+  sessionKey?: string;
+}
+
+interface FilePreviewResult {
+  success: boolean;
+  inputPath: string;
+  resolvedPath?: string;
+  kind?: PreviewKind;
+  extension?: string;
+  fileUrl?: string;
+  content?: string;
+  truncated?: boolean;
+  size?: number;
+  error?: string;
+}
 
 function sendTerminalData(sessionKey: string, chunk: string): void {
   if (currentMainWindow && !currentMainWindow.isDestroyed()) {
@@ -179,6 +245,264 @@ function normalizeSessionKey(value: unknown): string {
   return normalized === '' ? 'default' : normalized;
 }
 
+function sanitizeSessionKey(input: string): string {
+  if (!input) {
+    return 'default';
+  }
+
+  let out = '';
+  for (const char of input) {
+    if (
+      (char >= 'a' && char <= 'z') ||
+      (char >= 'A' && char <= 'Z') ||
+      (char >= '0' && char <= '9') ||
+      char === '-' ||
+      char === '_'
+    ) {
+      out += char;
+    } else {
+      out += '_';
+    }
+  }
+
+  return out || 'default';
+}
+
+function trimPathToken(raw: string): string {
+  let value = (raw || '').trim();
+  value = value.replace(/^`+|`+$/g, '');
+  value = value.replace(/^['"]+|['"]+$/g, '');
+  value = value.replace(/[),.;]+$/g, '');
+  return value.trim();
+}
+
+function resolveSessionOutputDir(workspace: string | undefined, sessionKey: string | undefined): string | undefined {
+  const root = (workspace || '').trim();
+  if (!root) {
+    return undefined;
+  }
+  const normalizedSession = sanitizeSessionKey((sessionKey || '').trim());
+  return path.join(root, '.sessions', normalizedSession);
+}
+
+function resolveLocalFilePath(inputPath: string, options?: FileResolveOptions): string {
+  const raw = trimPathToken(inputPath);
+  if (!raw) {
+    throw new Error('empty path');
+  }
+
+  let candidate = raw;
+  if (candidate.startsWith('file://')) {
+    candidate = fileURLToPath(candidate);
+  } else if (candidate.startsWith('~/')) {
+    candidate = path.join(app.getPath('home'), candidate.slice(2));
+  }
+
+  if (path.isAbsolute(candidate)) {
+    return path.normalize(candidate);
+  }
+
+  const workspace = (options?.workspace || '').trim();
+  const baseDir = resolveSessionOutputDir(workspace, options?.sessionKey) || workspace || process.cwd();
+  return path.resolve(baseDir, candidate);
+}
+
+function detectPreviewKind(ext: string): PreviewKind {
+  if (markdownExtensions.has(ext)) {
+    return 'markdown';
+  }
+  if (textExtensions.has(ext)) {
+    return 'text';
+  }
+  if (imageExtensions.has(ext)) {
+    return 'image';
+  }
+  if (videoExtensions.has(ext)) {
+    return 'video';
+  }
+  if (audioExtensions.has(ext)) {
+    return 'audio';
+  }
+  if (ext === '.pdf') {
+    return 'pdf';
+  }
+  if (officeExtensions.has(ext)) {
+    return 'office';
+  }
+  return 'binary';
+}
+
+function decodeXmlEntities(input: string): string {
+  return input
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function stripOfficeXML(xml: string): string {
+  const withBreaks = xml
+    .replace(/<\/w:p>/gi, '\n')
+    .replace(/<\/a:p>/gi, '\n')
+    .replace(/<w:tab\/>/gi, '\t')
+    .replace(/<br\s*\/?>/gi, '\n');
+
+  const withoutTags = withBreaks.replace(/<[^>]+>/g, '');
+  const decoded = decodeXmlEntities(withoutTags);
+  return decoded
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
+function slideNumber(entry: string): number {
+  const matched = entry.match(/slide(\d+)\.xml$/i);
+  if (!matched) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  return Number.parseInt(matched[1], 10);
+}
+
+async function listZipEntries(filePath: string): Promise<string[]> {
+  const { stdout } = await execFileAsync('unzip', ['-Z1', filePath], { maxBuffer: 4 * 1024 * 1024 });
+  return stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+async function readZipEntry(filePath: string, entry: string): Promise<string> {
+  const { stdout } = await execFileAsync('unzip', ['-p', filePath, entry], { maxBuffer: 8 * 1024 * 1024 });
+  return stdout;
+}
+
+async function extractOfficePreviewText(filePath: string, extension: string): Promise<string> {
+  const entries = await listZipEntries(filePath);
+
+  if (extension === '.docx') {
+    if (!entries.includes('word/document.xml')) {
+      return '';
+    }
+    const xml = await readZipEntry(filePath, 'word/document.xml');
+    return stripOfficeXML(xml);
+  }
+
+  if (extension === '.pptx') {
+    const slides = entries
+      .filter((entry) => /^ppt\/slides\/slide\d+\.xml$/i.test(entry))
+      .sort((a, b) => slideNumber(a) - slideNumber(b));
+    if (slides.length === 0) {
+      return '';
+    }
+
+    const chunks: string[] = [];
+    for (let index = 0; index < slides.length; index += 1) {
+      const xml = await readZipEntry(filePath, slides[index]);
+      const text = stripOfficeXML(xml);
+      if (!text) {
+        continue;
+      }
+      chunks.push(`Slide ${index + 1}\n${text}`);
+    }
+    return chunks.join('\n\n');
+  }
+
+  if (extension === '.xlsx') {
+    const chunks: string[] = [];
+    if (entries.includes('xl/sharedStrings.xml')) {
+      const xml = await readZipEntry(filePath, 'xl/sharedStrings.xml');
+      const text = stripOfficeXML(xml);
+      if (text) {
+        chunks.push(text);
+      }
+    }
+
+    const sheets = entries
+      .filter((entry) => /^xl\/worksheets\/sheet\d+\.xml$/i.test(entry))
+      .sort();
+    for (const sheet of sheets.slice(0, 3)) {
+      const xml = await readZipEntry(filePath, sheet);
+      const text = stripOfficeXML(xml);
+      if (text) {
+        chunks.push(text);
+      }
+    }
+
+    return chunks.join('\n\n');
+  }
+
+  return '';
+}
+
+async function buildFilePreview(inputPath: string, options?: FileResolveOptions): Promise<FilePreviewResult> {
+  try {
+    const resolvedPath = resolveLocalFilePath(inputPath, options);
+    const stat = await fs.promises.stat(resolvedPath);
+    if (!stat.isFile()) {
+      return {
+        success: false,
+        inputPath,
+        resolvedPath,
+        error: 'Path is not a file'
+      };
+    }
+
+    const extension = path.extname(resolvedPath).toLowerCase();
+    const kind = detectPreviewKind(extension);
+    const baseResult: FilePreviewResult = {
+      success: true,
+      inputPath,
+      resolvedPath,
+      extension,
+      kind,
+      size: stat.size,
+      fileUrl: pathToFileURL(resolvedPath).toString()
+    };
+
+    if (kind === 'markdown' || kind === 'text') {
+      const content = await fs.promises.readFile(resolvedPath, 'utf8');
+      if (Buffer.byteLength(content, 'utf8') > MAX_TEXT_PREVIEW_BYTES) {
+        const truncated = content.slice(0, MAX_TEXT_PREVIEW_BYTES);
+        return {
+          ...baseResult,
+          content: `${truncated}\n\n... (preview truncated)`,
+          truncated: true
+        };
+      }
+
+      return {
+        ...baseResult,
+        content
+      };
+    }
+
+    if (kind === 'office') {
+      try {
+        const officeText = await extractOfficePreviewText(resolvedPath, extension);
+        return {
+          ...baseResult,
+          content: officeText || '无法提取可预览文本，请使用“打开文件”查看完整内容。'
+        };
+      } catch (error) {
+        return {
+          ...baseResult,
+          content: `暂不支持直接渲染该 Office 文件。\n${error instanceof Error ? error.message : String(error)}`
+        };
+      }
+    }
+
+    return baseResult;
+  } catch (error) {
+    return {
+      success: false,
+      inputPath,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
 export function createIPCHandlers(
   mainWindow: BrowserWindow,
   gatewayManager: GatewayManager,
@@ -258,6 +582,26 @@ export function createIPCHandlers(
 
   ipcMain.handle('system:openExternal', (_, url: string) => {
     shell.openExternal(url);
+  });
+
+  ipcMain.handle('system:openPath', async (_, targetPath: string, options?: FileResolveOptions) => {
+    try {
+      const resolvedPath = resolveLocalFilePath(targetPath, options);
+      const openErr = await shell.openPath(resolvedPath);
+      if (openErr) {
+        return { success: false, error: openErr, resolvedPath };
+      }
+      return { success: true, resolvedPath };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  });
+
+  ipcMain.handle('system:previewFile', async (_, targetPath: string, options?: FileResolveOptions) => {
+    return buildFilePreview(targetPath, options);
   });
 
   ipcMain.handle('system:selectFolder', async () => {

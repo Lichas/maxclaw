@@ -52,6 +52,10 @@ const electronAPI = {
     requestNotificationPermission: () =>
       ipcRenderer.invoke('notification:request-permission'),
     openExternal: (url: string) => ipcRenderer.invoke('system:openExternal', url),
+    openPath: (targetPath: string, options?: { workspace?: string; sessionKey?: string }) =>
+      ipcRenderer.invoke('system:openPath', targetPath, options),
+    previewFile: (targetPath: string, options?: { workspace?: string; sessionKey?: string }) =>
+      ipcRenderer.invoke('system:previewFile', targetPath, options),
     selectFolder: () => ipcRenderer.invoke('system:selectFolder'),
     selectFile: (filters?: Array<{ name: string; extensions: string[] }>) =>
       ipcRenderer.invoke('system:selectFile', filters)

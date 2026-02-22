@@ -12,6 +12,19 @@ export interface AppConfig {
   shortcuts: Record<string, string>;
 }
 
+export interface FilePreviewResult {
+  success: boolean;
+  inputPath: string;
+  resolvedPath?: string;
+  kind?: 'markdown' | 'text' | 'image' | 'pdf' | 'audio' | 'video' | 'office' | 'binary';
+  extension?: string;
+  fileUrl?: string;
+  content?: string;
+  truncated?: boolean;
+  size?: number;
+  error?: string;
+}
+
 export interface ElectronAPI {
   window: {
     minimize: () => Promise<void>;
@@ -35,6 +48,14 @@ export interface ElectronAPI {
   system: {
     showNotification: (title: string, body: string) => Promise<void>;
     openExternal: (url: string) => Promise<void>;
+    openPath: (
+      targetPath: string,
+      options?: { workspace?: string; sessionKey?: string }
+    ) => Promise<{ success: boolean; error?: string; resolvedPath?: string }>;
+    previewFile: (
+      targetPath: string,
+      options?: { workspace?: string; sessionKey?: string }
+    ) => Promise<FilePreviewResult>;
     selectFolder: () => Promise<string | null>;
     selectFile: (filters?: Array<{ name: string; extensions: string[] }>) => Promise<string | null>;
   };
