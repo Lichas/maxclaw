@@ -46,6 +46,7 @@ func TestGetAPIKey(t *testing.T) {
 	cfg.Providers.OpenAI.APIKey = "openai-key"
 	cfg.Providers.MiniMax.APIKey = "minimax-key"
 	cfg.Providers.DashScope.APIKey = "dashscope-key"
+	cfg.Providers.Zhipu.APIKey = "zhipu-key"
 
 	tests := []struct {
 		model    string
@@ -58,6 +59,8 @@ func TestGetAPIKey(t *testing.T) {
 		{"openai/gpt-3.5", "openai-key"},
 		{"minimax/MiniMax-M2", "minimax-key"},
 		{"qwen-max", "dashscope-key"},
+		{"glm-4.5", "zhipu-key"},
+		{"zai/glm-5", "zhipu-key"},
 		{"unknown-model", "openrouter-key"}, // fallback to first available
 	}
 
@@ -80,6 +83,7 @@ func TestGetAPIBase(t *testing.T) {
 	cfg.Providers.MiniMax.APIBase = "https://api.minimaxi.com/v1"
 	cfg.Providers.Moonshot.APIBase = "https://api.moonshot.ai/v1"
 	cfg.Providers.DashScope.APIBase = "https://dashscope.custom/v1"
+	cfg.Providers.Zhipu.APIBase = "https://open.bigmodel.cn/api/coding/paas/v4"
 
 	tests := []struct {
 		model    string
@@ -92,6 +96,8 @@ func TestGetAPIBase(t *testing.T) {
 		{"minimax/MiniMax-M2", "https://api.minimaxi.com/v1"},
 		{"qwen-max", "https://dashscope.custom/v1"},
 		{"minimax/another-model", "https://api.minimaxi.com/v1"},
+		{"glm-4.5", "https://open.bigmodel.cn/api/coding/paas/v4"},
+		{"zai/glm-5", "https://open.bigmodel.cn/api/coding/paas/v4"},
 		{"anthropic/claude", ""},
 	}
 
@@ -125,6 +131,12 @@ func TestGetAPIBaseMoonshotDefault(t *testing.T) {
 	cfg := DefaultConfig()
 	got := cfg.GetAPIBase("kimi-k2.5")
 	assert.Equal(t, "https://api.moonshot.ai/v1", got)
+}
+
+func TestGetAPIBaseZhipuDefault(t *testing.T) {
+	cfg := DefaultConfig()
+	got := cfg.GetAPIBase("glm-4.5")
+	assert.Equal(t, "https://open.bigmodel.cn/api/coding/paas/v4", got)
 }
 
 func TestWorkspacePath(t *testing.T) {

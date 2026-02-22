@@ -191,6 +191,7 @@ type ProvidersConfig struct {
 	Anthropic  ProviderConfig `json:"anthropic" mapstructure:"anthropic"`
 	OpenAI     ProviderConfig `json:"openai" mapstructure:"openai"`
 	DeepSeek   ProviderConfig `json:"deepseek" mapstructure:"deepseek"`
+	Zhipu      ProviderConfig `json:"zhipu" mapstructure:"zhipu"`
 	Groq       ProviderConfig `json:"groq" mapstructure:"groq"`
 	Gemini     ProviderConfig `json:"gemini" mapstructure:"gemini"`
 	DashScope  ProviderConfig `json:"dashscope" mapstructure:"dashscope"`
@@ -206,6 +207,7 @@ func (p ProvidersConfig) ToMap() map[string]ProviderConfig {
 		"anthropic":  p.Anthropic,
 		"openai":     p.OpenAI,
 		"deepseek":   p.DeepSeek,
+		"zhipu":      p.Zhipu,
 		"groq":       p.Groq,
 		"gemini":     p.Gemini,
 		"dashscope":  p.DashScope,
@@ -222,6 +224,7 @@ func ProvidersConfigFromMap(m map[string]ProviderConfig) ProvidersConfig {
 		Anthropic:  m["anthropic"],
 		OpenAI:     m["openai"],
 		DeepSeek:   m["deepseek"],
+		Zhipu:      m["zhipu"],
 		Groq:       m["groq"],
 		Gemini:     m["gemini"],
 		DashScope:  m["dashscope"],

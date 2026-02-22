@@ -25,6 +25,7 @@ func (s ProviderSpec) MatchesModel(model string) bool {
 var ProviderSpecs = []ProviderSpec{
 	{Name: "openrouter", Keywords: []string{"openrouter"}, DefaultAPIBase: "https://openrouter.ai/api/v1"},
 	{Name: "deepseek", Keywords: []string{"deepseek"}, DefaultAPIBase: "https://api.deepseek.com/v1"},
+	{Name: "zhipu", Keywords: []string{"zhipu", "glm", "zai"}, DefaultAPIBase: "https://open.bigmodel.cn/api/coding/paas/v4"},
 	{Name: "anthropic", Keywords: []string{"anthropic", "claude"}},
 	{Name: "openai", Keywords: []string{"openai", "gpt"}},
 	{Name: "gemini", Keywords: []string{"gemini"}},

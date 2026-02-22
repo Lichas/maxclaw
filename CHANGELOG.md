@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 设置页模型配置新增智谱 GLM（编码套餐端点）
+- **变更**：新增 `Zhipu` 预置提供商（默认 `https://open.bigmodel.cn/api/coding/paas/v4`，预置 `glm-4.5 / glm-4.5-air / zai/glm-5`）；后端新增 `zhipu` provider 路由与默认 API Base，支持按 `glm`/`zai` 模型名自动匹配 API Key 与 API Base；补充 provider 连接测试默认端点与文档示例。
+- **位置**：`electron/src/renderer/types/providers.ts`、`internal/providers/registry.go`、`internal/config/schema.go`、`internal/webui/server.go`、`internal/config/config_test.go`、`internal/providers/registry_test.go`、`README.md`、`internal/providers/README.md`。
+- **验证**：`go test ./internal/config ./internal/providers`、`cd electron && npm run build`、`make build`。
+
 #### 项目统一更名为 `maxclaw`（Go CLI / Desktop / 文档与安装脚本）
 - **变更**：统一模块与品牌命名，CLI 命令、桌面应用标识、安装/发布脚本、Web UI 与主页文案改为 `maxclaw`；默认数据目录切换到 `~/.maxclaw`，并兼容旧 `~/.nanobot` 与 `NANOBOT_*` 环境变量。
 - **位置**：`cmd/maxclaw/main.go`、`internal/config/loader.go`、`internal/cli/root.go`、`internal/agent/context.go`、`electron/src/main/gateway.ts`、`electron/electron-builder.yml`、`deploy/systemd/maxclaw-*.service`、`install*.sh`、`README.md`、`homepage/index.html`。

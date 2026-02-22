@@ -52,6 +52,18 @@ export const PRESET_PROVIDERS: Omit<ProviderConfig, 'id' | 'apiKey'>[] = [
     enabled: false,
   },
   {
+    name: 'Zhipu',
+    type: 'openai',
+    baseURL: 'https://open.bigmodel.cn/api/coding/paas/v4',
+    apiFormat: 'openai',
+    models: [
+      { id: 'glm-4.5', name: 'GLM-4.5', enabled: true },
+      { id: 'glm-4.5-air', name: 'GLM-4.5-Air', enabled: true },
+      { id: 'zai/glm-5', name: 'GLM-5', enabled: true },
+    ],
+    enabled: false,
+  },
+  {
     name: 'Moonshot',
     type: 'openai',
     baseURL: 'https://api.moonshot.cn/v1',

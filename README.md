@@ -107,6 +107,23 @@ Linux 默认会安装并启动：
 
 默认 API Base：`https://dashscope.aliyuncs.com/compatible-mode/v1`（可在 `providers.dashscope.apiBase` 覆盖）。
 
+### 智谱 GLM（编码套餐端点）配置示例
+```json
+{
+  "providers": {
+    "zhipu": {
+      "apiKey": "your-zhipu-key",
+      "apiBase": "https://open.bigmodel.cn/api/coding/paas/v4"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "glm-4.5"
+    }
+  }
+}
+```
+
 提示：如果你使用中国大陆站点密钥（`minimaxi.com`），可显式设置：
 
 ```json

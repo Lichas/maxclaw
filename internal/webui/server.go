@@ -1283,6 +1283,8 @@ func (s *Server) handleTestProvider(w http.ResponseWriter, r *http.Request) {
 			switch req.Name {
 			case "DeepSeek":
 				baseURL = "https://api.deepseek.com/v1"
+			case "Zhipu", "Zhipu GLM":
+				baseURL = "https://open.bigmodel.cn/api/coding/paas/v4"
 			case "Moonshot":
 				baseURL = "https://api.moonshot.cn/v1"
 			case "Groq":

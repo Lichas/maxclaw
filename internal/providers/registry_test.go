@@ -43,3 +43,25 @@ func TestProviderSpecsContainsDashScopeForQwen(t *testing.T) {
 		t.Fatalf("expected dashscope spec in ProviderSpecs")
 	}
 }
+
+func TestProviderSpecsContainsZhipuForGLM(t *testing.T) {
+	found := false
+	for _, spec := range ProviderSpecs {
+		if spec.Name == "zhipu" {
+			found = true
+			if spec.DefaultAPIBase == "" {
+				t.Fatalf("expected zhipu default api base")
+			}
+			if !spec.MatchesModel("glm-4.5") {
+				t.Fatalf("expected zhipu spec to match glm model")
+			}
+			if !spec.MatchesModel("zai/glm-5") {
+				t.Fatalf("expected zhipu spec to match zai/glm model")
+			}
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected zhipu spec in ProviderSpecs")
+	}
+}

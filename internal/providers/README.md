@@ -57,6 +57,24 @@ DashScope / Qwen 配置示例：
 }
 ```
 
+智谱 GLM（编码套餐端点）配置示例：
+
+```json
+{
+  "providers": {
+    "zhipu": {
+      "apiKey": "YOUR_ZHIPU_KEY",
+      "apiBase": "https://open.bigmodel.cn/api/coding/paas/v4"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "glm-4.5"
+    }
+  }
+}
+```
+
 扩展新 provider（两步）：
 1. 在 `internal/config/schema.go` 的 `ProvidersConfig` 增加配置字段。
 2. 在 `internal/providers/registry.go` 追加 `ProviderSpec`（关键词与默认 API Base）。
