@@ -4,6 +4,26 @@
 
 ### 新增功能
 
+#### Electron App 品牌更新（`electron/assets/`, `electron/src/renderer/components/`）
+- **功能**：更新应用图标和名称为 "nanobot-go"
+- **实现**：
+  - 新增应用图标 `icon.png`（项目根目录），并复制到 `electron/assets/`
+  - 生成平台专用图标：`icon.icns`（macOS）、`icon.ico`（Windows）
+  - 在 Sidebar 的"新建任务"按钮中使用图标，带渐变边框效果
+  - 更新应用标题栏显示名称为 "nanobot-go"
+  - 更新 `electron-builder.yml` 中的 `productName` 和各平台图标配置
+- **验证**
+  - `cd electron && npm run build` 成功
+  - 所有平台图标文件生成正常
+- **文件**
+  - `electron/assets/icon.png` - 应用图标
+  - `electron/assets/icon.icns` - macOS 图标
+  - `electron/assets/icon.ico` - Windows 图标
+  - `electron/src/renderer/components/Sidebar.tsx` - 集成图标按钮
+  - `electron/src/renderer/components/TitleBar.tsx` - 更新标题
+  - `electron/src/main/window.ts` - 更新窗口标题
+  - `electron/electron-builder.yml` - 更新配置
+
 #### Mermaid 图表渲染支持（`electron/src/renderer/components/MermaidRenderer.tsx`）
 - **功能**：聊天界面支持渲染 Mermaid 图表（流程图、时序图、类图等）
 - **实现**：
