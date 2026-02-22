@@ -167,11 +167,16 @@ export function ChatView() {
   }, [slashCommands, slashQuery]);
 
   const modelOptions = useMemo(
-    () =>
-      availableModels.map((model) => ({
+    () => {
+      if (availableModels.length === 0) {
+        return [{ value: '__no_model__', label: '未检测到可用模型', disabled: true }];
+      }
+
+      return availableModels.map((model) => ({
         value: model.id,
         label: `${model.provider} / ${model.name}`
-      })),
+      }));
+    },
     [availableModels]
   );
 
@@ -894,7 +899,7 @@ export function ChatView() {
             onChange={handleModelChange}
             options={modelOptions}
             placeholder="选择模型..."
-            disabled={modelsLoading || isLoading || modelOptions.length === 0}
+            disabled={modelsLoading || isLoading}
             size="sm"
             className="w-[220px] max-w-full"
             triggerClassName="bg-secondary"

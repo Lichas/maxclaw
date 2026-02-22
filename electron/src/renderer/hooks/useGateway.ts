@@ -52,6 +52,64 @@ export interface SessionDetail {
   }>;
 }
 
+interface GatewayConfigResponse {
+  agents?: {
+    defaults?: {
+      model?: string;
+    };
+  };
+  providers?: Record<
+    string,
+    {
+      apiKey?: string;
+      apiBase?: string;
+    }
+  >;
+}
+
+const PROVIDER_DEFAULT_MODELS: Record<string, string[]> = {
+  openrouter: ['openrouter/anthropic/claude-3.7-sonnet', 'openrouter/openai/gpt-4o'],
+  anthropic: ['anthropic/claude-opus-4-5', 'anthropic/claude-sonnet-4-5'],
+  openai: ['openai/gpt-4o', 'openai/gpt-4.1-mini'],
+  deepseek: ['deepseek-chat', 'deepseek-reasoner'],
+  zhipu: ['glm-4.5', 'glm-4.5-air', 'zai/glm-5'],
+  groq: ['groq/llama-3.1-70b-versatile', 'groq/mixtral-8x7b-32768'],
+  gemini: ['gemini/gemini-2.0-flash', 'gemini/gemini-1.5-pro'],
+  dashscope: ['qwen-max', 'qwen-plus'],
+  moonshot: ['moonshot-v1-8k', 'moonshot-v1-32k'],
+  minimax: ['minimax/MiniMax-M2']
+};
+
+const PROVIDER_KEYWORDS: Array<{ provider: string; keywords: string[] }> = [
+  { provider: 'openrouter', keywords: ['openrouter'] },
+  { provider: 'deepseek', keywords: ['deepseek'] },
+  { provider: 'zhipu', keywords: ['zhipu', 'glm', 'zai'] },
+  { provider: 'anthropic', keywords: ['anthropic', 'claude'] },
+  { provider: 'openai', keywords: ['openai', 'gpt'] },
+  { provider: 'gemini', keywords: ['gemini'] },
+  { provider: 'dashscope', keywords: ['dashscope', 'qwen'] },
+  { provider: 'groq', keywords: ['groq'] },
+  { provider: 'moonshot', keywords: ['moonshot', 'kimi'] },
+  { provider: 'minimax', keywords: ['minimax'] },
+  { provider: 'vllm', keywords: ['vllm'] }
+];
+
+function inferProviderFromModel(modelId: string, configuredProviderKeys: string[]): string {
+  const normalized = modelId.toLowerCase();
+  const prefix = normalized.includes('/') ? normalized.split('/')[0] : '';
+  if (prefix && configuredProviderKeys.includes(prefix)) {
+    return prefix;
+  }
+
+  for (const entry of PROVIDER_KEYWORDS) {
+    if (entry.keywords.some((keyword) => normalized.includes(keyword))) {
+      return entry.provider;
+    }
+  }
+
+  return configuredProviderKeys[0] || prefix || 'custom';
+}
+
 export function useGateway() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -224,21 +282,37 @@ export function useGateway() {
   }, []);
 
   const getModels = useCallback(async () => {
-    const config = await getConfig();
+    const config = await getConfig() as GatewayConfigResponse;
     const providers = config.providers || {};
     const models: Array<{ id: string; name: string; provider: string }> = [];
+    const seen = new Set<string>();
+    const configuredProviderKeys = Object.entries(providers)
+      .filter(([, providerConfig]) => Boolean(providerConfig?.apiKey) || Boolean(providerConfig?.apiBase))
+      .map(([providerKey]) => providerKey);
 
-    for (const [providerKey, providerConfig] of Object.entries(providers)) {
-      const pc = providerConfig as { enabled?: boolean; models?: string[] };
-      if (pc.enabled !== false && Array.isArray(pc.models)) {
-        for (const modelId of pc.models) {
-          models.push({
-            id: modelId,
-            name: modelId.split('/').pop() || modelId,
-            provider: providerKey
-          });
-        }
+    const addModel = (modelId: string, provider: string) => {
+      if (!modelId || seen.has(modelId)) {
+        return;
       }
+
+      seen.add(modelId);
+      models.push({
+        id: modelId,
+        name: modelId.split('/').pop() || modelId,
+        provider
+      });
+    };
+
+    for (const providerKey of configuredProviderKeys) {
+      const candidates = PROVIDER_DEFAULT_MODELS[providerKey] || [];
+      for (const modelId of candidates) {
+        addModel(modelId, providerKey);
+      }
+    }
+
+    const currentModel = config.agents?.defaults?.model || '';
+    if (currentModel) {
+      addModel(currentModel, inferProviderFromModel(currentModel, configuredProviderKeys));
     }
 
     return models;

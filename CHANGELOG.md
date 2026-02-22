@@ -9,6 +9,11 @@
 - **位置**：`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`。
 - **验证**：`cd electron && npm run build`、`make build`。
 
+#### 修复聊天模型选择器灰色不可点（无 `providers.models` 场景）
+- **变更**：修复模型列表仅依赖 `providers.models` 导致始终为空的问题；改为基于已配置 provider + `agents.defaults.model` 生成候选模型，并在无候选时显示“未检测到可用模型”而非整控件禁用。
+- **位置**：`electron/src/renderer/hooks/useGateway.ts`、`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 设置页模型配置新增智谱 GLM（编码套餐端点）
 - **变更**：新增 `Zhipu` 预置提供商（默认 `https://open.bigmodel.cn/api/coding/paas/v4`，预置 `glm-4.5 / glm-4.5-air / zai/glm-5`）；后端新增 `zhipu` provider 路由与默认 API Base，支持按 `glm`/`zai` 模型名自动匹配 API Key 与 API Base；补充 provider 连接测试默认端点与文档示例。
 - **位置**：`electron/src/renderer/types/providers.ts`、`internal/providers/registry.go`、`internal/config/schema.go`、`internal/webui/server.go`、`internal/config/config_test.go`、`internal/providers/registry_test.go`、`README.md`、`internal/providers/README.md`。
