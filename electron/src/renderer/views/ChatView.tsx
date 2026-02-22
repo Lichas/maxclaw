@@ -1065,7 +1065,7 @@ export function ChatView() {
 
   const renderThreadHeader = () => (
     <div
-      className={`draggable flex h-12 items-center border-b border-border/80 bg-background/95 ${
+      className={`flex h-12 items-center border-b border-border/80 bg-background/95 ${
         isMac && sidebarCollapsed ? 'pl-44 pr-6' : 'px-6'
       }`}
     >

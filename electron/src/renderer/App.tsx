@@ -16,6 +16,9 @@ function App() {
   const controlAnchorStyle = isMac
     ? { left: '92px', top: '10px' }
     : { left: '12px', top: '10px' };
+  const dragStripStyle = isMac
+    ? { left: '176px', right: '0px', top: '0px' }
+    : { left: '120px', right: '0px', top: '0px' };
 
   useEffect(() => {
     dispatch(setCurrentSessionKey(`desktop:${Date.now()}`));
@@ -98,7 +101,7 @@ function App() {
   return (
     <div className="h-screen overflow-hidden bg-background text-foreground">
       <div className="relative flex h-full overflow-hidden">
-        <div className={`absolute inset-x-0 top-0 z-10 h-12 draggable ${isMac ? 'h-14' : ''}`} />
+        <div className={`absolute z-10 draggable ${isMac ? 'h-14' : 'h-12'}`} style={dragStripStyle} />
         <div className="absolute z-40 flex items-center gap-2 no-drag" style={controlAnchorStyle}>
           <button
             onClick={() => dispatch(toggleSidebar())}

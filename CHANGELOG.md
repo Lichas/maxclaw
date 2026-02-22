@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 修复侧边栏收起后 toggle 按钮偶发失效（拖拽区点击冲突）
+- **变更**：将顶部可拖拽区域改为避开左上角控制按钮的独立条带；聊天页会话标题栏移除 `draggable`，避免与按钮点击区域冲突，修复收起侧边栏后 toggle 点击无响应。
+- **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 修复 macOS 顶部控制区间距：侧栏收起后按钮与会话标题避让
 - **变更**：调整左上角 toggle/新建按钮锚点位置，确保与 macOS 三色窗口按钮保持稳定间隔；侧边栏收起时聊天页标题栏增加左侧避让，避免与控制按钮重叠。
 - **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/views/ChatView.tsx`。
