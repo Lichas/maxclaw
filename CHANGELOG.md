@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 聊天主面板视觉精修为完整圆角矩形（更优雅卡片感）
+- **变更**：右侧主聊天区域由左侧圆角改为完整圆角矩形，并增强阴影与边框层次，提升整体精致感与可读性。
+- **位置**：`electron/src/renderer/App.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 修复侧边栏收起后 toggle 按钮偶发失效（拖拽区点击冲突）
 - **变更**：将顶部可拖拽区域改为避开左上角控制按钮的独立条带；聊天页会话标题栏移除 `draggable`，避免与按钮点击区域冲突，修复收起侧边栏后 toggle 点击无响应。
 - **位置**：`electron/src/renderer/App.tsx`、`electron/src/renderer/views/ChatView.tsx`。
