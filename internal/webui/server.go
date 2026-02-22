@@ -862,6 +862,15 @@ func wantsStreamResponse(r *http.Request, payload messagePayload) bool {
 	return strings.Contains(accept, "text/event-stream")
 }
 
+// configUpdateRequest 配置更新请求，支持动态 providers
+type configUpdateRequest struct {
+	Agents    *config.AgentsConfig              `json:"agents,omitempty"`
+	Channels  *config.ChannelsConfig            `json:"channels,omitempty"`
+	Providers map[string]config.ProviderConfig  `json:"providers,omitempty"`
+	Gateway   *config.GatewayConfig             `json:"gateway,omitempty"`
+	Tools     *config.ToolsConfig               `json:"tools,omitempty"`
+}
+
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -872,12 +881,37 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, cfg)
 	case http.MethodPut:
-		var cfg config.Config
-		if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+		var req configUpdateRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeError(w, err)
 			return
 		}
-		if err := config.SaveConfig(&cfg); err != nil {
+
+		// Load existing config
+		cfg, err := config.LoadConfig()
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+
+		// Update fields if provided
+		if req.Agents != nil {
+			cfg.Agents = *req.Agents
+		}
+		if req.Channels != nil {
+			cfg.Channels = *req.Channels
+		}
+		if req.Providers != nil {
+			cfg.Providers = config.ProvidersConfigFromMap(req.Providers)
+		}
+		if req.Gateway != nil {
+			cfg.Gateway = *req.Gateway
+		}
+		if req.Tools != nil {
+			cfg.Tools = *req.Tools
+		}
+
+		if err := config.SaveConfig(cfg); err != nil {
 			writeError(w, err)
 			return
 		}

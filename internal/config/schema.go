@@ -201,6 +201,38 @@ type ProvidersConfig struct {
 	VLLM       ProviderConfig `json:"vllm" mapstructure:"vllm"`
 }
 
+// ToMap 将 ProvidersConfig 转换为 map[string]ProviderConfig
+func (p ProvidersConfig) ToMap() map[string]ProviderConfig {
+	return map[string]ProviderConfig{
+		"openrouter": p.OpenRouter,
+		"anthropic":  p.Anthropic,
+		"openai":     p.OpenAI,
+		"deepseek":   p.DeepSeek,
+		"groq":       p.Groq,
+		"gemini":     p.Gemini,
+		"dashscope":  p.DashScope,
+		"moonshot":   p.Moonshot,
+		"minimax":    p.MiniMax,
+		"vllm":       p.VLLM,
+	}
+}
+
+// ProvidersConfigFromMap 从 map 创建 ProvidersConfig
+func ProvidersConfigFromMap(m map[string]ProviderConfig) ProvidersConfig {
+	return ProvidersConfig{
+		OpenRouter: m["openrouter"],
+		Anthropic:  m["anthropic"],
+		OpenAI:     m["openai"],
+		DeepSeek:   m["deepseek"],
+		Groq:       m["groq"],
+		Gemini:     m["gemini"],
+		DashScope:  m["dashscope"],
+		Moonshot:   m["moonshot"],
+		MiniMax:    m["minimax"],
+		VLLM:       m["vllm"],
+	}
+}
+
 // Config 根配置
 type Config struct {
 	Agents    AgentsConfig    `json:"agents" mapstructure:"agents"`
