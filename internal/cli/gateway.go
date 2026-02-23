@@ -92,6 +92,7 @@ var gatewayCmd = &cobra.Command{
 			cfg.Tools.RestrictToWorkspace,
 			cronService,
 			cfg.Tools.MCPServers,
+			cfg.Agents.Defaults.EnableGlobalSkills,
 		)
 		defer agentLoop.Close()
 

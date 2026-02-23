@@ -10,6 +10,16 @@ import (
 	"strings"
 )
 
+// GlobalSkillsDir 返回全局 skills 目录 (~/.agents/skills/)
+// 这是业界标准路径，可被多个 AI 工具共享
+func GlobalSkillsDir() string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(homeDir, ".agents", "skills")
+}
+
 var (
 	atSkillPattern     = regexp.MustCompile(`(?i)@skill:([a-z0-9_.-]+)`)
 	dollarSkillPattern = regexp.MustCompile(`\$([a-zA-Z][a-zA-Z0-9_.-]*)`)
@@ -22,6 +32,51 @@ type Entry struct {
 	Description string
 	Path        string
 	Body        string
+	Source      string // "workspace" or "global"
+}
+
+// DiscoverAll loads skills from both workspace and global directories.
+// Workspace skills take precedence over global skills (same name = workspace wins).
+func DiscoverAll(workspaceDir string, includeGlobal bool) ([]Entry, error) {
+	// 1. Discover workspace skills
+	entries, err := Discover(workspaceDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Mark source
+	for i := range entries {
+		entries[i].Source = "workspace"
+	}
+
+	// 2. Discover global skills if enabled
+	if includeGlobal {
+		globalDir := GlobalSkillsDir()
+		if globalDir != "" && globalDir != workspaceDir {
+			globalEntries, err := Discover(globalDir)
+			if err == nil {
+				// Mark source and filter out duplicates (workspace takes precedence)
+				workspaceNames := make(map[string]bool)
+				for _, e := range entries {
+					workspaceNames[strings.ToLower(e.Name)] = true
+				}
+
+				for _, e := range globalEntries {
+					if !workspaceNames[strings.ToLower(e.Name)] {
+						e.Source = "global"
+						entries = append(entries, e)
+					}
+				}
+			}
+		}
+	}
+
+	// Re-sort after merging
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Name < entries[j].Name
+	})
+
+	return entries, nil
 }
 
 // Discover loads markdown skill files from skillsDir.
@@ -89,6 +144,7 @@ func Discover(skillsDir string) ([]Entry, error) {
 			Description: description,
 			Path:        path,
 			Body:        body,
+			Source:      "workspace",
 		})
 		return nil
 	})

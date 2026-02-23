@@ -31,7 +31,8 @@ var errMaxclawSourceMarkerFound = errors.New("maxclaw source marker found")
 
 // ContextBuilder 上下文构建器
 type ContextBuilder struct {
-	workspace string
+	workspace          string
+	enableGlobalSkills bool
 
 	sourceOnce        sync.Once
 	sourceDir         string
@@ -42,6 +43,14 @@ type ContextBuilder struct {
 // NewContextBuilder 创建上下文构建器
 func NewContextBuilder(workspace string) *ContextBuilder {
 	return &ContextBuilder{workspace: workspace}
+}
+
+// NewContextBuilderWithConfig 创建带配置的上下文构建器
+func NewContextBuilderWithConfig(workspace string, enableGlobalSkills bool) *ContextBuilder {
+	return &ContextBuilder{
+		workspace:          workspace,
+		enableGlobalSkills: enableGlobalSkills,
+	}
 }
 
 // BuildMessages 构建消息列表

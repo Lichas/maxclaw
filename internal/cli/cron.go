@@ -336,6 +336,7 @@ func executeCronJob(cfg *config.Config, apiKey, apiBase string, cronService *cro
 		cfg.Tools.RestrictToWorkspace,
 		cronService,
 		cfg.Tools.MCPServers,
+		cfg.Agents.Defaults.EnableGlobalSkills,
 	)
 	defer agentLoop.Close()
 

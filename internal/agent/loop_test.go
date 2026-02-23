@@ -147,6 +147,7 @@ func TestAgentLoopProcessMessageInjectsRuntimeContextForCron(t *testing.T) {
 		false,
 		cronSvc,
 		nil,
+		false,
 	)
 
 	msg := bus.NewInboundMessage("telegram", "user-1", "chat-42", "set a reminder")
@@ -182,6 +183,7 @@ func TestAgentLoopProcessMessageMCPFailureDoesNotBreakMainFlow(t *testing.T) {
 		map[string]config.MCPServerConfig{
 			"broken": {Command: "/__nonexistent_mcp_server__"},
 		},
+		false,
 	)
 
 	msg := bus.NewInboundMessage("telegram", "user-1", "chat-42", "hello")
@@ -209,6 +211,7 @@ func TestAgentLoopProcessDirectUsesProvidedSessionKey(t *testing.T) {
 		false,
 		cronSvc,
 		nil,
+		false,
 	)
 
 	_, err := loop.ProcessDirect(context.Background(), "hello", "cli:custom", "cli", "direct")
@@ -242,6 +245,7 @@ func TestAgentLoopProcessMessageSlashHelp(t *testing.T) {
 		false,
 		cronSvc,
 		nil,
+		false,
 	)
 
 	msg := bus.NewInboundMessage("telegram", "user-1", "chat-42", "/help")
@@ -273,6 +277,7 @@ func TestAgentLoopProcessMessageSlashNewClearsSession(t *testing.T) {
 		false,
 		cronSvc,
 		nil,
+		false,
 	)
 
 	sess := loop.sessions.GetOrCreate("telegram:chat-42")
@@ -314,6 +319,7 @@ func TestAgentLoopProcessMessageMaxIterationFallback(t *testing.T) {
 		false,
 		cronSvc,
 		nil,
+		false,
 	)
 
 	msg := bus.NewInboundMessage("telegram", "user-1", "chat-42", "hello")
@@ -341,6 +347,7 @@ func TestAgentLoopProcessMessageAutoConsolidatesWhenSessionLarge(t *testing.T) {
 		false,
 		cronSvc,
 		nil,
+		false,
 	)
 
 	sess := loop.sessions.GetOrCreate("telegram:chat-42")
@@ -380,6 +387,7 @@ func TestAgentLoopProcessDirectEventStreamEmitsStructuredEvents(t *testing.T) {
 		false,
 		nil,
 		nil,
+		false,
 	)
 
 	var events []StreamEvent
@@ -467,6 +475,7 @@ func TestProcessDirectWithSkillsUsesOnlySelectedSkills(t *testing.T) {
 		false,
 		nil,
 		nil,
+		false,
 	)
 
 	resp, err := loop.ProcessDirectWithSkills(context.Background(), "hello", "desktop:test", "desktop", "chat-1", []string{"alpha"})

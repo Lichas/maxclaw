@@ -82,6 +82,7 @@ func NewAgentLoop(
 	restrictToWorkspace bool,
 	cronService *cron.Service,
 	mcpServers map[string]config.MCPServerConfig,
+	enableGlobalSkills bool,
 ) *AgentLoop {
 	if maxIterations <= 0 {
 		maxIterations = 20
@@ -105,7 +106,7 @@ func NewAgentLoop(
 		RestrictToWorkspace: restrictToWorkspace,
 		CronService:         cronService,
 		MCPServers:          cloneMCPServerConfigs(mcpServers),
-		context:             NewContextBuilder(workspace),
+		context:             NewContextBuilderWithConfig(workspace, enableGlobalSkills),
 		sessions:            session.NewManager(workspace),
 		tools:               tools.NewRegistry(),
 		intentAnalyzer:      NewIntentAnalyzer(),

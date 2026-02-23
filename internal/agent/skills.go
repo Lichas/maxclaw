@@ -30,7 +30,7 @@ func truncateRunes(s string, limit int, suffix string) string {
 
 func (b *ContextBuilder) buildSkillsSection(currentMessage string, explicitSkillRefs []string) string {
 	skillsDir := filepath.Join(b.workspace, "skills")
-	entries, err := skills.Discover(skillsDir)
+	entries, err := skills.DiscoverAll(skillsDir, b.enableGlobalSkills)
 	if err != nil || len(entries) == 0 {
 		return ""
 	}

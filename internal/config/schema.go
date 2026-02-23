@@ -110,11 +110,13 @@ type FeishuConfig struct {
 
 // AgentDefaults 默认代理配置
 type AgentDefaults struct {
-	Workspace         string  `json:"workspace" mapstructure:"workspace"`
-	Model             string  `json:"model" mapstructure:"model"`
-	MaxTokens         int     `json:"maxTokens" mapstructure:"maxTokens"`
-	Temperature       float64 `json:"temperature" mapstructure:"temperature"`
-	MaxToolIterations int     `json:"maxToolIterations" mapstructure:"maxToolIterations"`
+	Workspace             string   `json:"workspace" mapstructure:"workspace"`
+	Model                 string   `json:"model" mapstructure:"model"`
+	MaxTokens             int      `json:"maxTokens" mapstructure:"maxTokens"`
+	Temperature           float64  `json:"temperature" mapstructure:"temperature"`
+	MaxToolIterations     int      `json:"maxToolIterations" mapstructure:"maxToolIterations"`
+	EnableGlobalSkills    bool     `json:"enableGlobalSkills" mapstructure:"enableGlobalSkills"`
+	GlobalSkillsPaths     []string `json:"globalSkillsPaths,omitempty" mapstructure:"globalSkillsPaths"`
 }
 
 // AgentsConfig 代理配置
@@ -250,11 +252,12 @@ func DefaultConfig() *Config {
 	return &Config{
 		Agents: AgentsConfig{
 			Defaults: AgentDefaults{
-				Workspace:         workspace,
-				Model:             "anthropic/claude-opus-4-5",
-				MaxTokens:         8192,
-				Temperature:       0.7,
-				MaxToolIterations: 20,
+				Workspace:          workspace,
+				Model:              "anthropic/claude-opus-4-5",
+				MaxTokens:          8192,
+				Temperature:        0.7,
+				MaxToolIterations:  20,
+				EnableGlobalSkills: true, // 默认启用 ~/.agents/skills/
 			},
 		},
 		Channels: ChannelsConfig{

@@ -4,6 +4,12 @@
 
 ### 变更
 
+#### 支持全局 Skills 目录 `~/.agents/skills/`
+- **变更**：新增配置项 `agents.defaults.enableGlobalSkills`（默认启用），允许从 `~/.agents/skills/` 加载全局 skills 作为工作区 skills 的补充。
+- **行为**：工作区 skills 优先（同名时覆盖全局），合并后统一排序。
+- **位置**：`internal/skills/loader.go`、`internal/agent/context.go`、`internal/config/schema.go`。
+- **验证**：`go test ./internal/skills/...`、`go test ./internal/agent/...`、`make build`。
+
 #### 修复 MCP 服务卡死导致“发消息后无回复”
 - **变更**：为 MCP `initialize/list_tools` 与 `tools/call` 增加默认超时保护，避免不响应的 MCP 服务阻塞整条消息处理链路。
 - **位置**：`pkg/tools/mcp.go`、`pkg/tools/mcp_test.go`。
