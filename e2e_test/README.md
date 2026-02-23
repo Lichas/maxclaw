@@ -52,3 +52,65 @@ fi
 - 测试使用临时 HOME 目录，不会影响真实配置
 - 需要提前安装 `go` 和 `python3`（用于 JSON 验证）
 - 不测试真实的 LLM API 调用（需要 API key）
+
+## 智能插话功能测试 (Smart Interruption Testing)
+
+### 单元测试验证
+```bash
+# 运行意图分析测试
+go test ./internal/agent/... -v -run "TestIntentAnalyzer"
+
+# 运行中断上下文测试
+go test ./internal/agent/... -v -run "TestInterruptibleContext"
+```
+
+### 手动测试步骤
+
+1. **启动 Gateway**
+   ```bash
+   maxclaw gateway
+   ```
+
+2. **启动 Electron 前端**
+   ```bash
+   cd electron && npm run dev
+   ```
+
+3. **测试打断模式 (Cancel)**
+   - 在 ChatView 中发送一条消息
+   - 在生成回复过程中，按 `Enter` 键
+   - 或输入内容后点击"打断"按钮
+   - 预期：当前生成被取消，新消息（如果有）被处理
+
+4. **测试补充模式 (Append)**
+   - 在 ChatView 中发送一条消息
+   - 在生成回复过程中，输入补充内容
+   - 按 `Shift+Enter` 键
+   - 或点击"补充"按钮
+   - 预期：当前生成继续，补充内容被添加到上下文中
+
+5. **WebSocket 协议测试**
+   ```bash
+   # 使用 wscat 测试
+   wscat -c ws://localhost:18890/ws
+   
+   # 发送普通消息
+   {"type":"chat","session":"test","content":"你好"}
+   
+   # 发送打断请求
+   {"type":"interrupt","session":"test","mode":"cancel"}
+   
+   # 发送补充请求
+   {"type":"interrupt","session":"test","mode":"append","content":"记得补充代码"}
+   ```
+
+### E2E 自动化测试
+```bash
+# 需要设置 API key
+export DEEPSEEK_API_KEY="your-key"
+# 或
+export OPENROUTER_API_KEY="your-key"
+
+# 运行 E2E 测试
+./e2e_test/interrupt_test.sh
+```
