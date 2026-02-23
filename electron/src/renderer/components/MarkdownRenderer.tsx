@@ -69,14 +69,21 @@ export function MarkdownRenderer({ content, className = '', onFileLinkClick }: M
             }
 
             return (
-              <code className="bg-secondary px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
+              <code
+                className={`font-mono text-foreground ${
+                  inline
+                    ? 'rounded bg-secondary px-1.5 py-0.5 text-sm'
+                    : 'block whitespace-pre text-[13px] leading-6'
+                }`}
+                {...props}
+              >
                 {children}
               </code>
             );
           },
           pre({ children }: { children?: React.ReactNode }) {
             return (
-              <pre className="bg-secondary rounded-lg p-4 overflow-x-auto my-3">
+              <pre className="my-3 overflow-x-auto rounded-lg border border-border/70 bg-secondary/70 p-4 text-foreground [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-inherit">
                 {children}
               </pre>
             );

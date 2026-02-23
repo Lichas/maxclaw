@@ -34,6 +34,11 @@
 - **位置**：`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/views/SkillsView.tsx`。
 - **验证**：`cd electron && npm run build`、`make build`。
 
+#### 修复字符架构图代码块颜色对比度过低
+- **变更**：为 Markdown 无语言代码块与 `pre` 容器显式设置高对比文本色和样式覆盖，避免浅底背景下出现浅色文字导致难以阅读。
+- **位置**：`electron/src/renderer/components/MarkdownRenderer.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 ### 新增功能
 
 #### 智能插话/打断功能（Smart Interruption）
