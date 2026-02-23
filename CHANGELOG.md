@@ -24,6 +24,11 @@
 - **位置**：`electron/src/renderer/views/ChatView.tsx`。
 - **验证**：`cd electron && npm run build`、`make build`。
 
+#### 补充聊天信息流高度异常排查记录（仅文档）
+- **变更**：新增聊天窗口“信息流高度被挤压、底部大面积空白”的问题记录，补充根因与修复说明。
+- **位置**：`BUGFIX.md`。
+- **验证**：`make build`。
+
 ### 新增功能
 
 #### 智能插话/打断功能（Smart Interruption）
