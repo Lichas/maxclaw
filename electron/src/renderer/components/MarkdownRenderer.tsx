@@ -78,11 +78,16 @@ export function MarkdownRenderer({ content, className = '', onFileLinkClick }: M
 
             return (
               <code
-                className={`font-mono text-foreground ${
+                className={`font-mono ${
                   inline
                     ? 'rounded bg-secondary px-1.5 py-0.5 text-sm'
                     : 'block whitespace-pre text-[13px] leading-6'
                 }`}
+                style={
+                  inline
+                    ? undefined
+                    : { color: isDark ? '#e5e7eb' : '#1f2937' }
+                }
                 {...props}
               >
                 {children}
@@ -91,7 +96,14 @@ export function MarkdownRenderer({ content, className = '', onFileLinkClick }: M
           },
           pre({ children }: { children?: React.ReactNode }) {
             return (
-              <pre className="my-3 overflow-x-auto rounded-lg border border-border/70 bg-secondary/70 p-4 text-foreground [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-inherit">
+              <pre
+                className="my-3 overflow-x-auto rounded-lg border p-4 [&>code]:bg-transparent [&>code]:p-0 [&>code]:text-inherit"
+                style={{
+                  backgroundColor: isDark ? '#111827' : '#eef2f0',
+                  color: isDark ? '#e5e7eb' : '#1f2937',
+                  borderColor: isDark ? '#2b3446' : '#d7dfda'
+                }}
+              >
                 {children}
               </pre>
             );

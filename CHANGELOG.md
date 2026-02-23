@@ -49,6 +49,11 @@
 - **位置**：`electron/src/renderer/components/MarkdownRenderer.tsx`。
 - **验证**：`cd electron && npm run build`、`make build`。
 
+#### 修复浅色模式代码块仍显示深色底的问题
+- **变更**：修复 `prose` 默认样式覆盖导致的深色代码块问题；为 `pre` 与无语言代码块增加主题化显式样式，确保浅色模式下稳定呈现浅灰底深色字。
+- **位置**：`electron/src/renderer/components/MarkdownRenderer.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 ### 新增功能
 
 #### 智能插话/打断功能（Smart Interruption）
