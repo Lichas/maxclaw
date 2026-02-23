@@ -34,6 +34,7 @@ export function Sidebar() {
   const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
+  const [sessionToDeleteTitle, setSessionToDeleteTitle] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
 
   const buildDraftSession = (key: string): SessionSummary => ({
@@ -54,8 +55,17 @@ export function Sidebar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleDelete = async (sessionKey: string) => {
-    setSessionToDelete(sessionKey);
+  const getSessionDisplayTitle = (session: SessionSummary): string => {
+    const title = (session.lastMessage || '').trim();
+    if (title !== '') {
+      return title;
+    }
+    return session.key.replace(/^desktop:/, t('sidebar.newTask'));
+  };
+
+  const handleDelete = (session: SessionSummary) => {
+    setSessionToDelete(session.key);
+    setSessionToDeleteTitle(getSessionDisplayTitle(session));
     setDeleteDialogOpen(true);
     setOpenMenuKey(null);
   };
@@ -73,6 +83,7 @@ export function Sidebar() {
     }
     setDeleteDialogOpen(false);
     setSessionToDelete(null);
+    setSessionToDeleteTitle('');
   };
 
   const handleStartRename = (session: SessionSummary) => {
@@ -296,22 +307,12 @@ export function Sidebar() {
                 return (
                   <div
                     key={session.key}
-                    className={`group relative flex items-center gap-1 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
-                      !isCurrent && 'hover:scale-[1.01]'
+                    className={`group relative flex cursor-pointer items-center gap-1 rounded-xl px-3 py-2.5 transition-colors duration-150 ${
+                      !isCurrent ? 'hover:bg-[var(--hover)]' : ''
                     }`}
                     style={{
-                      background: isCurrent ? 'var(--card)' : 'transparent',
+                      background: isCurrent ? 'var(--card)' : isMenuOpen ? 'var(--hover)' : 'transparent',
                       boxShadow: isCurrent ? '0 1px 3px rgba(0,0,0,0.05)' : 'none'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isCurrent) {
-                        e.currentTarget.style.background = 'var(--hover)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isCurrent) {
-                        e.currentTarget.style.background = 'transparent';
-                      }
                     }}
                   >
                     <button
@@ -336,7 +337,9 @@ export function Sidebar() {
                           e.stopPropagation();
                           setOpenMenuKey(isMenuOpen ? null : session.key);
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all duration-200 hover:scale-110"
+                        className={`rounded-lg p-1.5 transition-opacity duration-150 ${
+                          isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                        }`}
                         style={{
                           background: isMenuOpen ? 'var(--hover)' : 'transparent'
                         }}
@@ -347,15 +350,19 @@ export function Sidebar() {
                       {/* Dropdown Menu */}
                       {isMenuOpen && (
                         <div
-                          className="absolute right-0 top-full mt-1 w-32 rounded-xl py-1 z-50"
+                          className="absolute right-10 top-1/2 z-50 w-36 -translate-y-1/2 rounded-xl border border-border/75 py-1"
                           style={{
                             background: 'var(--card)',
                             boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
                           }}
+                          onClick={(e) => e.stopPropagation()}
                         >
                           <button
-                            onClick={() => handleStartRename(session)}
-                            className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 transition-colors duration-150 hover:rounded-lg mx-1 w-[calc(100%-8px)]"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartRename(session);
+                            }}
+                            className="mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150"
                             style={{ color: 'var(--foreground)' }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.background = 'var(--hover)';
@@ -368,8 +375,11 @@ export function Sidebar() {
                             {t('sidebar.rename')}
                           </button>
                           <button
-                            onClick={() => handleDelete(session.key)}
-                            className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 transition-colors duration-150 hover:rounded-lg mx-1 w-[calc(100%-8px)]"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(session);
+                            }}
+                            className="mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150"
                             style={{ color: '#e74c3c' }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.background = 'rgba(231, 76, 60, 0.1)';
@@ -433,13 +443,20 @@ export function Sidebar() {
       <ConfirmDialog
         isOpen={deleteDialogOpen}
         title={t('sidebar.delete')}
-        message={t('sidebar.confirmDelete')}
+        message={
+          sessionToDeleteTitle
+            ? language === 'zh'
+              ? `确定要删除任务「${sessionToDeleteTitle}」吗？此操作不可恢复。`
+              : `Delete task "${sessionToDeleteTitle}"? This action cannot be undone.`
+            : t('sidebar.confirmDelete')
+        }
         confirmText={t('common.delete')}
         cancelText={t('common.cancel')}
         onConfirm={confirmDelete}
         onCancel={() => {
           setDeleteDialogOpen(false);
           setSessionToDelete(null);
+          setSessionToDeleteTitle('');
         }}
         variant="danger"
       />

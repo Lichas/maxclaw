@@ -54,6 +54,11 @@
 - **位置**：`electron/src/renderer/components/MarkdownRenderer.tsx`。
 - **验证**：`cd electron && npm run build`、`make build`。
 
+#### 修复侧边栏会话“更多”菜单悬浮闪烁并强化删除确认
+- **变更**：移除会话行 hover 缩放与手动背景抖动逻辑，菜单改为同高侧向弹出并固定可见状态，避免悬浮到菜单时触发相邻会话闪烁；删除操作保留二次确认弹窗，并显示任务名与不可恢复提示。
+- **位置**：`electron/src/renderer/components/Sidebar.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 ### 新增功能
 
 #### 智能插话/打断功能（Smart Interruption）
