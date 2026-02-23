@@ -9,6 +9,7 @@ import { ShortcutManager, DEFAULT_SHORTCUTS } from './shortcuts';
 import log from 'electron-log';
 import Store from 'electron-store';
 import { autoUpdater } from 'electron-updater';
+import { initializeWindowsIntegration } from './windows-integration';
 
 // Avoid crashing on detached stdio (EPIPE) in desktop runtime.
 const swallowBrokenPipe = (error: NodeJS.ErrnoException) => {
@@ -180,6 +181,11 @@ async function initializeApp(): Promise<void> {
 
   // Initialize tray
   initializeTray(mainWindow);
+
+  // Initialize Windows-specific integrations
+  if (mainWindow) {
+    initializeWindowsIntegration(mainWindow);
+  }
 
   // Setup auto-updater
   setupAutoUpdater();

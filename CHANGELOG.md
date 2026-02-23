@@ -16,6 +16,23 @@
 
 ### 新增功能
 
+#### Windows 多平台支持
+- **功能**：完整的 Windows 平台支持，包括安装程序、任务栏集成和 CI/CD 构建
+- **实现**：
+  - Windows 任务栏集成：跳转列表、进度条、缩略图工具栏
+  - NSIS 安装程序配置：自定义安装向导、协议注册 (`maxclaw://`)、快捷方式创建
+  - 便携版支持：无需安装，直接运行
+  - 跨平台自动启动：修复 Windows 兼容性
+  - GitHub Actions 多平台构建工作流
+- **验证**：`cd electron && npm run build` 成功
+- **文件**
+  - `electron/src/main/windows-integration.ts` - Windows 集成功能（新建）
+  - `electron/electron-builder.yml` - 更新 NSIS 配置
+  - `electron/build/installer.nsh` - NSIS 安装脚本（新建）
+  - `.github/workflows/build-desktop.yml` - CI/CD 工作流（新建）
+  - `docs/CROSS_PLATFORM.md` - 多平台文档（新建）
+  - `electron/src/main/index.ts` - 集成 Windows 功能
+
 #### 数据导入/导出功能（`electron/src/main/ipc.ts`, `electron/src/renderer/views/SettingsView.tsx`）
 - **功能**：支持导出和导入配置与会话数据，便于备份和迁移
 - **实现**：
@@ -39,6 +56,21 @@
   - `electron/package*.json` - 添加 jszip 依赖（修改）
 
 ### 新增功能
+
+#### Electron UI 优化 (`electron/src/renderer/`)
+- **功能**：4 项 UI 细节优化，提升用户体验
+- **实现**：
+  - 用户消息支持复制：添加复制按钮，悬停显示，点击后提示"已复制到剪贴板"
+  - 减小圆角：聊天区域整体圆角从 `rounded-2xl` 改为 `rounded-xl`（减少 2px）
+  - 统一背景色：聊天区域外层背景改为 `var(--secondary)`，与侧边栏融为一体，优雅显示内层圆角
+  - 自定义确认弹窗：删除确认对话框使用 App 图标替换默认 Electron 图标
+- **验证**：`cd electron && npm run build` 成功
+- **文件**
+  - `electron/src/renderer/components/ConfirmDialog.tsx` - 新增确认对话框组件
+  - `electron/src/renderer/views/ChatView.tsx` - 消息复制按钮、圆角和背景色调整
+  - `electron/src/renderer/components/Sidebar.tsx` - 使用 ConfirmDialog 替换原生 confirm
+  - `electron/src/renderer/views/SessionsView.tsx` - 使用 ConfirmDialog 替换原生 confirm
+  - `electron/src/renderer/views/ScheduledTasksView.tsx` - 使用 ConfirmDialog 替换原生 confirm
 
 #### 定时任务执行历史记录 (`internal/cron/`, `electron/src/renderer/`)
 - **功能**：为定时任务添加执行历史追踪，用户可查看每次执行的详细记录

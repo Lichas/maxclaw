@@ -22,6 +22,27 @@ win:
   target:
     - nsis
     - portable
+  publisherName: 'Lichas'
+  verifyUpdateCodeSignature: false
+  signingHashAlgorithms:
+    - sha256
+  requestedExecutionLevel: asInvoker
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: 'Maxclaw AI'
+  installerIcon: assets/icon.ico
+  uninstallerIcon: assets/icon.ico
+  installerHeaderIcon: assets/icon.ico
+  license: ../LICENSE
+  artifactName: 'Maxclaw-${version}-Setup.${ext}'
+  deleteAppDataOnUninstall: false
+  include: build/installer.nsh
+  menuCategory: true
+portable:
+  artifactName: 'Maxclaw-${version}-Portable.${ext}'
 linux:
   icon: assets/icon.png
   target:
