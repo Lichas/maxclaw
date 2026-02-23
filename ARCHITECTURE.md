@@ -112,6 +112,108 @@ function setupAutoUpdater() {
 3. 上传 `dist/` 目录中的安装包（.dmg, .exe, .AppImage）
 4. 客户端自动检测到新版本并提示用户
 
+#### 技术实现细节
+
+**谁提供"有新版本"的接口？**
+
+GitHub Releases 托管的 `latest.yml`（Windows）、`latest-mac.yml`（macOS）、`latest-linux.yml`（Linux）元数据文件。
+
+**打包时生成的元数据文件**（electron-builder 自动生成）：
+```yaml
+# latest-mac.yml
+version: 1.0.1
+files:
+  - url: Maxclaw-1.0.1-mac.zip
+    sha512: abc123...  # 文件哈希校验
+    size: 52567890
+path: Maxclaw-1.0.1-mac.zip
+sha512: abc123...
+releaseDate: '2026-02-23T00:00:00.000Z'
+```
+
+**检查更新的完整流程**：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. autoUpdater.checkForUpdates()                           │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  2. 请求 GitHub API                                         │
+│     GET /repos/{owner}/{repo}/releases/latest               │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  3. 从 Release Assets 下载 latest-{platform}.yml            │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  4. 解析 YAML，获取 version                                 │
+│     对比当前版本 app.getVersion()                           │
+│     1.0.1 > 1.0.0 → 有新版本                                │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  5. 触发 'update-available' 事件                            │
+│     返回 { version, files, releaseDate, ... }               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**版本比较规则**（使用 semver）：
+
+| 当前版本 | 远程版本 | 结果 |
+|---------|---------|------|
+| 1.0.0 | 1.0.1 | ✅ 有更新（patch）|
+| 1.0.0 | 1.1.0 | ✅ 有更新（minor）|
+| 1.0.0 | 2.0.0 | ✅ 有更新（major）|
+| 1.0.0 | 1.0.0 | ❌ 无更新 |
+| 1.0.1 | 1.0.0 | ❌ 无更新（本地更新）|
+
+**下载和安装流程**：
+
+```typescript
+// 1. 用户点击"下载更新"
+autoUpdater.downloadUpdate()
+  ├─▶ 根据 latest-mac.yml 中的 url 下载 .zip/.dmg
+  ├─▶ 校验 sha512 哈希（防篡改）
+  ├─▶ 保存到本地缓存目录
+  └─▶ 触发 'update-downloaded' 事件
+
+// 2. 用户点击"安装并重启"
+autoUpdater.quitAndInstall()
+  ├─▶ 退出应用
+  ├─▶ 解压/替换旧版本（electron-updater 内置逻辑）
+  └─▶ 启动新版本
+```
+
+**配置关键点**：
+
+```yaml
+# electron-builder.yml
+publish:
+  provider: github
+  owner: Lichas      # GitHub 用户名
+  repo: maxclaw      # 仓库名
+  releaseType: release  # 只检查正式 release，不包括 draft/prerelease
+```
+
+```json
+// package.json（版本号来源）
+{
+  "name": "maxclaw",
+  "version": "1.0.1"  // 这个版本号会被打包进应用
+}
+```
+
+**安全机制**：
+- **SHA512 校验**：下载完成后校验文件哈希，防止中间人攻击或文件损坏
+- **HTTPS 传输**：所有下载通过 HTTPS，防止窃听和篡改
+- **签名验证**（macOS/Windows）：安装包需要有效的代码签名证书
+
 ### 全局快捷键
 
 使用 Electron `globalShortcut` API 注册系统级快捷键：
