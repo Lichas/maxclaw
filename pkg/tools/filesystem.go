@@ -166,7 +166,7 @@ func NewReadFileTool() *ReadFileTool {
 				"properties": map[string]interface{}{
 					"path": map[string]interface{}{
 						"type":        "string",
-						"description": "Path to the file to read",
+						"description": "Relative path to the file to read (e.g., 'document.md' or 'data/report.json'). Automatically resolves to the current session directory.",
 					},
 					"limit": map[string]interface{}{
 						"type":        "integer",
@@ -252,7 +252,7 @@ func NewWriteFileTool() *WriteFileTool {
 				"properties": map[string]interface{}{
 					"path": map[string]interface{}{
 						"type":        "string",
-						"description": "Path to the file to write",
+						"description": "Relative path to the file to write (e.g., 'report.md' or 'docs/readme.md'). Files are automatically saved to the current session directory.",
 					},
 					"content": map[string]interface{}{
 						"type":        "string",
@@ -308,7 +308,7 @@ func NewEditFileTool() *EditFileTool {
 				"properties": map[string]interface{}{
 					"path": map[string]interface{}{
 						"type":        "string",
-						"description": "Path to the file to edit",
+						"description": "Relative path to the file to edit (e.g., 'config.yaml'). Automatically resolves to the current session directory.",
 					},
 					"old_string": map[string]interface{}{
 						"type":        "string",
@@ -374,7 +374,7 @@ func NewListDirTool() *ListDirTool {
 				"properties": map[string]interface{}{
 					"path": map[string]interface{}{
 						"type":        "string",
-						"description": "Path to the directory to list",
+						"description": "Relative path to the directory to list (e.g., '.' for current directory or 'src' for subdirectory). Automatically resolves to the current session directory.",
 					},
 					"recursive": map[string]interface{}{
 						"type":        "boolean",
