@@ -56,6 +56,16 @@
 - 完整日志：`~/.maxclaw/logs`
 
 ## 快速开始
+
+### 本地开发一键启动（all-in-one）
+
+```bash
+# 构建 + 启动 Gateway + 启动 Electron 桌面应用
+make build && make restart-daemon && make electron-start
+```
+
+### 标准流程
+
 1. 安装依赖：Go 1.21+，Node.js 18+
 2. 构建：`make build`
 3. 初始化：`./build/maxclaw onboard`
