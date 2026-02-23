@@ -6,6 +6,28 @@
 
 ---
 
+## 2026-02-23 - 字符架构图代码块颜色对比度过低（难以阅读）
+
+**问题**：
+- 聊天消息中用文本字符（ASCII）表示的架构图在渲染后颜色过浅，内容接近不可读。
+
+**根因**：
+- 该类内容属于 Markdown 无语言代码块（`pre > code`）。
+- `prose` 默认代码块文本色偏浅，而页面代码块背景为浅色，形成“浅色文字 + 浅色背景”的低对比组合。
+
+**修复**：
+- 在 Markdown 渲染器中为无语言代码块显式设置高对比文本色（`text-foreground`）。
+- 为 `pre` 容器补充边框、背景和 `code` 子元素样式覆盖，避免被 `prose` 默认样式覆盖。
+
+**修复文件**：
+- `electron/src/renderer/components/MarkdownRenderer.tsx`
+
+**验证**：
+- `cd electron && npm run build`
+- `make build`
+
+---
+
 ## 2026-02-23 - Electron 聊天窗口信息流高度异常（底部大面积空白）
 
 **问题**：
