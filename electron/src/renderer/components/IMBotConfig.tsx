@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from '../i18n';
 import type { ChannelsConfig } from '../types/channels';
 import { CHANNEL_DEFINITIONS } from '../types/channels';
+import QRCode from 'qrcode';
 
 interface IMBotConfigProps {
   config: ChannelsConfig;
@@ -29,8 +30,27 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
 
   // WhatsApp QR code state
   const [whatsAppQR, setWhatsAppQR] = useState<string | null>(null);
+  const [whatsAppQRDataUrl, setWhatsAppQRDataUrl] = useState<string | null>(null);
   const [whatsAppStatus, setWhatsAppStatus] = useState<string>('');
   const [loadingQR, setLoadingQR] = useState(false);
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Generate QR code data URL
+  const generateQRDataUrl = useCallback(async (qrText: string) => {
+    try {
+      const dataUrl = await QRCode.toDataURL(qrText, {
+        width: 160,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff',
+        },
+      });
+      setWhatsAppQRDataUrl(dataUrl);
+    } catch {
+      setWhatsAppQRDataUrl(null);
+    }
+  }, []);
 
   // Fetch WhatsApp QR code
   const fetchWhatsAppStatus = useCallback(async () => {
@@ -41,15 +61,17 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
       setWhatsAppStatus(status.status);
       if (status.qr) {
         setWhatsAppQR(status.qr);
+        await generateQRDataUrl(status.qr);
       } else if (status.connected) {
         setWhatsAppQR(null);
+        setWhatsAppQRDataUrl(null);
       }
     } catch {
       // Ignore errors
     } finally {
       setLoadingQR(false);
     }
-  }, [getWhatsAppStatus, config.whatsapp.enabled]);
+  }, [getWhatsAppStatus, config.whatsapp.enabled, generateQRDataUrl]);
 
   // Poll WhatsApp status when active
   useEffect(() => {
@@ -306,7 +328,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
                 </div>
 
                 {/* WhatsApp QR Code */}
-                {def.key === 'whatsapp' && whatsAppQR && (
+                {def.key === 'whatsapp' && whatsAppQRDataUrl && (
                   <div className="p-4 bg-secondary rounded-lg">
                     <h4 className="text-sm font-medium mb-3">
                       {renderLabel('扫描二维码绑定 WhatsApp', 'Scan QR Code to bind WhatsApp')}
@@ -314,7 +336,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
                     <div className="flex items-start gap-4">
                       <div className="bg-white p-2 rounded-lg">
                         <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(whatsAppQR)}`}
+                          src={whatsAppQRDataUrl}
                           alt="WhatsApp QR Code"
                           className="w-40 h-40"
                         />
