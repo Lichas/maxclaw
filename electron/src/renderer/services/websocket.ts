@@ -3,6 +3,16 @@ import { setStatus } from '../store';
 
 type MessageHandler = (data: any) => void;
 
+export type WebSocketMessageType = 'chat' | 'interrupt' | 'stream' | 'status';
+
+export interface WSMessage {
+  type: WebSocketMessageType;
+  session?: string;
+  content?: string;
+  mode?: 'cancel' | 'append';
+  timestamp?: number;
+}
+
 class WebSocketClient {
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
@@ -102,6 +112,39 @@ class WebSocketClient {
 
   isConnected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  send(message: WSMessage): boolean {
+    if (!this.isConnected()) {
+      console.warn('WebSocket not connected, cannot send message');
+      return false;
+    }
+    try {
+      this.ws!.send(JSON.stringify(message));
+      return true;
+    } catch (error) {
+      console.error('Failed to send WebSocket message:', error);
+      return false;
+    }
+  }
+
+  sendChat(session: string, content: string): boolean {
+    return this.send({
+      type: 'chat',
+      session,
+      content,
+      timestamp: Date.now()
+    });
+  }
+
+  sendInterrupt(session: string, mode: 'cancel' | 'append', content?: string): boolean {
+    return this.send({
+      type: 'interrupt',
+      session,
+      mode,
+      content: content || '',
+      timestamp: Date.now()
+    });
   }
 }
 

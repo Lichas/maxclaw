@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'rea
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, setCurrentSessionKey } from '../store';
 import { GatewayStreamEvent, SkillSummary, useGateway } from '../hooks/useGateway';
+import { wsClient } from '../services/websocket';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import { FileAttachment, UploadedFile } from '../components/FileAttachment';
 import { CustomSelect } from '../components/CustomSelect';
@@ -149,6 +150,11 @@ export function ChatView() {
 
   // File attachments state
   const [attachedFiles, setAttachedFiles] = useState<UploadedFile[]>([]);
+
+  // Interrupt/append mode state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [interruptMode, setInterruptMode] = useState<'cancel' | 'append'>('cancel');
+  const [interruptHintVisible, setInterruptHintVisible] = useState(false);
 
   // @mention skills state
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -565,7 +571,21 @@ export function ChatView() {
 
     if (event.key === 'Enter' && !event.shiftKey && !isComposing) {
       event.preventDefault();
-      void handleSubmit(event);
+      if (isGenerating) {
+        // Enter during generation = interrupt with cancel mode
+        handleInterrupt('cancel');
+      } else {
+        void handleSubmit(event);
+      }
+    }
+
+    if (event.key === 'Enter' && event.shiftKey && !isComposing) {
+      event.preventDefault();
+      if (isGenerating) {
+        // Shift+Enter during generation = interrupt with append mode
+        handleInterrupt('append');
+      }
+      // If not generating, Shift+Enter adds newline (default behavior)
     }
   };
 
@@ -793,12 +813,34 @@ export function ChatView() {
     };
   }, [currentSessionKey, getSession, getSessions]);
 
+  const handleInterrupt = (mode: 'cancel' | 'append') => {
+    if (!isGenerating || !currentSessionKey) {
+      return;
+    }
+
+    const content = input.trim();
+    const success = wsClient.sendInterrupt(currentSessionKey, mode, content);
+
+    if (success) {
+      // Clear input if content was sent
+      if (content) {
+        setInput('');
+      }
+      // Show feedback toast
+      showToast(mode === 'cancel' ? '已发送打断请求' : '已补充上下文');
+      // Reset interrupt hint
+      setInterruptHintVisible(false);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!input.trim() || isLoading) {
       return;
     }
     setPreviewSidebarCollapsed(true);
+    setIsGenerating(true);
+    setInterruptHintVisible(true);
 
     const userMessage: Message = {
       id: `${Date.now()}`,
@@ -876,6 +918,9 @@ export function ChatView() {
         }
       ]);
       setPreviewSidebarCollapsed(true);
+    } finally {
+      setIsGenerating(false);
+      setInterruptHintVisible(false);
     }
   };
 
@@ -1287,14 +1332,50 @@ export function ChatView() {
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={!input.trim() || isLoading}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <SendIcon className="h-4 w-4" />
-        </button>
+        {isGenerating ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleInterrupt('append')}
+              disabled={!input.trim()}
+              title="Shift+Enter 补充上下文"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-secondary px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <PlusIcon className="h-4 w-4" />
+              补充
+            </button>
+            <button
+              type="button"
+              onClick={() => handleInterrupt('cancel')}
+              title="Enter 打断并重试"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-destructive px-3 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
+            >
+              <StopIcon className="h-4 w-4" />
+              打断
+            </button>
+          </div>
+        ) : (
+          <button
+            type="submit"
+            disabled={!input.trim() || isLoading}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <SendIcon className="h-4 w-4" />
+          </button>
+        )}
       </div>
+      {interruptHintVisible && isGenerating && (
+        <div className="mt-2 flex items-center justify-center gap-4 text-xs text-foreground/50">
+          <span className="flex items-center gap-1">
+            <kbd className="rounded bg-secondary px-1.5 py-0.5 text-[10px]">Enter</kbd>
+            打断并重试
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="rounded bg-secondary px-1.5 py-0.5 text-[10px]">Shift+Enter</kbd>
+            补充上下文
+          </span>
+        </div>
+      )}
     </form>
   );
 
@@ -1540,6 +1621,22 @@ function CopyIcon({ className }: { className?: string }) {
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth={2} />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+    </svg>
+  );
+}
+
+function PlusIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+    </svg>
+  );
+}
+
+function StopIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <rect x="6" y="6" width="12" height="12" rx="2" />
     </svg>
   );
 }
