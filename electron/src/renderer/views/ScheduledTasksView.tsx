@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { CustomSelect } from '../components/CustomSelect';
 import { CronBuilder } from '../components/CronBuilder';
 import { ExecutionHistory } from '../components/ExecutionHistory';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 interface CronJob {
   id: string;
@@ -38,6 +39,8 @@ export function ScheduledTasksView() {
     scheduleValue: '0 9 * * *',
     workDir: ''
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [jobToDelete, setJobToDelete] = useState<string | null>(null);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -101,9 +104,14 @@ export function ScheduledTasksView() {
   };
 
   const deleteJob = async (id: string) => {
-    if (!confirm('确定要删除这个定时任务吗？')) return;
+    setJobToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteJob = async () => {
+    if (!jobToDelete) return;
     try {
-      const response = await fetch(`http://localhost:18890/api/cron/${id}`, {
+      const response = await fetch(`http://localhost:18890/api/cron/${jobToDelete}`, {
         method: 'DELETE'
       });
       if (!response.ok) throw new Error('Failed to delete job');
@@ -111,6 +119,8 @@ export function ScheduledTasksView() {
     } catch (err) {
       setError(err instanceof Error ? err.message : '删除失败');
     }
+    setDeleteDialogOpen(false);
+    setJobToDelete(null);
   };
 
   const viewJobHistory = (id: string) => {
@@ -382,6 +392,21 @@ export function ScheduledTasksView() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteDialogOpen}
+        title="删除定时任务"
+        message="确定要删除这个定时任务吗？此操作不可恢复。"
+        confirmText="删除"
+        cancelText="取消"
+        onConfirm={confirmDeleteJob}
+        onCancel={() => {
+          setDeleteDialogOpen(false);
+          setJobToDelete(null);
+        }}
+        variant="danger"
+      />
     </div>
   );
 }

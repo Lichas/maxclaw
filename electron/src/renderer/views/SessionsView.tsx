@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { setActiveTab, setCurrentSessionKey } from '../store';
 import { SessionSummary, useGateway } from '../hooks/useGateway';
 import { CustomSelect } from '../components/CustomSelect';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useTranslation } from '../i18n';
 import {
   DEFAULT_CHANNEL_ORDER,
@@ -40,6 +41,8 @@ export function SessionsView() {
   const [editingSession, setEditingSession] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,14 +125,21 @@ export function SessionsView() {
   }, [sessions, channelFilter, searchQuery]);
 
   const handleDelete = async (sessionKey: string) => {
-    if (!confirm('确定要删除这个会话吗？此操作不可恢复。')) return;
+    setSessionToDelete(sessionKey);
+    setDeleteDialogOpen(true);
+    setOpenMenuKey(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!sessionToDelete) return;
     try {
-      await deleteSession(sessionKey);
-      setSessions((prev) => prev.filter((s) => s.key !== sessionKey));
+      await deleteSession(sessionToDelete);
+      setSessions((prev) => prev.filter((s) => s.key !== sessionToDelete));
     } catch {
       alert('删除会话失败');
     }
-    setOpenMenuKey(null);
+    setDeleteDialogOpen(false);
+    setSessionToDelete(null);
   };
 
   const handleStartRename = (session: SessionSummary) => {
@@ -329,6 +339,21 @@ export function SessionsView() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteDialogOpen}
+        title="删除会话"
+        message="确定要删除这个会话吗？此操作不可恢复。"
+        confirmText="删除"
+        cancelText="取消"
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setDeleteDialogOpen(false);
+          setSessionToDelete(null);
+        }}
+        variant="danger"
+      />
     </div>
   );
 }

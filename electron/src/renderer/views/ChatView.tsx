@@ -1113,7 +1113,7 @@ export function ChatView() {
   const renderComposer = (landing: boolean) => (
     <form
       onSubmit={handleSubmit}
-      className={`relative rounded-2xl border border-primary/40 bg-background shadow-sm ${
+      className={`relative rounded-xl border border-primary/40 bg-background shadow-sm ${
         landing ? 'p-4' : 'p-3'
       }`}
     >
@@ -1370,11 +1370,12 @@ export function ChatView() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-card">
-      {renderThreadHeader()}
-      <div className="min-h-0 flex flex-1">
-        <div className="min-w-0 flex flex-1 flex-col">
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+    <div className="h-full flex flex-col" style={{ background: 'var(--secondary)' }}>
+      <div className="flex-1 overflow-hidden rounded-xl bg-card m-2 mb-0 flex flex-col">
+        {renderThreadHeader()}
+        <div className="flex-1 flex min-h-0">
+          <div className="min-w-0 flex flex-1 flex-col">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -1395,8 +1396,19 @@ export function ChatView() {
                         ))}
                       </div>
                     )}
-                    <div className="rounded-2xl bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground">
-                      <pre className="whitespace-pre-wrap break-all font-sans">{message.content}</pre>
+                    <div className="group relative rounded-xl bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground">
+                      <pre className="whitespace-pre-wrap break-all font-sans selection:bg-primary-foreground/30">{message.content}</pre>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void navigator.clipboard.writeText(message.content);
+                          showToast('已复制到剪贴板');
+                        }}
+                        className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-card text-foreground shadow-md opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary"
+                        title="复制内容"
+                      >
+                        <CopyIcon className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -1423,7 +1435,7 @@ export function ChatView() {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="bg-card p-4 pt-3">
+          <div className="p-4 pt-3">
             {renderComposer(false)}
             {terminalVisible && (
               <Suspense
@@ -1436,6 +1448,7 @@ export function ChatView() {
                 <LazyTerminalPanel key={currentSessionKey} sessionKey={currentSessionKey} />
               </Suspense>
             )}
+          </div>
           </div>
         </div>
 
@@ -1520,4 +1533,25 @@ function ChevronDownIcon({ className }: { className?: string }) {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9l6 6 6-6" />
     </svg>
   );
+}
+
+function CopyIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" strokeWidth={2} />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+    </svg>
+  );
+}
+
+function showToast(message: string) {
+  const toast = document.createElement('div');
+  toast.className = 'fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-foreground px-4 py-2 text-sm text-background shadow-lg';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s';
+    setTimeout(() => toast.remove(), 300);
+  }, 2000);
 }

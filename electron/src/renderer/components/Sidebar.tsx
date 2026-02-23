@@ -4,6 +4,7 @@ import { RootState, setActiveTab, setCurrentSessionKey } from '../store';
 import { SessionSummary, useGateway } from '../hooks/useGateway';
 import { useTranslation } from '../i18n';
 import { CustomSelect } from './CustomSelect';
+import { ConfirmDialog } from './ConfirmDialog';
 import {
   DEFAULT_CHANNEL_ORDER,
   extractSessionChannel,
@@ -31,6 +32,8 @@ export function Sidebar() {
   const [editingSession, setEditingSession] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const buildDraftSession = (key: string): SessionSummary => ({
@@ -52,17 +55,24 @@ export function Sidebar() {
   }, []);
 
   const handleDelete = async (sessionKey: string) => {
-    if (!confirm(t('sidebar.confirmDelete'))) return;
+    setSessionToDelete(sessionKey);
+    setDeleteDialogOpen(true);
+    setOpenMenuKey(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!sessionToDelete) return;
     try {
-      await deleteSession(sessionKey);
-      setSessions((prev) => prev.filter((s) => s.key !== sessionKey));
-      if (currentSessionKey === sessionKey) {
+      await deleteSession(sessionToDelete);
+      setSessions((prev) => prev.filter((s) => s.key !== sessionToDelete));
+      if (currentSessionKey === sessionToDelete) {
         dispatch(setCurrentSessionKey(''));
       }
     } catch {
       alert(t('common.error'));
     }
-    setOpenMenuKey(null);
+    setDeleteDialogOpen(false);
+    setSessionToDelete(null);
   };
 
   const handleStartRename = (session: SessionSummary) => {
@@ -418,6 +428,21 @@ export function Sidebar() {
           </span>
         </button>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteDialogOpen}
+        title={t('sidebar.delete')}
+        message={t('sidebar.confirmDelete')}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setDeleteDialogOpen(false);
+          setSessionToDelete(null);
+        }}
+        variant="danger"
+      />
     </aside>
   );
 }
