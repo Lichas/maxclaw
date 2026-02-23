@@ -16,6 +16,23 @@
 
 ### 新增功能
 
+#### 智能插话/打断功能（Smart Interruption）
+- **功能**：支持在 Agent 生成回复时进行插话，提供"打断重试"和"补充上下文"两种模式
+- **实现**：
+  - **核心机制**：`internal/agent/interrupt.go` - 实现 `InterruptibleContext`，支持上下文取消和消息追加队列
+  - **意图分析**：`internal/agent/intent.go` - 基于关键词识别用户意图（打断/补充/停止/继续）
+  - **AgentLoop 集成**：`internal/agent/loop.go` - 增强消息处理循环以支持中断处理
+  - **WebSocket 协议**：`internal/webui/websocket.go` - 扩展消息类型支持实时中断
+  - **前端界面**：
+    - `electron/src/renderer/services/websocket.ts` - 添加发送中断消息的方法
+    - `electron/src/renderer/views/ChatView.tsx` - 双模式按钮（打断/补充）和键盘快捷键
+  - **流式响应**：`internal/providers/openai.go` - 支持在流式生成时响应上下文取消
+- **使用方式**：
+  - 生成过程中按 `Enter` = 打断并重试
+  - 生成过程中按 `Shift+Enter` = 补充上下文（不打断当前生成）
+  - 点击界面上的"打断"/"补充"按钮
+- **验证**：`go test ./internal/agent/... -v`、`make build`、`cd electron && npm run build`
+
 #### 定时任务编辑功能
 - **功能**：支持编辑已创建的定时任务，包括标题、提示词和调度设置
 - **实现**：
