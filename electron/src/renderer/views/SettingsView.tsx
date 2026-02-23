@@ -7,6 +7,7 @@ import { ProviderEditor } from '../components/ProviderEditor';
 import { EmailConfig } from '../components/EmailConfig';
 import { IMBotConfig } from '../components/IMBotConfig';
 import { CustomSelect } from '../components/CustomSelect';
+import { useGateway } from '../hooks/useGateway';
 import type { ChannelsConfig } from '../types/channels';
 
 interface Settings {
@@ -28,6 +29,7 @@ export function SettingsView() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const { theme: storeTheme, language: storeLanguage } = useSelector((state: RootState) => state.ui);
+  const { getWhatsAppStatus } = useGateway();
 
   const [settings, setSettings] = useState<Settings>({
     theme: 'system',
@@ -725,6 +727,7 @@ export function SettingsView() {
                     config={channels}
                     onChange={handleChannelsChange}
                     onTestChannel={handleTestChannel}
+                    getWhatsAppStatus={getWhatsAppStatus}
                   />
                 </section>
               </div>

@@ -383,5 +383,17 @@ export function useGateway() {
     return response.json();
   }, []);
 
-  return { sendMessage, getSessions, getSession, getConfig, getSkills, getModels, updateConfig, deleteSession, renameSession, isLoading, error };
+  const getWhatsAppStatus = useCallback(async () => {
+    const response = await fetch('http://localhost:18890/api/channels/whatsapp/status');
+    if (!response.ok) throw new Error('Failed to fetch WhatsApp status');
+    return response.json() as Promise<{
+      enabled: boolean;
+      connected: boolean;
+      status: string;
+      qr?: string;
+      qrAt?: string;
+    }>;
+  }, []);
+
+  return { sendMessage, getSessions, getSession, getConfig, getSkills, getModels, updateConfig, deleteSession, renameSession, getWhatsAppStatus, isLoading, error };
 }

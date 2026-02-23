@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '../i18n';
 import type { ChannelsConfig } from '../types/channels';
 import { CHANNEL_DEFINITIONS } from '../types/channels';
@@ -7,11 +7,12 @@ interface IMBotConfigProps {
   config: ChannelsConfig;
   onChange: (config: ChannelsConfig) => void;
   onTestChannel?: (channel: keyof ChannelsConfig) => Promise<{ success: boolean; error?: string }>;
+  getWhatsAppStatus?: () => Promise<{ enabled: boolean; connected: boolean; status: string; qr?: string; qrAt?: string }>;
 }
 
 type ChannelKey = keyof ChannelsConfig;
 
-export function IMBotConfig({ config, onChange, onTestChannel }: IMBotConfigProps) {
+export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus }: IMBotConfigProps) {
   const { t, language } = useTranslation();
   const [activeChannel, setActiveChannel] = useState<ChannelKey>('telegram');
   const [testing, setTesting] = useState<ChannelKey | null>(null);
@@ -25,6 +26,41 @@ export function IMBotConfig({ config, onChange, onTestChannel }: IMBotConfigProp
     qq: null,
     feishu: null,
   });
+
+  // WhatsApp QR code state
+  const [whatsAppQR, setWhatsAppQR] = useState<string | null>(null);
+  const [whatsAppStatus, setWhatsAppStatus] = useState<string>('');
+  const [loadingQR, setLoadingQR] = useState(false);
+
+  // Fetch WhatsApp QR code
+  const fetchWhatsAppStatus = useCallback(async () => {
+    if (!getWhatsAppStatus || !config.whatsapp.enabled) return;
+    try {
+      setLoadingQR(true);
+      const status = await getWhatsAppStatus();
+      setWhatsAppStatus(status.status);
+      if (status.qr) {
+        setWhatsAppQR(status.qr);
+      } else if (status.connected) {
+        setWhatsAppQR(null);
+      }
+    } catch {
+      // Ignore errors
+    } finally {
+      setLoadingQR(false);
+    }
+  }, [getWhatsAppStatus, config.whatsapp.enabled]);
+
+  // Poll WhatsApp status when active
+  useEffect(() => {
+    if (activeChannel !== 'whatsapp' || !config.whatsapp.enabled) {
+      return;
+    }
+
+    fetchWhatsAppStatus();
+    const interval = setInterval(fetchWhatsAppStatus, 5000);
+    return () => clearInterval(interval);
+  }, [activeChannel, config.whatsapp.enabled, fetchWhatsAppStatus]);
 
   const renderLabel = (zh: string, en: string) => (language === 'zh' ? zh : en);
 
@@ -269,6 +305,34 @@ export function IMBotConfig({ config, onChange, onTestChannel }: IMBotConfigProp
                   )}
                 </div>
 
+                {/* WhatsApp QR Code */}
+                {def.key === 'whatsapp' && whatsAppQR && (
+                  <div className="p-4 bg-secondary rounded-lg">
+                    <h4 className="text-sm font-medium mb-3">
+                      {renderLabel('扫描二维码绑定 WhatsApp', 'Scan QR Code to bind WhatsApp')}
+                    </h4>
+                    <div className="flex items-start gap-4">
+                      <div className="bg-white p-2 rounded-lg">
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(whatsAppQR)}`}
+                          alt="WhatsApp QR Code"
+                          className="w-40 h-40"
+                        />
+                      </div>
+                      <div className="text-sm text-foreground/60 space-y-1">
+                        <p>{renderLabel('1. 打开 WhatsApp 手机应用', '1. Open WhatsApp on your phone')}</p>
+                        <p>{renderLabel('2. 点击设置 → 已关联设备', '2. Go to Settings → Linked Devices')}</p>
+                        <p>{renderLabel('3. 点击"关联新设备"', '3. Tap "Link a Device"')}</p>
+                        <p>{renderLabel('4. 扫描左侧二维码', '4. Scan the QR code on the left')}</p>
+                        <p className="text-xs mt-2 text-foreground/40">
+                          {renderLabel('状态: ', 'Status: ')}
+                          {whatsAppStatus || (loadingQR ? renderLabel('加载中...', 'Loading...') : renderLabel('等待扫码', 'Waiting for scan'))}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex items-center gap-4 pt-4 border-t border-border">
                   {onTestChannel && (
@@ -282,6 +346,18 @@ export function IMBotConfig({ config, onChange, onTestChannel }: IMBotConfigProp
                           ? renderLabel('测试中...', 'Testing...')
                           : renderLabel('测试连接', 'Test Connection')}
                       </button>
+
+                      {def.key === 'whatsapp' && (
+                        <button
+                          onClick={fetchWhatsAppStatus}
+                          disabled={loadingQR}
+                          className="px-4 py-2 bg-secondary text-foreground rounded-lg text-sm font-medium hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {loadingQR
+                            ? renderLabel('刷新中...', 'Refreshing...')
+                            : renderLabel('刷新二维码', 'Refresh QR Code')}
+                        </button>
+                      )}
 
                       {testResults[def.key] && (
                         <span

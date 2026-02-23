@@ -16,6 +16,7 @@ interface Message {
   timestamp: Date;
   timeline?: TimelineEntry[];
   attachments?: UploadedFile[];
+  durationMs?: number;
 }
 
 interface PreviewPayload {
@@ -121,6 +122,18 @@ function formatSessionTitle(text?: string): string {
 
   const collapsed = firstLine.replace(/\s+/g, ' ');
   return collapsed.length > 72 ? `${collapsed.slice(0, 72)}...` : collapsed;
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) {
+    return `${ms}ms`;
+  }
+  if (ms < 60000) {
+    return `${(ms / 1000).toFixed(1)}s`;
+  }
+  const minutes = Math.floor(ms / 60000);
+  const seconds = ((ms % 60000) / 1000).toFixed(1);
+  return `${minutes}m ${seconds}s`;
 }
 
 export function ChatView() {
@@ -861,6 +874,7 @@ export function ChatView() {
     resetTypingState();
 
     let assistantContent = '';
+    const startTime = Date.now();
 
     try {
       const result = await sendMessage(
@@ -892,6 +906,7 @@ export function ChatView() {
 
       await waitForTypingDrain();
 
+      const durationMs = Date.now() - startTime;
       setMessages((prev) => [
         ...prev,
         {
@@ -899,13 +914,15 @@ export function ChatView() {
           role: 'assistant',
           content: assistantContent,
           timestamp: new Date(),
-          timeline: streamingTimelineRef.current.length > 0 ? [...streamingTimelineRef.current] : undefined
+          timeline: streamingTimelineRef.current.length > 0 ? [...streamingTimelineRef.current] : undefined,
+          durationMs
         }
       ]);
       setPreviewSidebarCollapsed(true);
       resetTypingState();
     } catch (err) {
       const errorTimeline = streamingTimelineRef.current.length > 0 ? [...streamingTimelineRef.current] : undefined;
+      const durationMs = Date.now() - startTime;
       resetTypingState();
       setMessages((prev) => [
         ...prev,
@@ -914,7 +931,8 @@ export function ChatView() {
           role: 'assistant',
           content: err instanceof Error ? `消息发送失败：${err.message}` : '消息发送失败，请检查 Gateway 状态后重试。',
           timestamp: new Date(),
-          timeline: errorTimeline
+          timeline: errorTimeline,
+          durationMs
         }
       ]);
       setPreviewSidebarCollapsed(true);
@@ -1497,6 +1515,15 @@ export function ChatView() {
                       renderTimeline(message.timeline, false)
                     ) : (
                       renderMarkdownWithActions(message.content, message.id)
+                    )}
+                    {message.durationMs !== undefined && message.durationMs > 0 && (
+                      <div className="mt-2 flex items-center gap-1.5 text-[11px] text-foreground/40">
+                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="9" strokeWidth={1.5} />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 7v5l3 3" />
+                        </svg>
+                        <span>{formatDuration(message.durationMs)}</span>
+                      </div>
                     )}
                   </div>
                 )}

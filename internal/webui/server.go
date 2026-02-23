@@ -96,6 +96,7 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	mux.HandleFunc("/api/notifications/", s.handleMarkNotificationDelivered)
 	mux.HandleFunc("/api/providers/test", s.handleTestProvider)
 	mux.HandleFunc("/api/channels/", s.handleTestChannel)
+	mux.HandleFunc("/api/channels/whatsapp/status", s.handleWhatsAppStatus)
 	mux.HandleFunc("/ws", s.handleWebSocket)
 
 	mux.Handle("/", spaHandler(s.uiDir))
@@ -1942,4 +1943,45 @@ func findRestartScript() (string, string, error) {
 	}
 
 	return "", "", fmt.Errorf("restart script not found")
+}
+
+// handleWhatsAppStatus returns WhatsApp channel status including QR code
+func (s *Server) handleWhatsAppStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	if s.channelRegistry == nil {
+		writeJSON(w, map[string]interface{}{
+			"enabled":   false,
+			"connected": false,
+			"status":    "registry not initialized",
+		})
+		return
+	}
+
+	ch, ok := s.channelRegistry.Get("whatsapp")
+	if !ok {
+		writeJSON(w, map[string]interface{}{
+			"enabled":   false,
+			"connected": false,
+			"status":    "channel not registered",
+		})
+		return
+	}
+
+	// Type assert to WhatsAppChannel to get status
+	if wc, ok := ch.(interface{ Status() channels.WhatsAppStatus }); ok {
+		status := wc.Status()
+		writeJSON(w, status)
+		return
+	}
+
+	// Fallback to basic channel info
+	writeJSON(w, map[string]interface{}{
+		"enabled":   ch.IsEnabled(),
+		"connected": false,
+		"status":    "status not available",
+	})
 }
