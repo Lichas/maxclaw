@@ -223,7 +223,12 @@ export function SkillsView() {
                 </div>
 
                 {skill.description && (
-                  <p className="mt-3 text-sm text-foreground/70 line-clamp-2">{skill.description}</p>
+                  <div className="group relative mt-3">
+                    <p className="cursor-help text-sm text-foreground/70 line-clamp-2">{skill.description}</p>
+                    <div className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-full min-w-[16rem] translate-y-1 rounded-xl border border-border/80 bg-card/95 p-3 text-xs leading-5 text-foreground shadow-[0_14px_34px_rgba(15,23,42,0.18)] opacity-0 backdrop-blur-sm transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+                      {skill.description}
+                    </div>
+                  </div>
                 )}
 
                 {skill.installedAt && (

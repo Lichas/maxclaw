@@ -1128,7 +1128,7 @@ export function ChatView() {
               onClick={() => void previewReference(reference)}
               className="rounded border border-border/80 bg-background px-1.5 py-0.5 text-[11px] text-foreground/75 transition-colors hover:bg-secondary"
             >
-              渲染
+              预览
             </button>
             <button
               type="button"

@@ -29,6 +29,11 @@
 - **位置**：`BUGFIX.md`。
 - **验证**：`make build`。
 
+#### 优化聊天文件操作文案与技能描述悬浮预览
+- **变更**：聊天消息中的文件操作按钮文案从“渲染”改为“预览”；技能市场卡片在鼠标悬浮描述时显示完整内容浮窗，保留行内截断并增加平滑过渡与阴影层次。
+- **位置**：`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/views/SkillsView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 ### 新增功能
 
 #### 智能插话/打断功能（Smart Interruption）
