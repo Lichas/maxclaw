@@ -470,3 +470,38 @@ useEffect(() => {
 - `cd electron && npm run start`（可启动主进程）
 - `cd electron && npm run build`
 - `make build`
+
+## 2026-02-23 - Agent 简单问候（`hi`）回复慢定位分析（仅记录，不改代码）
+
+**问题**：用户反馈即使发送简单消息（如 `hi`），回复也明显偏慢，怀疑可能卡在 MCP 初始化、模型思考或其他链路。
+
+**排查方式**：
+- 查看运行日志：`~/.maxclaw/logs/session.log`、`~/.maxclaw/logs/tools.log`、`~/.maxclaw/logs/webui.log`
+- 本地压测非流式 `/api/message`（连续 3 次 `hi`）
+- 本地压测流式 `/api/message`（记录首个 `content_delta` 时间）
+
+**关键证据**：
+1. 非流式 `hi` 三次耗时（`time_starttransfer`）：
+   - 13.248s
+   - 16.813s
+   - 29.886s
+2. 对应会话日志显示单轮消息确有明显延迟：
+   - `session.log` 中 `desktop:latency-check-*` 的入站/出站间隔分别约 13s / 17s / 30s。
+3. 慢请求期间未出现新的 MCP 初始化告警；最近一次 MCP 连接告警为：
+   - `tools.log`：`2026/02/23 07:47:55 ... context deadline exceeded`
+4. 流式请求中，首个内容 token 也较慢：
+   - `first_delta_sec = 8.654s`
+   - `final_sec = 9.404s`
+5. 部分 `hi` 流程存在额外工具回合（会进一步拉长总时延）：
+   - `tools.log` 出现 `message -> read_file(memory) -> message` 序列。
+
+**结论**：
+1. 当前“`hi` 也慢”的主要瓶颈不是网络连接（本地 connect 几乎 0ms）。
+2. 不是每次都卡在 MCP；MCP 问题主要体现在重启后连接阶段，且已有超时保护。
+3. 当前主要耗时来自两部分叠加：
+   - LLM 首 token 较慢（约 8~9s）
+   - 部分简单问候触发了不必要工具调用，产生多轮往返，放大到 15~30s
+
+**状态**：
+- 本条为分析记录，按用户要求“先不修改代码”。
+- 后续若要优化，优先方向是：减少简单问候场景下的工具回合、收窄默认工具策略。

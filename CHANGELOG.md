@@ -9,6 +9,11 @@
 - **位置**：`pkg/tools/mcp.go`、`pkg/tools/mcp_test.go`。
 - **验证**：`go test ./pkg/tools -count=1`、`go test ./internal/agent -count=1`、`make build`。
 
+#### 补充“简单消息回复慢”排查记录（仅文档）
+- **变更**：新增 `hi` 场景的时延排查结论，明确当前主要耗时来自 LLM 首 token + 额外工具回合，并记录 MCP 仅在连接阶段间歇影响。
+- **位置**：`BUGFIX.md`。
+- **验证**：`curl /api/message` 本地时延采样（3 次非流式 + 1 次流式首 token），`make build`。
+
 ### 新增功能
 
 #### 数据导入/导出功能（`electron/src/main/ipc.ts`, `electron/src/renderer/views/SettingsView.tsx`）
