@@ -183,8 +183,14 @@ Examples:
   # Install official skills from Anthropic
   maxclaw skills install --official
 
-  # Install from a GitHub repository
+  # Install entire repository
   maxclaw skills install github.com/username/repo
+
+  # Install specific skill (subdirectory)
+  maxclaw skills install github.com/openclaw/skills/tree/main/skills/steipete/weather
+
+  # Install single skill file
+  maxclaw skills install github.com/openclaw/skills/blob/main/skills/weather/SKILL.md
 
   # Install from local directory
   maxclaw skills install /path/to/skills`,
@@ -195,7 +201,7 @@ Examples:
 		installer := skills.NewInstaller(workspace)
 
 		if official {
-			fmt.Println("📦 Installing official skills from anthropics/skills...")
+			fmt.Println("📦 Installing official skills...")
 			if err := installer.InstallOfficialSkills(); err != nil {
 				return fmt.Errorf("failed to install official skills: %w", err)
 			}
@@ -219,9 +225,178 @@ Examples:
 		}
 
 		source := args[0]
-		fmt.Printf("📦 Installing skills from %s...\n", source)
-		return fmt.Errorf("custom source installation not yet implemented")
+		return installFromSource(installer, workspace, source)
 	},
+}
+
+// installFromSource 智能识别源类型并安装
+func installFromSource(installer *skills.Installer, workspace, source string) error {
+	// 标准化 source（去掉 https:// 前缀）
+	source = strings.TrimPrefix(source, "https://")
+	source = strings.TrimPrefix(source, "http://")
+	source = strings.TrimSuffix(source, "/")
+
+	// 判断是否为 GitHub URL
+	if isGitHubURL(source) {
+		return installFromGitHub(installer, workspace, source)
+	}
+
+	// 本地路径
+	if _, err := os.Stat(source); err == nil {
+		fmt.Printf("📦 Installing from local path: %s\n", source)
+		return installFromLocal(workspace, source)
+	}
+
+	return fmt.Errorf("unsupported source: %s", source)
+}
+
+// isGitHubURL 判断是否为 GitHub URL
+func isGitHubURL(source string) bool {
+	return strings.HasPrefix(source, "github.com/") ||
+		strings.HasPrefix(source, "raw.githubusercontent.com/")
+}
+
+// installFromGitHub 从 GitHub 智能安装
+func installFromGitHub(installer *skills.Installer, workspace, source string) error {
+	repoInfo := parseGitHubURL(source)
+
+	switch repoInfo.Type {
+	case "file":
+		// 单文件（blob 链接）
+		fmt.Printf("📦 Installing single skill file from %s/%s...\n", repoInfo.Owner, repoInfo.Repo)
+		return installer.InstallSingleFile(skills.GitHubSource(repoInfo))
+
+	case "dir":
+		// 子目录（tree 链接）
+		fmt.Printf("📦 Installing skill directory from %s/%s/%s...\n", repoInfo.Owner, repoInfo.Repo, repoInfo.Path)
+		return installer.InstallSubPath(skills.GitHubSource(repoInfo))
+
+	case "repo":
+		// 整个仓库
+		fmt.Printf("📦 Installing skills from %s/%s...\n", repoInfo.Owner, repoInfo.Repo)
+		repo := skills.OfficialRepo{
+			Name: fmt.Sprintf("%s/%s", repoInfo.Owner, repoInfo.Repo),
+			Repo: fmt.Sprintf("%s/%s", repoInfo.Owner, repoInfo.Repo),
+		}
+		_, err := installer.InstallRepoSkills(repo)
+		return err
+
+	default:
+		return fmt.Errorf("unrecognized GitHub URL format: %s", source)
+	}
+}
+
+// GitHubRepoInfo 解析后的 GitHub 信息（内部使用，与 skills.GitHubSource 结构一致）
+type GitHubRepoInfo struct {
+	Owner  string
+	Repo   string
+	Branch string
+	Path   string
+	Type   string // "file", "dir", "repo"
+}
+
+// parseGitHubURL 解析 GitHub URL
+// 支持格式：
+// - github.com/owner/repo
+// - github.com/owner/repo/tree/branch/path
+// - github.com/owner/repo/blob/branch/path/file.md
+// - raw.githubusercontent.com/owner/repo/branch/path/file.md
+func parseGitHubURL(source string) GitHubRepoInfo {
+	info := GitHubRepoInfo{Type: "repo"}
+
+	// 处理 raw.githubusercontent.com
+	if strings.HasPrefix(source, "raw.githubusercontent.com/") {
+		parts := strings.SplitN(strings.TrimPrefix(source, "raw.githubusercontent.com/"), "/", 5)
+		if len(parts) >= 4 {
+			info.Owner = parts[0]
+			info.Repo = parts[1]
+			info.Branch = parts[2]
+			info.Path = parts[3]
+			info.Type = "file"
+		}
+		return info
+	}
+
+	// 处理 github.com
+	parts := strings.SplitN(strings.TrimPrefix(source, "github.com/"), "/", 5)
+	if len(parts) < 2 {
+		return info
+	}
+
+	info.Owner = parts[0]
+	info.Repo = parts[1]
+
+	if len(parts) < 4 {
+		return info
+	}
+
+	// 判断是 tree 还是 blob
+	mode := parts[2]
+	info.Branch = parts[3]
+
+	if len(parts) >= 5 {
+		info.Path = parts[4]
+	}
+
+	if mode == "blob" {
+		info.Type = "file"
+	} else if mode == "tree" {
+		info.Type = "dir"
+	}
+
+	return info
+}
+
+// installFromLocal 从本地路径安装
+func installFromLocal(workspace, source string) error {
+	info, err := os.Stat(source)
+	if err != nil {
+		return err
+	}
+
+	targetDir := filepath.Join(workspace, "skills")
+
+	if info.IsDir() {
+		// 如果是目录，复制所有 .md 文件
+		entries, err := os.ReadDir(source)
+		if err != nil {
+			return err
+		}
+
+		count := 0
+		for _, entry := range entries {
+			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
+				srcPath := filepath.Join(source, entry.Name())
+				dstPath := filepath.Join(targetDir, entry.Name())
+				data, err := os.ReadFile(srcPath)
+				if err != nil {
+					continue
+				}
+				if err := os.WriteFile(dstPath, data, 0644); err != nil {
+					continue
+				}
+				count++
+			}
+		}
+		fmt.Printf("✓ Installed %d skills\n", count)
+		return nil
+	}
+
+	// 单文件
+	if strings.HasSuffix(source, ".md") {
+		data, err := os.ReadFile(source)
+		if err != nil {
+			return err
+		}
+		dstPath := filepath.Join(targetDir, filepath.Base(source))
+		if err := os.WriteFile(dstPath, data, 0644); err != nil {
+			return err
+		}
+		fmt.Printf("✓ Installed %s\n", filepath.Base(source))
+		return nil
+	}
+
+	return fmt.Errorf("unsupported file type: %s", source)
 }
 
 var skillsUpdateCmd = &cobra.Command{

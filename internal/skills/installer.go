@@ -3,6 +3,7 @@ package skills
 import (
 	"archive/zip"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -86,14 +87,17 @@ func (i *Installer) IsFirstRun() bool {
 
 // OfficialRepo 定义官方技能仓库
 type OfficialRepo struct {
-	Name string
-	Repo string
+	Name    string
+	Repo    string
+	SubPath string // 可选：指定子路径，如 "skills/steipete/weather"
 }
 
 // officialRepos 官方技能仓库列表（按安装顺序）
 var officialRepos = []OfficialRepo{
 	{Name: "Anthropics", Repo: AnthricSkillsRepo},
 	{Name: "Playwright", Repo: PlaywrightSkillsRepo},
+	// 按需安装特定子路径示例：
+	// {Name: "OpenClawWeather", Repo: "openclaw/skills", SubPath: "skills/steipete/weather"},
 }
 
 // InstallOfficialSkills 从 GitHub 或镜像下载并安装所有官方 skills
@@ -112,7 +116,7 @@ func (i *Installer) InstallOfficialSkills() error {
 	// 遍历所有官方仓库
 	for _, repo := range officialRepos {
 		fmt.Printf("\n📦 Installing %s skills...\n", repo.Name)
-		count, err := i.installRepoSkills(repo)
+		count, err := i.InstallRepoSkills(repo)
 		if err != nil {
 			// 检查是否是网络错误
 			if _, ok := err.(*NetworkError); ok {
@@ -151,10 +155,17 @@ func (i *Installer) InstallOfficialSkills() error {
 	return nil
 }
 
-// installRepoSkills 安装单个仓库的技能
+// InstallRepoSkills 安装单个仓库的技能（公开方法）
 // 返回安装的文件数量和可能的错误
-func (i *Installer) installRepoSkills(repo OfficialRepo) (int, error) {
+func (i *Installer) InstallRepoSkills(repo OfficialRepo) (int, error) {
 	skillsDir := filepath.Join(i.workspace, "skills")
+
+	// 如果指定了子路径，使用子目录安装方式
+	if repo.SubPath != "" {
+		return i.installSubPathSkills(repo, skillsDir)
+	}
+
+	// 完整仓库安装（原有逻辑）
 	zipPath := filepath.Join(i.workspace, fmt.Sprintf(".tmp_skills_%s.zip", strings.ReplaceAll(repo.Repo, "/", "_")))
 	defer os.Remove(zipPath)
 
@@ -197,6 +208,193 @@ func (i *Installer) installRepoSkills(repo OfficialRepo) (int, error) {
 	}
 
 	return count, nil
+}
+
+// installSubPathSkills 安装仓库中特定子路径的技能
+// 使用 GitHub Contents API 逐个下载文件
+func (i *Installer) installSubPathSkills(repo OfficialRepo, targetDir string) (int, error) {
+	// 提取 owner 和 repo 名称
+	parts := strings.Split(repo.Repo, "/")
+	if len(parts) != 2 {
+		return 0, fmt.Errorf("invalid repo format: %s", repo.Repo)
+	}
+	owner, repoName := parts[0], parts[1]
+
+	// 构建 API URL
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s?ref=%s",
+		owner, repoName, repo.SubPath, DefaultSkillsBranch)
+
+	fmt.Printf("  Fetching from GitHub API: %s...\n", repo.SubPath)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// 获取目录内容
+	contents, err := i.fetchGitHubContents(ctx, apiURL)
+	if err != nil {
+		// API 失败时尝试用镜像下载整个仓库然后提取
+		fmt.Printf("  API failed (%v), falling back to zip extract...\n", err)
+		return i.installSubPathFromZip(repo, targetDir)
+	}
+
+	// 下载目录中的文件
+	installedCount := 0
+	for _, item := range contents {
+		if item.Type == "file" && strings.HasSuffix(item.Name, ".md") {
+			targetPath := filepath.Join(targetDir, item.Name)
+			if err := i.downloadSkillFile(ctx, item.DownloadURL, targetPath); err != nil {
+				fmt.Printf("    ⚠ Failed to download %s: %v\n", item.Name, err)
+				continue
+			}
+			fmt.Printf("    ✓ Downloaded %s\n", item.Name)
+			installedCount++
+		}
+	}
+
+	return installedCount, nil
+}
+
+// githubContentItem 表示 GitHub API 返回的单个内容项
+type githubContentItem struct {
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	Type        string `json:"type"`
+	DownloadURL string `json:"download_url"`
+	HTMLURL     string `json:"html_url"`
+}
+
+// fetchGitHubContents 调用 GitHub API 获取目录内容
+func (i *Installer) fetchGitHubContents(ctx context.Context, apiURL string) ([]githubContentItem, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("User-Agent", "maxclaw-skills-installer/1.0")
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	resp, err := i.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned %s", resp.Status)
+	}
+
+	var contents []githubContentItem
+	if err := json.NewDecoder(resp.Body).Decode(&contents); err != nil {
+		return nil, err
+	}
+
+	return contents, nil
+}
+
+// downloadSkillFile 下载单个技能文件
+func (i *Installer) downloadSkillFile(ctx context.Context, url, targetPath string) error {
+	return i.downloadFileWithContext(ctx, url, targetPath)
+}
+
+// installSubPathFromZip 作为备选方案：下载整个仓库 ZIP，然后只提取子路径
+func (i *Installer) installSubPathFromZip(repo OfficialRepo, targetDir string) (int, error) {
+	zipPath := filepath.Join(i.workspace, fmt.Sprintf(".tmp_skills_%s.zip", strings.ReplaceAll(repo.Repo, "/", "_")))
+	defer os.Remove(zipPath)
+
+	var lastErr error
+	for _, source := range mirrorSources {
+		zipURL := fmt.Sprintf(source.url, repo.Repo, DefaultSkillsBranch)
+		fmt.Printf("  Trying %s...\n", source.name)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		err := i.downloadFileWithContext(ctx, zipURL, zipPath)
+		cancel()
+
+		if err == nil {
+			fmt.Printf("    ✓ Downloaded from %s\n", source.name)
+			break
+		}
+
+		lastErr = err
+		if isNetworkError(err) {
+			continue
+		}
+		return 0, err
+	}
+
+	if _, err := os.Stat(zipPath); os.IsNotExist(err) {
+		return 0, &NetworkError{
+			Message: fmt.Sprintf("failed to download %s from all mirrors", repo.Repo),
+			Cause:   lastErr,
+		}
+	}
+
+	// 提取子路径
+	return i.extractSubPath(zipPath, targetDir, repo.SubPath)
+}
+
+// extractSubPath 从 ZIP 中提取特定子路径的文件
+func (i *Installer) extractSubPath(zipPath, targetDir, subPath string) (int, error) {
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return 0, err
+	}
+	defer r.Close()
+
+	// ZIP 中的路径前缀通常是 "repo-main/"
+	var repoPrefix string
+	for _, f := range r.File {
+		if f.FileInfo().IsDir() {
+			// 找到第一个目录作为前缀
+			parts := strings.Split(f.Name, "/")
+			if len(parts) > 0 && repoPrefix == "" {
+				repoPrefix = parts[0] + "/"
+				break
+			}
+		}
+	}
+
+	fullPrefix := repoPrefix + subPath + "/"
+	installedCount := 0
+
+	for _, f := range r.File {
+		// 只匹配子路径下的 .md 文件
+		if !strings.HasPrefix(f.Name, fullPrefix) {
+			continue
+		}
+		if !strings.HasSuffix(f.Name, ".md") {
+			continue
+		}
+
+		relPath := strings.TrimPrefix(f.Name, fullPrefix)
+		if strings.Contains(relPath, "/") {
+			// 跳过后代目录中的文件，只取直接子文件
+			continue
+		}
+
+		targetPath := filepath.Join(targetDir, relPath)
+
+		rc, err := f.Open()
+		if err != nil {
+			continue
+		}
+
+		out, err := os.Create(targetPath)
+		if err != nil {
+			rc.Close()
+			continue
+		}
+
+		_, err = io.Copy(out, rc)
+		out.Close()
+		rc.Close()
+
+		if err == nil {
+			installedCount++
+		}
+	}
+
+	return installedCount, nil
 }
 
 // NetworkError 网络错误类型
@@ -445,4 +643,81 @@ Options:
      maxclaw works without official skills. You can add your own skills
      to ~/.maxclaw/workspace/skills/ later.
 `
+}
+
+// GitHubSource 表示解析后的 GitHub 源信息
+type GitHubSource struct {
+	Owner  string
+	Repo   string
+	Branch string
+	Path   string
+	Type   string // "file", "dir", "repo"
+}
+
+// InstallFromGitHub 从 GitHub 智能安装技能
+func (i *Installer) InstallFromGitHub(source GitHubSource) (int, error) {
+	targetDir := filepath.Join(i.workspace, "skills")
+
+	switch source.Type {
+	case "file":
+		return i.installSingleFile(source, targetDir)
+	case "dir":
+		return i.installSubPath(source, targetDir)
+	case "repo":
+		repo := OfficialRepo{
+			Name: fmt.Sprintf("%s/%s", source.Owner, source.Repo),
+			Repo: fmt.Sprintf("%s/%s", source.Owner, source.Repo),
+		}
+		return i.InstallRepoSkills(repo)
+	default:
+		return 0, fmt.Errorf("unsupported source type: %s", source.Type)
+	}
+}
+
+// installSingleFile 安装单个技能文件
+func (i *Installer) installSingleFile(source GitHubSource, targetDir string) (int, error) {
+	// 构建 raw 内容 URL
+	rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/%s",
+		source.Owner, source.Repo, source.Branch, source.Path)
+
+	// 确定目标文件名
+	fileName := filepath.Base(source.Path)
+	if !strings.HasSuffix(fileName, ".md") {
+		fileName += ".md"
+	}
+
+	targetPath := filepath.Join(targetDir, fileName)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := i.downloadFileWithContext(ctx, rawURL, targetPath); err != nil {
+		return 0, fmt.Errorf("failed to download file: %w", err)
+	}
+
+	return 1, nil
+}
+
+// installSubPath 安装子路径下的所有技能文件
+func (i *Installer) installSubPath(source GitHubSource, targetDir string) (int, error) {
+	repo := OfficialRepo{
+		Name:    fmt.Sprintf("%s/%s", source.Owner, source.Repo),
+		Repo:    fmt.Sprintf("%s/%s", source.Owner, source.Repo),
+		SubPath: source.Path,
+	}
+	return i.installSubPathSkills(repo, targetDir)
+}
+
+// InstallSingleFile 公开方法：从 GitHub 安装单个技能文件
+func (i *Installer) InstallSingleFile(source GitHubSource) error {
+	targetDir := filepath.Join(i.workspace, "skills")
+	_, err := i.installSingleFile(source, targetDir)
+	return err
+}
+
+// InstallSubPath 公开方法：从 GitHub 安装子路径下的所有技能
+func (i *Installer) InstallSubPath(source GitHubSource) error {
+	targetDir := filepath.Join(i.workspace, "skills")
+	_, err := i.installSubPath(source, targetDir)
+	return err
 }

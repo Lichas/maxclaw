@@ -4,6 +4,14 @@
 
 ### 变更
 
+#### 智能识别 GitHub URL 安装单个技能
+- **变更**：`maxclaw skills install <github-url>` 命令现在智能识别 URL 类型：
+  - 单文件（`blob/.../SKILL.md`）→ 直接下载该文件
+  - 子目录（`tree/.../skill-name`）→ 下载目录下所有 .md 文件
+  - 整仓库（`github.com/owner/repo`）→ 下载仓库中所有 skills
+- **位置**：`internal/skills/installer.go`、`internal/cli/skills.go`。
+- **验证**：`go test ./...`、`make build`。
+
 #### 首次安装时同时安装 Playwright CLI skills
 - **变更**：在安装官方 skills 时，新增 `microsoft/playwright-cli` 仓库作为第二个技能源。
 - **行为**：按顺序安装 Anthropics → Playwright 的 skills，网络失败时跳过单个仓库不中断整体流程。
