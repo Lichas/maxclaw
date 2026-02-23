@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { MermaidRenderer } from './MermaidRenderer';
@@ -43,7 +43,8 @@ export function MarkdownRenderer({ content, className = '', onFileLinkClick }: M
             children?: React.ReactNode;
           }) {
             const match = /language-(\w+)/.exec(className || '');
-            const language = match ? match[1] : '';
+            const language = (match ? match[1] : '').toLowerCase();
+            const isPlainTextBlock = ['text', 'plain', 'plaintext', 'txt'].includes(language);
 
             // Handle mermaid code blocks
             if (!inline && language === 'mermaid') {
@@ -55,12 +56,19 @@ export function MarkdownRenderer({ content, className = '', onFileLinkClick }: M
               );
             }
 
-            if (!inline && language) {
+            if (!inline && language && !isPlainTextBlock) {
               return (
                 <SyntaxHighlighter
-                  style={oneDark}
+                  style={isDark ? oneDark : oneLight}
                   language={language}
                   PreTag="div"
+                  customStyle={{
+                    margin: 0,
+                    borderRadius: '0.5rem',
+                    padding: '1rem',
+                    background: isDark ? undefined : '#eef2f0',
+                    color: isDark ? undefined : '#1f2937'
+                  }}
                   {...props}
                 >
                   {String(children).replace(/\n$/, '')}

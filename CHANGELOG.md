@@ -44,6 +44,11 @@
 - **位置**：`BUGFIX.md`。
 - **验证**：`make build`。
 
+#### 优化浅色模式 Markdown 代码块可读性
+- **变更**：代码高亮主题按明暗模式切换（浅色模式不再强制 dark 主题）；`text/plain` 等文本代码块按浅灰背景与深色文字渲染，提升字符架构图可读性。
+- **位置**：`electron/src/renderer/components/MarkdownRenderer.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 ### 新增功能
 
 #### 智能插话/打断功能（Smart Interruption）
