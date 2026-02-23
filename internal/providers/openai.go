@@ -144,82 +144,106 @@ func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, too
 
 	buildersByIndex := make(map[int]*toolCallBuilder)
 
-	scanner := bufio.NewScanner(stream)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	// Use a goroutine to read from stream so we can respond to context cancellation
+	lines := make(chan string, 100)
+	scanErr := make(chan error, 1)
 
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
+	go func() {
+		scanner := bufio.NewScanner(stream)
+		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+		for scanner.Scan() {
+			lines <- scanner.Text()
 		}
-		if !strings.HasPrefix(line, "data:") {
-			continue
+		if err := scanner.Err(); err != nil {
+			scanErr <- err
 		}
+		close(lines)
+	}()
 
-		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-		if data == "[DONE]" {
-			break
-		}
-		if data == "" {
-			continue
-		}
-
-		var chunk chatStreamChunk
-		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
-			handler.OnError(fmt.Errorf("stream decode error: %w", err))
-			return err
-		}
-
-		if len(chunk.Choices) == 0 {
-			continue
-		}
-
-		choice := chunk.Choices[0]
-		delta := choice.Delta
-
-		if choice.FinishReason != "" {
-			fmt.Printf("[DEBUG] FinishReason: %s\n", choice.FinishReason)
-		}
-
-		if delta.Content != "" {
-			handler.OnContent(delta.Content)
-		}
-
-		for _, tc := range delta.ToolCalls {
-			idx := tc.Index
-			builder, exists := buildersByIndex[idx]
-			if !exists {
-				builder = &toolCallBuilder{}
-				buildersByIndex[idx] = builder
+	for {
+		select {
+		case <-ctx.Done():
+			// Context cancelled - return gracefully
+			return ctx.Err()
+		case err := <-scanErr:
+			wrappedErr := fmt.Errorf("stream error: %w", err)
+			modelErr := p.wrapModelRequestError("stream read failed", model, wrappedErr)
+			handler.OnError(modelErr)
+			return modelErr
+		case line, ok := <-lines:
+			if !ok {
+				// Stream closed normally
+				goto complete
 			}
 
-			if tc.ID != "" {
-				builder.ID = tc.ID
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
 			}
-			if tc.Function.Name != "" {
-				builder.Name = tc.Function.Name
-			}
-
-			if !builder.Started && builder.ID != "" && builder.Name != "" {
-				builder.Started = true
-				handler.OnToolCallStart(builder.ID, builder.Name)
+			if !strings.HasPrefix(line, "data:") {
+				continue
 			}
 
-			if tc.Function.Arguments != "" {
-				builder.Arguments += tc.Function.Arguments
-				if builder.ID != "" {
-					handler.OnToolCallDelta(builder.ID, tc.Function.Arguments)
+			data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+			if data == "[DONE]" {
+				goto complete
+			}
+			if data == "" {
+				continue
+			}
+
+			var chunk chatStreamChunk
+			if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+				handler.OnError(fmt.Errorf("stream decode error: %w", err))
+				return err
+			}
+
+			if len(chunk.Choices) == 0 {
+				continue
+			}
+
+			choice := chunk.Choices[0]
+			delta := choice.Delta
+
+			if choice.FinishReason != "" {
+				fmt.Printf("[DEBUG] FinishReason: %s\n", choice.FinishReason)
+			}
+
+			if delta.Content != "" {
+				handler.OnContent(delta.Content)
+			}
+
+			for _, tc := range delta.ToolCalls {
+				idx := tc.Index
+				builder, exists := buildersByIndex[idx]
+				if !exists {
+					builder = &toolCallBuilder{}
+					buildersByIndex[idx] = builder
+				}
+
+				if tc.ID != "" {
+					builder.ID = tc.ID
+				}
+				if tc.Function.Name != "" {
+					builder.Name = tc.Function.Name
+				}
+
+				if !builder.Started && builder.ID != "" && builder.Name != "" {
+					builder.Started = true
+					handler.OnToolCallStart(builder.ID, builder.Name)
+				}
+
+				if tc.Function.Arguments != "" {
+					builder.Arguments += tc.Function.Arguments
+					if builder.ID != "" {
+						handler.OnToolCallDelta(builder.ID, tc.Function.Arguments)
+					}
 				}
 			}
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		wrappedErr := fmt.Errorf("stream error: %w", err)
-		modelErr := p.wrapModelRequestError("stream read failed", model, wrappedErr)
-		handler.OnError(modelErr)
-		return modelErr
-	}
+complete:
 
 	for _, builder := range buildersByIndex {
 		if builder != nil && builder.Arguments != "" && builder.ID != "" {
