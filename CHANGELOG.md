@@ -14,6 +14,11 @@
 - **位置**：`BUGFIX.md`。
 - **验证**：`curl /api/message` 本地时延采样（3 次非流式 + 1 次流式首 token），`make build`。
 
+#### 修复聊天页消息区被底部空白挤压
+- **变更**：调整聊天态布局，把文件预览侧栏放回与消息区同一行，避免侧栏在纵向布局中占满高度导致消息流可视区域变小。
+- **位置**：`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 ### 新增功能
 
 #### 智能插话/打断功能（Smart Interruption）

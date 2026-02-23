@@ -1531,9 +1531,8 @@ export function ChatView() {
             )}
           </div>
           </div>
+          {renderPreviewSidebar()}
         </div>
-
-        {renderPreviewSidebar()}
       </div>
     </div>
   );
