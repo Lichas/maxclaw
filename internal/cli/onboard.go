@@ -56,9 +56,17 @@ var onboardCmd = &cobra.Command{
 		fmt.Println("\n📦 Installing official skills from anthropics/skills...")
 		installer := skills.NewInstaller(config.GetWorkspacePath())
 		if err := installer.InstallOfficialSkills(); err != nil {
-			// 安装失败不中断，只是提示
-			fmt.Printf("  ⚠ Failed to install official skills: %v\n", err)
-			fmt.Println("  You can manually install them later with: maxclaw skills install --official")
+			// 检查是否是网络错误
+			if _, ok := err.(*skills.NetworkError); ok {
+				fmt.Println("  ⚠ Network issue detected. Unable to download official skills.")
+				fmt.Println("\n  Troubleshooting options:")
+				fmt.Println("    1. Set proxy: export HTTPS_PROXY=http://127.0.0.1:7890")
+				fmt.Println("    2. Manual download: https://github.com/anthropics/skills")
+				fmt.Println("    3. Retry later: maxclaw skills install --official")
+			} else {
+				fmt.Printf("  ⚠ Failed to install official skills: %v\n", err)
+				fmt.Println("  You can manually install them later with: maxclaw skills install --official")
+			}
 		} else {
 			// 列出已安装的 skills
 			installedSkills, _ := installer.ListInstalledSkills()

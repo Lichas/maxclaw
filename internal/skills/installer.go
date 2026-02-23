@@ -2,9 +2,11 @@ package skills
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,17 +22,34 @@ const (
 	SkillsInstallMarker = ".official_skills_installed"
 )
 
+// 镜像源列表（按优先级排序）
+var mirrorSources = []struct {
+	name string
+	url  string
+}{
+	{"GitHub", "https://github.com/%s/archive/refs/heads/%s.zip"},
+	{"FastGit", "https://hub.fastgit.xyz/%s/archive/refs/heads/%s.zip"},
+	{"GhProxy", "https://ghproxy.com/https://github.com/%s/archive/refs/heads/%s.zip"},
+	{"GhProxy-CN", "https://ghproxy.cn/https://github.com/%s/archive/refs/heads/%s.zip"},
+	{"Moeyy", "https://github.moeyy.xyz/https://github.com/%s/archive/refs/heads/%s.zip"},
+}
+
 // Installer 负责安装官方 skills
 type Installer struct {
-	workspace   string
-	httpClient  *http.Client
+	workspace  string
+	httpClient *http.Client
 }
 
 // NewInstaller 创建 skills 安装器
 func NewInstaller(workspace string) *Installer {
 	return &Installer{
-		workspace:  workspace,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		workspace: workspace,
+		httpClient: &http.Client{
+			Timeout: 60 * time.Second,
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment, // 支持系统代理
+			},
+		},
 	}
 }
 
@@ -63,7 +82,8 @@ func (i *Installer) IsFirstRun() bool {
 	return true
 }
 
-// InstallOfficialSkills 从 GitHub 下载并安装官方 skills
+// InstallOfficialSkills 从 GitHub 或镜像下载并安装官方 skills
+// 支持自动 fallback 到可用镜像
 func (i *Installer) InstallOfficialSkills() error {
 	skillsDir := filepath.Join(i.workspace, "skills")
 
@@ -72,17 +92,41 @@ func (i *Installer) InstallOfficialSkills() error {
 		return fmt.Errorf("failed to create skills directory: %w", err)
 	}
 
-	// 下载官方 skills
-	fmt.Println("📦 Downloading official skills from anthropics/skills...")
-
-	zipURL := fmt.Sprintf("https://github.com/%s/archive/refs/heads/%s.zip", AnthricSkillsRepo, DefaultSkillsBranch)
+	// 尝试从多个源下载
 	zipPath := filepath.Join(i.workspace, ".tmp_skills.zip")
-
-	// 下载 zip 文件
-	if err := i.downloadFile(zipURL, zipPath); err != nil {
-		return fmt.Errorf("failed to download skills: %w", err)
-	}
 	defer os.Remove(zipPath)
+
+	var lastErr error
+	for _, source := range mirrorSources {
+		zipURL := fmt.Sprintf(source.url, AnthricSkillsRepo, DefaultSkillsBranch)
+		fmt.Printf("📦 Trying %s...\n", source.name)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		err := i.downloadFileWithContext(ctx, zipURL, zipPath)
+		cancel()
+
+		if err == nil {
+			fmt.Printf("  ✓ Downloaded from %s\n", source.name)
+			break
+		}
+
+		lastErr = err
+		// 检查是否是网络连接问题
+		if isNetworkError(err) {
+			fmt.Printf("  ✗ %s unavailable, trying next mirror...\n", source.name)
+			continue
+		}
+		// 其他错误直接返回
+		return fmt.Errorf("download failed from %s: %w", source.name, err)
+	}
+
+	// 检查是否下载成功
+	if _, err := os.Stat(zipPath); os.IsNotExist(err) {
+		return &NetworkError{
+			Message: "failed to download skills from all mirrors",
+			Cause:   lastErr,
+		}
+	}
 
 	// 解压并安装
 	if err := i.extractSkills(zipPath, skillsDir); err != nil {
@@ -101,9 +145,69 @@ func (i *Installer) InstallOfficialSkills() error {
 	return nil
 }
 
-// downloadFile 下载文件到指定路径
-func (i *Installer) downloadFile(url, filepath string) error {
-	resp, err := i.httpClient.Get(url)
+// NetworkError 网络错误类型
+type NetworkError struct {
+	Message string
+	Cause   error
+}
+
+func (e *NetworkError) Error() string {
+	if e.Cause != nil {
+		return fmt.Sprintf("%s: %v", e.Message, e.Cause)
+	}
+	return e.Message
+}
+
+func (e *NetworkError) Unwrap() error {
+	return e.Cause
+}
+
+// IsNetworkError 检查是否是网络错误
+func isNetworkError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// 检查 URL 错误
+	if urlErr, ok := err.(*url.Error); ok {
+		// 超时或临时错误
+		if urlErr.Timeout() || urlErr.Temporary() {
+			return true
+		}
+	}
+
+	// 检查错误消息
+	errStr := err.Error()
+	networkKeywords := []string{
+		"connection refused",
+		"no such host",
+		"timeout",
+		"i/o timeout",
+		"temporary failure",
+		"connection reset",
+		"EOF",
+	}
+
+	for _, keyword := range networkKeywords {
+		if strings.Contains(errStr, keyword) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// downloadFileWithContext 带上下文的文件下载
+func (i *Installer) downloadFileWithContext(ctx context.Context, url, filepath string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+
+	// 设置请求头，模拟浏览器
+	req.Header.Set("User-Agent", "maxclaw-skills-installer/1.0")
+
+	resp, err := i.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -113,11 +217,7 @@ func (i *Installer) downloadFile(url, filepath string) error {
 		return fmt.Errorf("bad status: %s", resp.Status)
 	}
 
-	// 创建临时目录
-	if err := os.MkdirAll(os.TempDir(), 0755); err != nil {
-		return err
-	}
-
+	// 创建目标文件
 	out, err := os.Create(filepath)
 	if err != nil {
 		return err
@@ -226,7 +326,7 @@ func (i *Installer) ListInstalledSkills() ([]string, error) {
 		return nil, err
 	}
 
-	var skills []string
+	var skillsList []string
 	for _, entry := range entries {
 		name := entry.Name()
 		if name == "README.md" || name == SkillsInstallMarker || strings.HasPrefix(name, ".") {
@@ -237,20 +337,20 @@ func (i *Installer) ListInstalledSkills() ([]string, error) {
 		if entry.IsDir() {
 			skillFile := filepath.Join(skillsDir, name, "SKILL.md")
 			if _, err := os.Stat(skillFile); err == nil {
-				skills = append(skills, name)
+				skillsList = append(skillsList, name)
 				continue
 			}
 			// 也检查目录下是否有 .md 文件
 			if hasMarkdownFiles(filepath.Join(skillsDir, name)) {
-				skills = append(skills, name)
+				skillsList = append(skillsList, name)
 			}
 		} else if strings.HasSuffix(name, ".md") {
 			skillName := strings.TrimSuffix(name, ".md")
-			skills = append(skills, skillName)
+			skillsList = append(skillsList, skillName)
 		}
 	}
 
-	return skills, nil
+	return skillsList, nil
 }
 
 // hasMarkdownFiles 检查目录下是否有 markdown 文件
@@ -266,4 +366,28 @@ func hasMarkdownFiles(dir string) bool {
 		}
 	}
 	return false
+}
+
+// GetInstallHelpMessage 获取安装帮助信息（网络失败时显示）
+func GetInstallHelpMessage() string {
+	return `
+Skills installation failed due to network issues.
+
+Options:
+  1. Configure proxy and retry:
+     export HTTPS_PROXY=http://127.0.0.1:7890
+     maxclaw skills install --official
+
+  2. Manual download:
+     - Download: https://github.com/anthropics/skills/archive/refs/heads/main.zip
+     - Extract the 'skills' folder to: ~/.maxclaw/workspace/skills/
+
+  3. Use a mirror:
+     The installer already tried multiple mirrors (FastGit, GhProxy, etc.)
+     If all failed, you may need a system-wide VPN/proxy.
+
+  4. Skip for now:
+     maxclaw works without official skills. You can add your own skills
+     to ~/.maxclaw/workspace/skills/ later.
+`
 }
