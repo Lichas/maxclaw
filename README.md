@@ -1,6 +1,46 @@
 # maxclaw
 
-轻量级的个人 AI 助手框架（Go）。支持多渠道消息、工具调用、Web UI、定时任务与可选浏览器抓取。
+> **7×24 小时 AI 本地办公助理** —— 在您的设备上本地运行，数据永不离开电脑。
+
+[![Go Version](https://img.shields.io/badge/Go-1.21%2B-blue)](https://golang.org)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)]()
+
+**maxclaw** 是一款专为高效办公打造的 AI 助手。与其他云端 AI 不同，它在您的设备上**本地运行**，保护隐私的同时提供极速响应。无论是代码审查、文档处理、定时任务还是多步骤网页自动化，maxclaw 都能 7×24 小时随时为您服务。
+
+---
+
+## ✨ 核心亮点
+
+### 🏠 本地优先，隐私至上
+- **完全本地化** —— 所有数据处理在您的设备上完成，无需联网也能使用
+- **数据永不离开** —— 敏感信息绝对安全，适合处理机密文档和代码
+- **0ms 本地响应** —— 无需等待云端，即刻获得 AI 回答
+
+### 💻 精美的桌面应用
+- **现代化 UI 设计** —— 优雅的圆角卡片、流畅动画、浅色/深色主题
+- **实时流式对话** —— 打字机效果，边生成边看，支持**智能打断**
+- **内置文件预览** —— PDF、Word、Excel、图片、代码，右侧直接预览
+- **真终端集成** —— VS Code 同款 node-pty + xterm，按任务隔离会话
+
+### 🤖 强大的 Agent 能力
+- **工具自由调用** —— Web 搜索、文件操作、Shell 命令、浏览器自动化
+- **多步骤浏览器控制** —— 自动登录、点击、填表、截图，轻松抓取需登录站点
+- **定时任务调度** —— Cron/Every/Once 三种模式，支持编辑和执行历史追踪
+- **智能记忆系统** —— 长期事实记忆 + 历史摘要，跨会话保持上下文
+
+### 🔌 多渠道无缝接入
+- **即时通讯** —— Telegram、Discord、WhatsApp、Slack、QQ、飞书
+- **邮箱集成** —— IMAP/SMTP 收发自如
+- **WebSocket 实时推送** —— 替代轮询，即时响应
+
+### 🛠️ 开发者友好
+- **开源透明** —— Go 原生实现，MIT 许可证
+- **技能系统** —— `@技能名` 快速加载，支持 GitHub 安装
+- **MCP 协议支持** —— 接入外部 MCP 服务器扩展能力
+- **一键安装** —— `curl | bash` 即装即用，systemd/launchd 自动托管
+
+---
 
 <details open>
 <summary>中文</summary>

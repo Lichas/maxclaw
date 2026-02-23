@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>maxClaw - 7×24 AI本地办公助理</title>
+    <meta name="description" content="maxClaw - 您的高效AI办公助手，7×24小时随时待命">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Core Colors */
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a25;
+            --bg-card: #151520;
+
+            /* Accent - Amber/Gold like a sharp claw */
+            --accent-primary: #f59e0b;
+            --accent-secondary: #fbbf24;
+            --accent-glow: rgba(245, 158, 11, 0.3);
+            --accent-dim: rgba(245, 158, 11, 0.1);
+
+            /* Text */
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+
+            /* Gradients */
+            --gradient-hero: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(245, 158, 11, 0.15), transparent);
+            --gradient-card: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, transparent 50%);
+
+            /* Spacing */
+            --section-padding: clamp(4rem, 10vw, 8rem);
+
+            /* Transitions */
+            --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Background Effects */
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(245, 158, 11, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(245, 158, 11, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-glow {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            top: -200px;
+            right: -200px;
+            pointer-events: none;
+            z-index: 0;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-30px, 30px) scale(1.1); }
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 1rem 2rem;
+            background: linear-gradient(to bottom, rgba(10, 10, 15, 0.95), transparent);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo-icon::before {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+        }
+
+        .logo-icon::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-primary);
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.3s var(--transition-smooth);
+            position: relative;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-primary);
+            transition: width 0.3s var(--transition-smooth);
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .lang-toggle {
+            background: var(--bg-tertiary);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s var(--transition-smooth);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .lang-toggle:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-secondary);
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 6rem 2rem 4rem;
+            background: var(--gradient-hero);
+        }
+
+        .hero-content {
+            max-width: 1000px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--accent-dim);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.8s var(--transition-smooth);
+        }
+
+        .hero-badge .pulse {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .hero h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(3rem, 8vw, 5.5rem);
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: fadeInUp 0.8s 0.1s var(--transition-smooth) backwards;
+        }
+
+        .hero h1 span {
+            color: var(--accent-primary);
+            -webkit-text-fill-color: var(--accent-primary);
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 3rem;
+            font-weight: 300;
+            animation: fadeInUp 0.8s 0.2s var(--transition-smooth) backwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s 0.3s var(--transition-smooth) backwards;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s var(--transition-smooth);
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: var(--bg-primary);
+            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(245, 158, 11, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card);
+            border-color: var(--accent-primary);
+        }
+
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-top: 4rem;
+            animation: fadeInUp 0.8s 0.4s var(--transition-smooth) backwards;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--accent-secondary);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        /* Features Section */
+        .features {
+            padding: var(--section-padding) 2rem;
+            position: relative;
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 4rem;
+        }
+
+        .section-label {
+            display: inline-block;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .section-desc {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .features-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(245, 158, 11, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s var(--transition-smooth);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .feature-card:hover {
+            border-color: rgba(245, 158, 11, 0.3);
+            transform: translateY(-4px);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            background: var(--gradient-card);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-icon.large {
+            width: 64px;
+            height: 64px;
+            font-size: 1.75rem;
+        }
+
+        .feature-card.highlight {
+            border-color: rgba(245, 158, 11, 0.25);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, var(--bg-card) 50%);
+        }
+
+        .feature-card.highlight:hover {
+            border-color: var(--accent-primary);
+        }
+
+        .feature-card h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        /* How It Works */
+        .how-it-works {
+            padding: var(--section-padding) 2rem;
+            background: var(--bg-secondary);
+        }
+
+        .steps {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .step {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+            padding: 2rem;
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid rgba(245, 158, 11, 0.1);
+            transition: all 0.3s var(--transition-smooth);
+        }
+
+        .step:hover {
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+
+        .step-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--accent-dim);
+            line-height: 1;
+            min-width: 60px;
+        }
+
+        .step-content h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-content p {
+            color: var(--text-secondary);
+        }
+
+        /* Download Section */
+        .download {
+            padding: var(--section-padding) 2rem;
+            position: relative;
+        }
+
+        .download-grid {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .download-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(245, 158, 11, 0.15);
+            border-radius: 20px;
+            padding: 2.5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s var(--transition-smooth);
+        }
+
+        .download-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--gradient-card);
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .download-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-4px);
+        }
+
+        .download-card:hover::after {
+            opacity: 1;
+        }
+
+        .download-card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .platform-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            background: var(--bg-tertiary);
+            border: 2px solid rgba(245, 158, 11, 0.2);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+        }
+
+        .download-card h3 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .download-card .version {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--accent-dim);
+            color: var(--accent-secondary);
+            padding: 0.875rem 1.5rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            transition: all 0.3s var(--transition-smooth);
+        }
+
+        .download-btn:hover {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+        }
+
+        .github-section {
+            text-align: center;
+            margin-top: 4rem;
+            padding: 3rem;
+            background: var(--bg-tertiary);
+            border-radius: 20px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            border: 1px solid rgba(245, 158, 11, 0.1);
+        }
+
+        .github-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1rem;
+            background: var(--bg-card);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+        }
+
+        .github-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 1rem;
+            transition: all 0.3s var(--transition-smooth);
+        }
+
+        .github-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(250, 250, 250, 0.1);
+        }
+
+        /* Footer */
+        footer {
+            padding: 3rem 2rem;
+            border-top: 1px solid rgba(245, 158, 11, 0.1);
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        footer p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Scroll animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s var(--transition-smooth), transform 0.8s var(--transition-smooth);
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero-stats {
+                gap: 2rem;
+            }
+
+            .stat-value {
+                font-size: 2rem;
+            }
+
+            .step {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .step-number {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <nav>
+        <div class="nav-container">
+            <a href="#" class="logo">
+                <div class="logo-icon"></div>
+                maxClaw
+            </a>
+            <div class="nav-links">
+                <a href="#features" data-i18n="nav.features">功能特性</a>
+                <a href="#download" data-i18n="nav.download">下载</a>
+                <a href="https://github.com/Lichas/maxclaw" target="_blank">GitHub</a>
+                <button class="lang-toggle" onclick="toggleLanguage()">
+                    <span>🌐</span>
+                    <span id="current-lang">EN</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="pulse"></span>
+                <span data-i18n="hero.badge">7×24 小时在线</span>
+            </div>
+            <h1>
+                <span data-i18n="hero.title1">您的</span>
+                <span>maxClaw</span>
+                <span data-i18n="hero.title2">AI 办公助理</span>
+            </h1>
+            <p class="hero-subtitle" data-i18n="hero.subtitle">
+                在本地运行的智能助手，保护隐私的同时提升工作效率。随时随地，为您服务。
+            </p>
+            <div class="hero-actions">
+                <a href="#download" class="btn btn-primary">
+                    <span>⬇</span>
+                    <span data-i18n="hero.cta1">立即下载</span>
+                </a>
+                <a href="https://github.com/Lichas/maxclaw" target="_blank" class="btn btn-secondary">
+                    <span>⭐</span>
+                    <span data-i18n="hero.cta2">GitHub</span>
+                </a>
+            </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <div class="stat-value">0ms</div>
+                    <div class="stat-label" data-i18n="stats.latency">本地响应</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">100%</div>
+                    <div class="stat-label" data-i18n="stats.privacy">隐私保护</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">∞</div>
+                    <div class="stat-label" data-i18n="stats.availability">全天候</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <div class="section-header fade-in">
+            <span class="section-label" data-i18n="features.label">FEATURES</span>
+            <h2 class="section-title" data-i18n="features.title">为什么选择 maxClaw</h2>
+            <p class="section-desc" data-i18n="features.desc">
+                专为高效办公打造的 AI 助手，在您的设备上本地运行，数据永不离开您的电脑。
+            </p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card highlight fade-in">
+                <div class="feature-icon large">💻</div>
+                <h3 data-i18n="feature1.title">精美的桌面应用</h3>
+                <p data-i18n="feature1.desc">
+                    现代化 UI 设计，优雅的圆角卡片、流畅动画、浅色/深色主题。实时流式对话，打字机效果，支持智能打断。
+                </p>
+            </div>
+            <div class="feature-card highlight fade-in">
+                <div class="feature-icon large">🌐</div>
+                <h3 data-i18n="feature2.title">浏览器自动化</h3>
+                <p data-i18n="feature2.desc">
+                    多步骤网页控制，自动登录、点击、填表、截图。轻松抓取需登录站点，复用 Chrome 登录态，无需反复验证。
+                </p>
+            </div>
+            <div class="feature-card highlight fade-in">
+                <div class="feature-icon large">🔒</div>
+                <h3 data-i18n="feature3.title">本地优先，隐私至上</h3>
+                <p data-i18n="feature3.desc">
+                    所有数据处理在您的设备上完成，无需联网也能使用。代码、文档、数据永不离开电脑，敏感信息绝对安全。
+                </p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon">⚡</div>
+                <h3 data-i18n="feature4.title">极速响应</h3>
+                <p data-i18n="feature4.desc">
+                    0ms 本地响应，无需等待云端。流畅的工作体验，让 AI 真正成为您的高效搭档。
+                </p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon">📁</div>
+                <h3 data-i18n="feature5.title">内置文件预览</h3>
+                <p data-i18n="feature5.desc">
+                    PDF、Word、Excel、图片、代码文件，右侧直接预览。会话产物自动落盘，按任务隔离管理。
+                </p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon">🖥️</div>
+                <h3 data-i18n="feature6.title">真终端集成</h3>
+                <p data-i18n="feature6.desc">
+                    VS Code 同款 node-pty + xterm 终端。按任务隔离会话，主题跟随应用，执行命令所见即所得。
+                </p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon">⏰</div>
+                <h3 data-i18n="feature7.title">智能定时任务</h3>
+                <p data-i18n="feature7.desc">
+                    Cron/Every/Once 三种调度模式，可视化编辑，执行历史追踪。让 AI 在指定时间自动完成工作。
+                </p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon">💬</div>
+                <h3 data-i18n="feature8.title">多渠道接入</h3>
+                <p data-i18n="feature8.desc">
+                    Telegram、Discord、WhatsApp、Slack、邮件、飞书、QQ。随时随地通过熟悉的渠道与 AI 对话。
+                </p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon">🧠</div>
+                <h3 data-i18n="feature9.title">智能记忆系统</h3>
+                <p data-i18n="feature9.desc">
+                    长期事实记忆 + 历史摘要，跨会话保持上下文。支持技能系统 @技能名，快速加载专业领域知识。
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <section class="how-it-works">
+        <div class="section-header fade-in">
+            <span class="section-label" data-i18n="howto.label">HOW IT WORKS</span>
+            <h2 class="section-title" data-i18n="howto.title">简单三步，即刻开始</h2>
+        </div>
+        <div class="steps">
+            <div class="step fade-in">
+                <div class="step-number">01</div>
+                <div class="step-content">
+                    <h3 data-i18n="step1.title">下载安装</h3>
+                    <p data-i18n="step1.desc">选择适合您系统的版本，一键安装，无需复杂配置。</p>
+                </div>
+            </div>
+            <div class="step fade-in">
+                <div class="step-number">02</div>
+                <div class="step-content">
+                    <h3 data-i18n="step2.title">初始配置</h3>
+                    <p data-i18n="step2.desc">运行 onboard 命令，配置您的 AI 模型和偏好设置。</p>
+                </div>
+            </div>
+            <div class="step fade-in">
+                <div class="step-number">03</div>
+                <div class="step-content">
+                    <h3 data-i18n="step3.title">开始工作</h3>
+                    <p data-i18n="step3.desc">通过命令行或集成渠道，随时召唤您的 AI 助手。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="download" id="download">
+        <div class="section-header fade-in">
+            <span class="section-label" data-i18n="download.label">DOWNLOAD</span>
+            <h2 class="section-title" data-i18n="download.title">下载 maxClaw</h2>
+            <p class="section-desc" data-i18n="download.desc">
+                选择您的平台，立即开始体验。完全免费，开源透明。
+            </p>
+        </div>
+        <div class="download-grid">
+            <div class="download-card fade-in">
+                <div class="platform-icon">🍎</div>
+                <h3>macOS</h3>
+                <p class="version" data-i18n="download.arm">Apple Silicon (ARM64)</p>
+                <a href="https://github.com/Lichas/maxclaw/releases/latest" class="download-btn" data-i18n="download.btn">
+                    下载 for macOS
+                </a>
+            </div>
+            <div class="download-card fade-in">
+                <div class="platform-icon">🪟</div>
+                <h3>Windows</h3>
+                <p class="version">Windows 10/11 (x64)</p>
+                <a href="https://github.com/Lichas/maxclaw/releases/latest" class="download-btn" data-i18n="download.btn">
+                    下载 for Windows
+                </a>
+            </div>
+        </div>
+        <div class="github-section fade-in">
+            <div class="github-icon">💻</div>
+            <h3 data-i18n="github.title">开源透明</h3>
+            <p data-i18n="github.desc">maxClaw 是开源项目，欢迎访问 GitHub 查看源码、提交 Issue 或贡献代码。</p>
+            <a href="https://github.com/Lichas/maxclaw" target="_blank" class="github-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                </svg>
+                <span data-i18n="github.btn">在 GitHub 上查看</span>
+            </a>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo">
+                <div class="logo-icon"></div>
+                maxClaw
+            </div>
+            <p data-i18n="footer.copyright">© 2025 maxClaw. 开源项目，MIT 许可证。</p>
+        </div>
+    </footer>
+
+    <script>
+        // Internationalization
+        const i18n = {
+            zh: {
+                'nav.features': '功能特性',
+                'nav.download': '下载',
+                'hero.badge': '7×24 小时在线',
+                'hero.title1': '您的',
+                'hero.title2': 'AI 办公助理',
+                'hero.subtitle': '在您的设备上本地运行的 AI 办公助理。精美桌面应用、浏览器自动化、文件预览、真终端集成——7×24小时，数据永不离开电脑。',
+                'hero.cta1': '立即下载',
+                'hero.cta2': 'GitHub',
+                'stats.latency': '本地响应',
+                'stats.privacy': '隐私保护',
+                'stats.availability': '全天候',
+                'features.label': 'FEATURES',
+                'features.title': '为什么选择 maxClaw',
+                'features.desc': '专为高效办公打造的 AI 助手，在您的设备上本地运行，数据永不离开您的电脑。',
+                'feature1.title': '精美的桌面应用',
+                'feature1.desc': '现代化 UI 设计，优雅的圆角卡片、流畅动画、浅色/深色主题。实时流式对话，打字机效果，支持智能打断。',
+                'feature2.title': '浏览器自动化',
+                'feature2.desc': '多步骤网页控制，自动登录、点击、填表、截图。轻松抓取需登录站点，复用 Chrome 登录态，无需反复验证。',
+                'feature3.title': '本地优先，隐私至上',
+                'feature3.desc': '所有数据处理在您的设备上完成，无需联网也能使用。代码、文档、数据永不离开电脑，敏感信息绝对安全。',
+                'feature4.title': '极速响应',
+                'feature4.desc': '0ms 本地响应，无需等待云端。流畅的工作体验，让 AI 真正成为您的高效搭档。',
+                'feature5.title': '内置文件预览',
+                'feature5.desc': 'PDF、Word、Excel、图片、代码文件，右侧直接预览。会话产物自动落盘，按任务隔离管理。',
+                'feature6.title': '真终端集成',
+                'feature6.desc': 'VS Code 同款 node-pty + xterm 终端。按任务隔离会话，主题跟随应用，执行命令所见即所得。',
+                'feature7.title': '智能定时任务',
+                'feature7.desc': 'Cron/Every/Once 三种调度模式，可视化编辑，执行历史追踪。让 AI 在指定时间自动完成工作。',
+                'feature8.title': '多渠道接入',
+                'feature8.desc': 'Telegram、Discord、WhatsApp、Slack、邮件、飞书、QQ。随时随地通过熟悉的渠道与 AI 对话。',
+                'feature9.title': '智能记忆系统',
+                'feature9.desc': '长期事实记忆 + 历史摘要，跨会话保持上下文。支持技能系统 @技能名，快速加载专业领域知识。',
+                'howto.label': 'HOW IT WORKS',
+                'howto.title': '简单三步，即刻开始',
+                'step1.title': '下载安装',
+                'step1.desc': '选择适合您系统的版本，一键安装，无需复杂配置。',
+                'step2.title': '初始配置',
+                'step2.desc': '运行 onboard 命令，配置您的 AI 模型和偏好设置。',
+                'step3.title': '开始工作',
+                'step3.desc': '通过命令行或集成渠道，随时召唤您的 AI 助手。',
+                'download.label': 'DOWNLOAD',
+                'download.title': '下载 maxClaw',
+                'download.desc': '选择您的平台，立即开始体验。完全免费，开源透明。',
+                'download.arm': 'Apple Silicon (ARM64)',
+                'download.btn': '下载',
+                'github.title': '开源透明',
+                'github.desc': 'maxClaw 是开源项目，欢迎访问 GitHub 查看源码、提交 Issue 或贡献代码。',
+                'github.btn': '在 GitHub 上查看',
+                'footer.copyright': '© 2025 maxClaw. 开源项目，MIT 许可证。'
+            },
+            en: {
+                'nav.features': 'Features',
+                'nav.download': 'Download',
+                'hero.badge': 'Available 7×24',
+                'hero.title1': 'Your',
+                'hero.title2': 'AI Office Assistant',
+                'hero.subtitle': 'An AI office assistant that runs locally on your device. Beautiful desktop app, browser automation, file preview, real terminal integration — 7×24 hours, your data never leaves your computer.',
+                'hero.cta1': 'Download Now',
+                'hero.cta2': 'GitHub',
+                'stats.latency': 'Local Response',
+                'stats.privacy': 'Privacy Protected',
+                'stats.availability': 'Always On',
+                'features.label': 'FEATURES',
+                'features.title': 'Why Choose maxClaw',
+                'features.desc': 'An AI assistant built for efficient work, running locally on your device. Your data never leaves your computer.',
+                'feature1.title': 'Beautiful Desktop App',
+                'feature1.desc': 'Modern UI design with elegant rounded cards, smooth animations, light/dark themes. Real-time streaming with typewriter effects and smart interruption.',
+                'feature2.title': 'Browser Automation',
+                'feature2.desc': 'Multi-step web control: auto-login, click, fill forms, screenshot. Easily scrape sites requiring authentication. Reuse Chrome login state.',
+                'feature3.title': 'Local First, Privacy First',
+                'feature3.desc': 'All data processing on your device. Works offline. Code, documents, and data never leave your computer. Absolute security for sensitive information.',
+                'feature4.title': 'Lightning Fast',
+                'feature4.desc': '0ms local response, no cloud waiting. Smooth workflow experience that makes AI your true efficient partner.',
+                'feature5.title': 'Built-in File Preview',
+                'feature5.desc': 'PDF, Word, Excel, images, code files preview directly in sidebar. Session outputs auto-saved with task-based isolation.',
+                'feature6.title': 'Real Terminal Integration',
+                'feature6.desc': 'VS Code-style node-pty + xterm terminal. Task-isolated sessions, theme following app, see commands execute in real-time.',
+                'feature7.title': 'Smart Scheduled Tasks',
+                'feature7.desc': 'Cron/Every/Once scheduling modes, visual editing, execution history tracking. Let AI complete work automatically at specified times.',
+                'feature8.title': 'Multi-Channel Access',
+                'feature8.desc': 'Telegram, Discord, WhatsApp, Slack, Email, Feishu, QQ. Chat with AI anytime through your familiar channels.',
+                'feature9.title': 'Intelligent Memory System',
+                'feature9.desc': 'Long-term factual memory + historical summaries, maintaining context across sessions. Skill system @skillname for quick domain knowledge loading.',
+                'howto.label': 'HOW IT WORKS',
+                'howto.title': 'Get Started in 3 Steps',
+                'step1.title': 'Download & Install',
+                'step1.desc': 'Choose the version for your system, install with one click. No complex configuration needed.',
+                'step2.title': 'Initial Setup',
+                'step2.desc': 'Run the onboard command to configure your AI model and preferences.',
+                'step3.title': 'Start Working',
+                'step3.desc': 'Summon your AI assistant anytime via command line or integrated channels.',
+                'download.label': 'DOWNLOAD',
+                'download.title': 'Download maxClaw',
+                'download.desc': 'Choose your platform and start experiencing. Completely free and open source.',
+                'download.arm': 'Apple Silicon (ARM64)',
+                'download.btn': 'Download for',
+                'github.title': 'Open Source',
+                'github.desc': 'maxClaw is open source. Visit GitHub to view source code, submit issues, or contribute.',
+                'github.btn': 'View on GitHub',
+                'footer.copyright': '© 2025 maxClaw. Open source project under MIT license.'
+            }
+        };
+
+        let currentLang = 'zh';
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            document.getElementById('current-lang').textContent = currentLang.toUpperCase();
+            document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
+            updateLanguage();
+        }
+
+        function updateLanguage() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[currentLang][key]) {
+                    el.textContent = i18n[currentLang][key];
+                }
+            });
+        }
+
+        // Scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+    </script>
+</body>
+</html>
