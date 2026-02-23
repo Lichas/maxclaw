@@ -21,7 +21,8 @@
 - **实现**：
   - **核心机制**：`internal/agent/interrupt.go` - 实现 `InterruptibleContext`，支持上下文取消和消息追加队列
   - **意图分析**：`internal/agent/intent.go` - 基于关键词识别用户意图（打断/补充/停止/继续）
-  - **AgentLoop 集成**：`internal/agent/loop.go` - 增强消息处理循环以支持中断处理
+  - **AgentLoop 集成**：`internal/agent/loop.go` - 增强消息处理循环以支持中断处理，添加后台检查器支持 Telegram 等轮询渠道
+  - **MessageBus**：`internal/bus/queue.go` - 添加 `PeekInboundForSession` 方法用于非阻塞会话消息检查
   - **WebSocket 协议**：`internal/webui/websocket.go` - 扩展消息类型支持实时中断
   - **前端界面**：
     - `electron/src/renderer/services/websocket.ts` - 添加发送中断消息的方法
