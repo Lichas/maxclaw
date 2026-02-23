@@ -10,6 +10,46 @@ interface Skill {
   installedAt?: string;
 }
 
+// 官方推荐的技能源
+interface RecommendedSkill {
+  name: string;
+  url: string;
+  description: string;
+}
+
+const RECOMMENDED_SKILLS: RecommendedSkill[] = [
+  {
+    name: 'Anthropics (Official)',
+    url: 'https://github.com/anthropics/skills/tree/main/skills',
+    description: 'Anthropic 官方技能库'
+  },
+  {
+    name: 'Playwright CLI',
+    url: 'https://github.com/microsoft/playwright-cli/tree/main/skills',
+    description: 'Microsoft Playwright 自动化测试技能'
+  },
+  {
+    name: 'Vercel Labs',
+    url: 'https://github.com/vercel-labs/agent-skills/tree/main/skills',
+    description: 'Vercel Labs 技能库'
+  },
+  {
+    name: 'Vercel Skills',
+    url: 'https://github.com/vercel-labs/skills/tree/main/skills',
+    description: 'Vercel 官方技能'
+  },
+  {
+    name: 'Remotion',
+    url: 'https://github.com/remotion-dev/skills/tree/main/skills',
+    description: 'Remotion 视频编辑技能'
+  },
+  {
+    name: 'Superpowers',
+    url: 'https://github.com/obra/superpowers/tree/main/skills',
+    description: 'Superpowers 增强技能'
+  }
+];
+
 export function SkillsView() {
   const { t } = useTranslation();
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -18,6 +58,8 @@ export function SkillsView() {
   const [installModalOpen, setInstallModalOpen] = useState(false);
   const [installType, setInstallType] = useState<'zip' | 'folder' | 'github'>('github');
   const [installUrl, setInstallUrl] = useState('');
+  const [selectedRecommend, setSelectedRecommend] = useState<string>('');
+  const [useCustomUrl, setUseCustomUrl] = useState(false);
 
   const fetchSkills = useCallback(async () => {
     try {
@@ -55,20 +97,38 @@ export function SkillsView() {
   const handleInstall = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const source = installType === 'github' && !useCustomUrl && selectedRecommend
+        ? selectedRecommend
+        : installUrl;
+
       const response = await fetch('http://localhost:18890/api/skills/install', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: installType,
-          source: installUrl
+          source: source
         })
       });
       if (!response.ok) throw new Error('Failed to install skill');
       setInstallModalOpen(false);
       setInstallUrl('');
+      setSelectedRecommend('');
+      setUseCustomUrl(false);
       void fetchSkills();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.error'));
+    }
+  };
+
+  const handleRecommendChange = (value: string) => {
+    if (value === 'custom') {
+      setUseCustomUrl(true);
+      setSelectedRecommend('');
+      setInstallUrl('');
+    } else {
+      setUseCustomUrl(false);
+      setSelectedRecommend(value);
+      setInstallUrl(value);
     }
   };
 
@@ -152,16 +212,63 @@ export function SkillsView() {
                 </label>
               </div>
 
-              <div>
-                <input
-                  type="text"
-                  value={installUrl}
-                  onChange={(e) => setInstallUrl(e.target.value)}
-                  placeholder={getInstallPlaceholder()}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
-                  required
-                />
-              </div>
+              {installType === 'github' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+                      推荐技能源
+                    </label>
+                    <select
+                      value={useCustomUrl ? 'custom' : selectedRecommend}
+                      onChange={(e) => handleRecommendChange(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary/40 focus:outline-none"
+                    >
+                      <option value="">选择推荐技能源...</option>
+                      {RECOMMENDED_SKILLS.map((skill) => (
+                        <option key={skill.url} value={skill.url}>
+                          {skill.name} - {skill.description}
+                        </option>
+                      ))}
+                      <option value="custom">自定义 URL...</option>
+                    </select>
+                  </div>
+
+                  {(useCustomUrl || selectedRecommend) && (
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+                        GitHub URL
+                      </label>
+                      <input
+                        type="text"
+                        value={installUrl}
+                        onChange={(e) => setInstallUrl(e.target.value)}
+                        placeholder={getInstallPlaceholder()}
+                        readOnly={!useCustomUrl && !!selectedRecommend}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none disabled:bg-secondary/50"
+                        required
+                      />
+                      {!useCustomUrl && selectedRecommend && (
+                        <p className="mt-1 text-xs text-foreground/50">
+                          已选择推荐源，如需修改请切换到"自定义 URL"
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {installType !== 'github' && (
+                <div>
+                  <input
+                    type="text"
+                    value={installUrl}
+                    onChange={(e) => setInstallUrl(e.target.value)}
+                    placeholder={getInstallPlaceholder()}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                    required
+                  />
+                </div>
+              )}
 
               <div className="flex justify-end gap-3">
                 <button

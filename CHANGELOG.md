@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### Electron 技能市场新增推荐技能下拉选择
+- **变更**：GitHub 方式安装技能时，提供6个官方推荐技能源的下拉选择（Anthropics、Playwright CLI、Vercel Labs、Vercel Skills、Remotion、Superpowers）。
+- **位置**：`electron/src/renderer/views/SkillsView.tsx`。
+- **验证**：`cd electron && npm run build`。
+
 #### 智能识别 GitHub URL 安装单个技能
 - **变更**：`maxclaw skills install <github-url>` 命令现在智能识别 URL 类型：
   - 单文件（`blob/.../SKILL.md`）→ 直接下载该文件

@@ -355,6 +355,7 @@ interface AppConfig {
   - [x] .zip 文件导入 → 解压到 skills 目录
   - [x] 文件夹导入
   - [x] GitHub URL 导入（支持子目录 sparse checkout）
+  - [x] **推荐技能下拉选择**（官方预设6个技能源：Anthropics、Playwright CLI、Vercel Labs、Vercel Skills、Remotion、Superpowers）
 - [x] 技能开关（通过 Gateway API 启用/禁用）
 - [x] 技能配置文件解析（`SKILL.md` YAML frontmatter）
 
@@ -505,3 +506,31 @@ async function sendStreamMessage(content: string) {
 | `/api/gateway/restart` | POST | 重启 Gateway |
 
 **WebSocket 端点**: `ws://localhost:18890/ws`（用于实时消息推送）
+
+---
+
+## 更新记录
+
+### 2026-02-24
+
+#### 新增：推荐技能下拉选择
+
+**需求描述**：在技能市场的 GitHub 安装方式中，提供官方推荐的技能源下拉选择，降低用户输入成本。
+
+**实现方案**：
+- 前端：在 `SkillsView.tsx` 中添加 `RECOMMENDED_SKILLS` 常量数组
+- UI：GitHub 方式下显示下拉选择框，包含6个预设技能源
+- 交互：选择预设时自动填充 URL，支持切换到自定义输入
+
+**推荐技能列表**：
+| 名称 | URL | 描述 |
+|------|-----|------|
+| Anthropics (Official) | github.com/anthropics/skills/tree/main/skills | Anthropic 官方技能库 |
+| Playwright CLI | github.com/microsoft/playwright-cli/tree/main/skills | Microsoft Playwright 自动化测试 |
+| Vercel Labs | github.com/vercel-labs/agent-skills/tree/main/skills | Vercel Labs 技能库 |
+| Vercel Skills | github.com/vercel-labs/skills/tree/main/skills | Vercel 官方技能 |
+| Remotion | github.com/remotion-dev/skills/tree/main/skills | Remotion 视频编辑技能 |
+| Superpowers | github.com/obra/superpowers/tree/main/skills | Superpowers 增强技能 |
+
+**相关文件**：
+- `electron/src/renderer/views/SkillsView.tsx`
