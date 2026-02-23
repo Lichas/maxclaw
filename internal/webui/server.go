@@ -1220,6 +1220,8 @@ func (s *Server) handleCronByID(w http.ResponseWriter, r *http.Request) {
 
 	// 单一资源操作
 	switch r.Method {
+	case http.MethodPut:
+		s.handleCronUpdate(w, r, jobID)
 	case http.MethodDelete:
 		s.handleCronDelete(w, r, jobID)
 	default:
@@ -1249,6 +1251,72 @@ func (s *Server) handleCronDelete(w http.ResponseWriter, r *http.Request, jobID 
 	}
 
 	writeJSON(w, map[string]bool{"ok": true})
+}
+
+func (s *Server) handleCronUpdate(w http.ResponseWriter, r *http.Request, jobID string) {
+	var req struct {
+		Title string `json:"title"`
+		Prompt string `json:"prompt"`
+		Cron string `json:"cron,omitempty"`
+		Every string `json:"every,omitempty"`
+		At string `json:"at,omitempty"`
+		WorkDir string `json:"workDir,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, fmt.Errorf("invalid request: %v", err))
+		return
+	}
+
+	// 解析调度配置
+	var schedule cron.Schedule
+	switch {
+	case req.Cron != "":
+		schedule = cron.Schedule{
+			Type: cron.ScheduleTypeCron,
+			Expr: req.Cron,
+		}
+	case req.Every != "":
+		// 尝试解析毫秒数
+		var everyMs int64
+		if _, err := fmt.Sscanf(req.Every, "%d", &everyMs); err != nil {
+			writeError(w, fmt.Errorf("invalid every format: %v", err))
+			return
+		}
+		schedule = cron.Schedule{
+			Type:    cron.ScheduleTypeEvery,
+			EveryMs: everyMs,
+		}
+	case req.At != "":
+		at, err := time.Parse(time.RFC3339, req.At)
+		if err != nil {
+			at, err = time.Parse("2006-01-02T15:04:05", req.At)
+			if err != nil {
+				writeError(w, fmt.Errorf("invalid at format: %v", err))
+				return
+			}
+		}
+		schedule = cron.Schedule{
+			Type: cron.ScheduleTypeOnce,
+			AtMs: at.UnixMilli(),
+		}
+	default:
+		writeError(w, fmt.Errorf("schedule is required (cron, every, or at)"))
+		return
+	}
+
+	payload := cron.Payload{
+		Message: req.Prompt,
+		Channel: "desktop",
+	}
+
+	job, ok := s.cronService.UpdateJob(jobID, req.Title, schedule, payload)
+	if !ok {
+		writeError(w, fmt.Errorf("job not found"))
+		return
+	}
+
+	writeJSON(w, s.toCronJobResponse(job))
 }
 
 func (s *Server) handleGetCronHistory(w http.ResponseWriter, r *http.Request) {

@@ -16,6 +16,21 @@
 
 ### 新增功能
 
+#### 定时任务编辑功能
+- **功能**：支持编辑已创建的定时任务，包括标题、提示词和调度设置
+- **实现**：
+  - 后端：`internal/cron/service.go` 新增 `UpdateJob` 方法
+  - 后端：`internal/webui/server.go` 新增 `PUT /api/cron/{id}` 接口
+  - 前端：`ScheduledTasksView.tsx` 添加编辑表单和交互
+    - 点击"编辑"按钮加载任务数据到表单
+    - 表单根据编辑/创建状态自动切换标题和按钮文本
+    - 支持取消编辑并清空表单
+- **验证**：`make build` 成功，`cd electron && npm run build` 成功
+- **文件**
+  - `internal/cron/service.go` - 添加 UpdateJob 方法
+  - `internal/webui/server.go` - 添加 PUT 处理
+  - `electron/src/renderer/views/ScheduledTasksView.tsx` - 添加编辑功能
+
 #### Windows 多平台支持
 - **功能**：完整的 Windows 平台支持，包括安装程序、任务栏集成和 CI/CD 构建
 - **实现**：

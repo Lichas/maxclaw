@@ -41,6 +41,7 @@ export function ScheduledTasksView() {
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
+  const [editingJob, setEditingJob] = useState<CronJob | null>(null);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -66,18 +67,26 @@ export function ScheduledTasksView() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:18890/api/cron', {
-        method: 'POST',
+      const payload = {
+        title: formData.title,
+        prompt: formData.prompt,
+        [formData.scheduleType === 'every' ? 'every' : formData.scheduleType === 'once' ? 'at' : 'cron']: formData.scheduleValue,
+        workDir: formData.workDir || undefined
+      };
+
+      const url = editingJob
+        ? `http://localhost:18890/api/cron/${editingJob.id}`
+        : 'http://localhost:18890/api/cron';
+      const method = editingJob ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: formData.title,
-          prompt: formData.prompt,
-          [formData.scheduleType === 'every' ? 'every' : formData.scheduleType === 'once' ? 'at' : 'cron']: formData.scheduleValue,
-          workDir: formData.workDir || undefined
-        })
+        body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error('Failed to create job');
+      if (!response.ok) throw new Error(editingJob ? 'Failed to update job' : 'Failed to create job');
       setShowForm(false);
+      setEditingJob(null);
       setFormData({
         title: '',
         prompt: '',
@@ -87,8 +96,32 @@ export function ScheduledTasksView() {
       });
       void fetchJobs();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '创建失败');
+      setError(err instanceof Error ? err.message : (editingJob ? '更新失败' : '创建失败'));
     }
+  };
+
+  const editJob = (job: CronJob) => {
+    setEditingJob(job);
+    setFormData({
+      title: job.title,
+      prompt: job.prompt,
+      scheduleType: job.scheduleType,
+      scheduleValue: job.schedule,
+      workDir: job.workDir || ''
+    });
+    setShowForm(true);
+  };
+
+  const cancelEdit = () => {
+    setShowForm(false);
+    setEditingJob(null);
+    setFormData({
+      title: '',
+      prompt: '',
+      scheduleType: 'cron',
+      scheduleValue: '0 9 * * *',
+      workDir: ''
+    });
   };
 
   const toggleJob = async (id: string, enabled: boolean) => {
@@ -153,10 +186,16 @@ export function ScheduledTasksView() {
               执行历史
             </button>
             <button
-              onClick={() => setShowForm(!showForm)}
+              onClick={() => {
+                if (showForm && editingJob) {
+                  cancelEdit();
+                } else {
+                  setShowForm(!showForm);
+                }
+              }}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              {showForm ? '取消' : '+ 新建任务'}
+              {showForm ? (editingJob ? '取消编辑' : '取消') : '+ 新建任务'}
             </button>
           </div>
         </div>
@@ -169,7 +208,7 @@ export function ScheduledTasksView() {
 
         {showForm && (
           <form onSubmit={handleSubmit} className="mb-6 rounded-xl border border-border bg-background p-5 shadow-sm">
-            <h3 className="mb-4 text-base font-semibold">创建新任务</h3>
+            <h3 className="mb-4 text-base font-semibold">{editingJob ? '编辑任务' : '创建新任务'}</h3>
             <div className="space-y-4">
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-foreground">任务名称</label>
@@ -256,7 +295,7 @@ export function ScheduledTasksView() {
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={cancelEdit}
                   className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary"
                 >
                   取消
@@ -265,7 +304,7 @@ export function ScheduledTasksView() {
                   type="submit"
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                 >
-                  创建任务
+                  {editingJob ? '保存修改' : '创建任务'}
                 </button>
               </div>
             </div>
@@ -329,6 +368,13 @@ export function ScheduledTasksView() {
                       title="查看执行历史"
                     >
                       历史
+                    </button>
+                    <button
+                      onClick={() => editJob(job)}
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary"
+                      title="编辑任务"
+                    >
+                      编辑
                     </button>
                     <button
                       onClick={() => void toggleJob(job.id, job.enabled)}
