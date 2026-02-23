@@ -46,6 +46,11 @@ type AgentLoop struct {
 	mcpConnector   *tools.MCPConnector
 	mcpConnectOnce sync.Once
 	runtimeMu      sync.RWMutex
+
+	// 中断处理相关
+	intentAnalyzer *IntentAnalyzer
+	currentIC      *InterruptibleContext
+	icMu           sync.RWMutex
 }
 
 // StreamEvent is a structured event for UI streaming consumers.
@@ -102,6 +107,7 @@ func NewAgentLoop(
 		context:             NewContextBuilder(workspace),
 		sessions:            session.NewManager(workspace),
 		tools:               tools.NewRegistry(),
+		intentAnalyzer:      NewIntentAnalyzer(),
 	}
 
 	if len(loop.MCPServers) > 0 {
@@ -248,22 +254,75 @@ func (h *streamHandler) GetToolCalls() []providers.ToolCall {
 	return h.toolCalls
 }
 
+
+func (a *AgentLoop) runtimeSnapshot() (providers.LLMProvider, string) {
+	a.runtimeMu.RLock()
+	defer a.runtimeMu.RUnlock()
+	return a.Provider, a.Model
+}
+
+// HandleInterruption 处理插话请求
+func (a *AgentLoop) HandleInterruption(msg *bus.InboundMessage) InterruptMode {
+	a.icMu.RLock()
+	ic := a.currentIC
+	a.icMu.RUnlock()
+
+	if ic == nil {
+		// 没有在处理中的任务，作为普通消息处理
+		return InterruptNone
+	}
+
+	// 分析意图
+	intent := a.intentAnalyzer.Analyze(msg.Content, "")
+
+	switch intent.Intent {
+	case IntentStop, IntentCorrection:
+		ic.RequestInterrupt(InterruptRequest{
+			Message: msg,
+			Mode:    InterruptCancel,
+		})
+		return InterruptCancel
+
+	case IntentAppend:
+		ic.RequestInterrupt(InterruptRequest{
+			Message: msg,
+			Mode:    InterruptAppend,
+		})
+		return InterruptAppend
+
+	default:
+		// 默认作为打断处理（保守策略）
+		ic.RequestInterrupt(InterruptRequest{
+			Message: msg,
+			Mode:    InterruptCancel,
+		})
+		return InterruptCancel
+	}
+}
+
 // ProcessMessage 处理单个消息（流式版本）
 func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage) (*bus.OutboundMessage, error) {
-	return a.processMessageWithCallbacks(ctx, msg, nil, nil)
+	// 创建可中断上下文
+	ic := NewInterruptibleContext(ctx, a.Bus)
+
+	a.icMu.Lock()
+	a.currentIC = ic
+	a.icMu.Unlock()
+
+	defer func() {
+		a.icMu.Lock()
+		a.currentIC = nil
+		a.icMu.Unlock()
+	}()
+
+	return a.processMessageWithIC(ic, msg, nil, nil)
 }
 
-func (a *AgentLoop) processMessageWithDelta(ctx context.Context, msg *bus.InboundMessage, onDelta func(string)) (*bus.OutboundMessage, error) {
-	return a.processMessageWithCallbacks(ctx, msg, onDelta, nil)
-}
-
-func (a *AgentLoop) processMessageWithCallbacks(
-	ctx context.Context,
-	msg *bus.InboundMessage,
-	onDelta func(string),
-	onEvent func(StreamEvent),
-) (*bus.OutboundMessage, error) {
+func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.InboundMessage, onDelta func(string), onEvent func(StreamEvent)) (*bus.OutboundMessage, error) {
+	// 使用 InterruptibleContext 的底层 context
+	ctx := ic.Context()
 	a.ensureMCPConnected(ctx)
+
 	timeline := make([]session.TimelineEntry, 0, 64)
 	emitEvent := func(event StreamEvent) {
 		timeline = appendTimelineFromEvent(timeline, event)
@@ -272,12 +331,34 @@ func (a *AgentLoop) processMessageWithCallbacks(
 		}
 	}
 
+	// 检查是否被取消
+	select {
+	case <-ic.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	if lg := logging.Get(); lg != nil && lg.Session != nil {
 		lg.Session.Printf("inbound channel=%s chat=%s sender=%s content=%q", msg.Channel, msg.ChatID, msg.SenderID, logging.Truncate(msg.Content, 400))
 	}
 
 	// 获取或创建会话
 	sess := a.sessions.GetOrCreate(msg.SessionKey)
+
+	// 检查并处理待处理的补充消息
+	pendingAppends := ic.GetPendingAppends()
+	if len(pendingAppends) > 0 {
+		appendContent := ""
+		for _, appendMsg := range pendingAppends {
+			if appendContent != "" {
+				appendContent += "\n"
+			}
+			appendContent += appendMsg.Content
+		}
+		if appendContent != "" {
+			msg.Content = msg.Content + "\n\n[补充信息] " + appendContent
+		}
+	}
 
 	// 统一 slash 命令
 	cmd := strings.TrimSpace(strings.ToLower(msg.Content))
@@ -320,6 +401,14 @@ func (a *AgentLoop) processMessageWithCallbacks(
 
 	for i := 0; i < a.MaxIterations; i++ {
 		iteration := i + 1
+
+		// 检查是否被取消
+		select {
+		case <-ic.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
 		emitEvent(StreamEvent{
 			Type:      "status",
 			Iteration: iteration,
@@ -352,6 +441,9 @@ func (a *AgentLoop) processMessageWithCallbacks(
 
 		err := provider.ChatStream(ctx, messages, toolDefs, model, handler)
 		if err != nil {
+			if err == context.Canceled {
+				return nil, err
+			}
 			return nil, fmt.Errorf("LLM stream error: %w", err)
 		}
 
@@ -376,6 +468,13 @@ func (a *AgentLoop) processMessageWithCallbacks(
 
 			// 执行工具调用并显示结果
 			for _, tc := range toolCalls {
+				// 检查是否被取消
+				select {
+				case <-ic.Done():
+					return nil, ctx.Err()
+				default:
+				}
+
 				emitEvent(StreamEvent{
 					Type:      "tool_start",
 					Iteration: iteration,
@@ -461,12 +560,6 @@ func (a *AgentLoop) processMessageWithCallbacks(
 	return bus.NewOutboundMessage(msg.Channel, msg.ChatID, finalContent), nil
 }
 
-func (a *AgentLoop) runtimeSnapshot() (providers.LLMProvider, string) {
-	a.runtimeMu.RLock()
-	defer a.runtimeMu.RUnlock()
-	return a.Provider, a.Model
-}
-
 // UpdateRuntimeModel updates the active provider/model used by new requests.
 func (a *AgentLoop) UpdateRuntimeModel(provider providers.LLMProvider, model string) {
 	a.runtimeMu.Lock()
@@ -520,7 +613,18 @@ func (a *AgentLoop) ProcessDirectStream(
 		msg.SessionKey = sessionKey
 	}
 
-	resp, err := a.processMessageWithDelta(ctx, msg, onDelta)
+	// 创建可中断上下文
+	ic := NewInterruptibleContext(ctx, a.Bus)
+	a.icMu.Lock()
+	a.currentIC = ic
+	a.icMu.Unlock()
+	defer func() {
+		a.icMu.Lock()
+		a.currentIC = nil
+		a.icMu.Unlock()
+	}()
+
+	resp, err := a.processMessageWithIC(ic, msg, onDelta, nil)
 	if err != nil {
 		return "", err
 	}
@@ -551,7 +655,18 @@ func (a *AgentLoop) ProcessDirectEventStreamWithSkills(
 	}
 	msg.SelectedSkills = normalizeSkillRefs(selectedSkills)
 
-	resp, err := a.processMessageWithCallbacks(ctx, msg, nil, onEvent)
+	// 创建可中断上下文
+	ic := NewInterruptibleContext(ctx, a.Bus)
+	a.icMu.Lock()
+	a.currentIC = ic
+	a.icMu.Unlock()
+	defer func() {
+		a.icMu.Lock()
+		a.currentIC = nil
+		a.icMu.Unlock()
+	}()
+
+	resp, err := a.processMessageWithIC(ic, msg, nil, onEvent)
 	if err != nil {
 		return "", err
 	}
