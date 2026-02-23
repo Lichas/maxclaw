@@ -1451,12 +1451,11 @@ export function ChatView() {
   }
 
   return (
-    <div className="h-full flex flex-col" style={{ background: 'var(--secondary)' }}>
-      <div className="flex-1 overflow-hidden rounded-xl bg-card m-2 mb-0 flex flex-col">
-        {renderThreadHeader()}
-        <div className="flex-1 flex min-h-0">
-          <div className="min-w-0 flex flex-1 flex-col">
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+    <div className="h-full flex flex-col bg-card">
+      {renderThreadHeader()}
+      <div className="flex-1 flex min-h-0">
+        <div className="min-w-0 flex flex-1 flex-col">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -1530,9 +1529,8 @@ export function ChatView() {
               </Suspense>
             )}
           </div>
-          </div>
-          {renderPreviewSidebar()}
         </div>
+        {renderPreviewSidebar()}
       </div>
     </div>
   );

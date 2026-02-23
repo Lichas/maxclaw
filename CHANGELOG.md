@@ -19,6 +19,11 @@
 - **位置**：`electron/src/renderer/views/ChatView.tsx`。
 - **验证**：`cd electron && npm run build`、`make build`。
 
+#### 调整聊天区为单层铺满，去掉浅绿色叠底
+- **变更**：移除聊天态外层浅绿色背景和内层留边圆角容器，改为聊天内容直接占满右侧主容器，避免出现双层卡片叠底视觉。
+- **位置**：`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 ### 新增功能
 
 #### 智能插话/打断功能（Smart Interruption）
