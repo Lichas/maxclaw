@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Lichas/maxclaw/internal/config"
+	"github.com/Lichas/maxclaw/internal/skills"
 	"github.com/spf13/cobra"
 )
 
@@ -50,6 +51,24 @@ var onboardCmd = &cobra.Command{
 		fmt.Println("  Created skills/example/SKILL.md")
 		fmt.Println("  Created memory/MEMORY.md")
 		fmt.Println("  Created memory/heartbeat.md")
+
+		// 安装官方 skills
+		fmt.Println("\n📦 Installing official skills from anthropics/skills...")
+		installer := skills.NewInstaller(config.GetWorkspacePath())
+		if err := installer.InstallOfficialSkills(); err != nil {
+			// 安装失败不中断，只是提示
+			fmt.Printf("  ⚠ Failed to install official skills: %v\n", err)
+			fmt.Println("  You can manually install them later with: maxclaw skills install --official")
+		} else {
+			// 列出已安装的 skills
+			installedSkills, _ := installer.ListInstalledSkills()
+			if len(installedSkills) > 0 {
+				fmt.Printf("  Installed %d official skills:\n", len(installedSkills))
+				for _, skill := range installedSkills {
+					fmt.Printf("    - %s\n", skill)
+				}
+			}
+		}
 
 		fmt.Printf("\n%s maxclaw is ready!\n\n", logo)
 		fmt.Println("Next steps:")

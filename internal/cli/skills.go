@@ -2,10 +2,12 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/Lichas/maxclaw/internal/config"
+	"github.com/Lichas/maxclaw/internal/skills"
 	workspaceSkills "github.com/Lichas/maxclaw/internal/skills"
 	"github.com/spf13/cobra"
 )
@@ -15,6 +17,10 @@ func init() {
 	skillsCmd.AddCommand(skillsShowCmd)
 	skillsCmd.AddCommand(skillsValidateCmd)
 	skillsCmd.AddCommand(skillsAddCmd)
+	skillsCmd.AddCommand(skillsInstallCmd)
+	skillsCmd.AddCommand(skillsUpdateCmd)
+
+	skillsInstallCmd.Flags().Bool("official", false, "Install official skills from anthropics/skills")
 }
 
 var skillsCmd = &cobra.Command{
@@ -166,4 +172,74 @@ func canonicalSkillName(name string) string {
 		}
 	}
 	return b.String()
+}
+
+var skillsInstallCmd = &cobra.Command{
+	Use:   "install [source]",
+	Short: "Install skills from a source",
+	Long: `Install skills from various sources.
+
+Examples:
+  # Install official skills from Anthropic
+  maxclaw skills install --official
+
+  # Install from a GitHub repository
+  maxclaw skills install github.com/username/repo
+
+  # Install from local directory
+  maxclaw skills install /path/to/skills`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		official, _ := cmd.Flags().GetBool("official")
+
+		workspace := config.GetWorkspacePath()
+		installer := skills.NewInstaller(workspace)
+
+		if official {
+			fmt.Println("📦 Installing official skills from anthropics/skills...")
+			if err := installer.InstallOfficialSkills(); err != nil {
+				return fmt.Errorf("failed to install official skills: %w", err)
+			}
+
+			installedSkills, err := installer.ListInstalledSkills()
+			if err != nil {
+				return err
+			}
+
+			if len(installedSkills) > 0 {
+				fmt.Printf("\n✓ Installed %d official skills:\n", len(installedSkills))
+				for _, skill := range installedSkills {
+					fmt.Printf("  - %s\n", skill)
+				}
+			}
+			return nil
+		}
+
+		if len(args) == 0 {
+			return fmt.Errorf("please specify a source or use --official flag\n\nUsage:\n  maxclaw skills install --official\n  maxclaw skills install github.com/username/repo")
+		}
+
+		source := args[0]
+		fmt.Printf("📦 Installing skills from %s...\n", source)
+		return fmt.Errorf("custom source installation not yet implemented")
+	},
+}
+
+var skillsUpdateCmd = &cobra.Command{
+	Use:   "update",
+	Short: "Update official skills to latest version",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		workspace := config.GetWorkspacePath()
+		installer := skills.NewInstaller(workspace)
+
+		markerPath := filepath.Join(workspace, "skills", skills.SkillsInstallMarker)
+		_ = os.Remove(markerPath)
+
+		fmt.Println("📦 Updating official skills...")
+		if err := installer.InstallOfficialSkills(); err != nil {
+			return fmt.Errorf("failed to update skills: %w", err)
+		}
+
+		fmt.Println("\n✓ Skills updated successfully!")
+		return nil
+	},
 }
