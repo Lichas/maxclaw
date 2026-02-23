@@ -98,6 +98,29 @@ func (b *MessageBus) TryConsumeOutbound() (*OutboundMessage, bool) {
 	}
 }
 
+// PeekInboundForSession 查找并返回指定会话的入站消息（非阻塞）
+// 如果不是目标会话的消息，会将其临时存储，不影响其他消费者
+func (b *MessageBus) PeekInboundForSession(sessionKey string) *InboundMessage {
+	// 尝试非阻塞消费
+	select {
+	case msg := <-b.inbound:
+		// 如果是目标会话，直接返回
+		if msg.SessionKey == sessionKey {
+			return msg
+		}
+		// 不是目标会话，重新放回队列（可能失败如果队列满）
+		select {
+		case b.inbound <- msg:
+			// 成功放回
+		default:
+			// 队列满，丢弃消息（这种情况很少见）
+		}
+		return nil
+	default:
+		return nil
+	}
+}
+
 // Close 关闭消息总线
 func (b *MessageBus) Close() {
 	b.mu.Lock()

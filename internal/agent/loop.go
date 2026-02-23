@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Lichas/maxclaw/internal/bus"
 	"github.com/Lichas/maxclaw/internal/config"
@@ -315,7 +316,32 @@ func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage)
 		a.icMu.Unlock()
 	}()
 
+	// 启动后台 goroutine 监听同一会话的新消息（用于 Telegram 等轮询渠道）
+	stopCheck := make(chan struct{})
+	go a.checkIncomingMessages(ic, msg, stopCheck)
+	defer close(stopCheck)
+
 	return a.processMessageWithIC(ic, msg, nil, nil)
+}
+
+// checkIncomingMessages 定期检查是否有同一会话的新消息
+func (a *AgentLoop) checkIncomingMessages(ic *InterruptibleContext, currentMsg *bus.InboundMessage, stop <-chan struct{}) {
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-stop:
+			return
+		case <-ic.Done():
+			return
+		case <-ticker.C:
+			// 非阻塞检查 Bus 中是否有同一会话的新消息
+			if newMsg := a.Bus.PeekInboundForSession(currentMsg.SessionKey); newMsg != nil {
+				a.HandleInterruption(newMsg)
+			}
+		}
+	}
 }
 
 func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.InboundMessage, onDelta func(string), onEvent func(StreamEvent)) (*bus.OutboundMessage, error) {
