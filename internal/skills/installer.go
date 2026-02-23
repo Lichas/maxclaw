@@ -16,6 +16,8 @@ import (
 const (
 	// AnthricSkillsRepo 官方 skills 仓库
 	AnthricSkillsRepo = "anthropics/skills"
+	// PlaywrightSkillsRepo Microsoft Playwright CLI skills 仓库
+	PlaywrightSkillsRepo = "microsoft/playwright-cli"
 	// DefaultSkillsBranch 默认分支
 	DefaultSkillsBranch = "main"
 	// SkillsInstallMarker 安装标记文件
@@ -82,7 +84,19 @@ func (i *Installer) IsFirstRun() bool {
 	return true
 }
 
-// InstallOfficialSkills 从 GitHub 或镜像下载并安装官方 skills
+// OfficialRepo 定义官方技能仓库
+type OfficialRepo struct {
+	Name string
+	Repo string
+}
+
+// officialRepos 官方技能仓库列表（按安装顺序）
+var officialRepos = []OfficialRepo{
+	{Name: "Anthropics", Repo: AnthricSkillsRepo},
+	{Name: "Playwright", Repo: PlaywrightSkillsRepo},
+}
+
+// InstallOfficialSkills 从 GitHub 或镜像下载并安装所有官方 skills
 // 支持自动 fallback 到可用镜像
 func (i *Installer) InstallOfficialSkills() error {
 	skillsDir := filepath.Join(i.workspace, "skills")
@@ -92,57 +106,97 @@ func (i *Installer) InstallOfficialSkills() error {
 		return fmt.Errorf("failed to create skills directory: %w", err)
 	}
 
-	// 尝试从多个源下载
-	zipPath := filepath.Join(i.workspace, ".tmp_skills.zip")
+	installedRepos := []string{}
+	totalInstalled := 0
+
+	// 遍历所有官方仓库
+	for _, repo := range officialRepos {
+		fmt.Printf("\n📦 Installing %s skills...\n", repo.Name)
+		count, err := i.installRepoSkills(repo)
+		if err != nil {
+			// 检查是否是网络错误
+			if _, ok := err.(*NetworkError); ok {
+				fmt.Printf("  ⚠ Network issue for %s, skipping...\n", repo.Name)
+				continue
+			}
+			// 其他错误（如解压失败）记录但不中断
+			fmt.Printf("  ⚠ Failed to install %s: %v\n", repo.Name, err)
+			continue
+		}
+		fmt.Printf("  ✓ Installed %d skills from %s\n", count, repo.Name)
+		installedRepos = append(installedRepos, repo.Repo)
+		totalInstalled += count
+	}
+
+	if totalInstalled == 0 {
+		return &NetworkError{
+			Message: "failed to download skills from all mirrors and repos",
+		}
+	}
+
+	// 创建安装标记
+	markerPath := filepath.Join(skillsDir, SkillsInstallMarker)
+	var markerContent strings.Builder
+	markerContent.WriteString(fmt.Sprintf("Official skills installed at: %s\n", time.Now().Format(time.RFC3339)))
+	markerContent.WriteString(fmt.Sprintf("Total skills installed: %d\n", totalInstalled))
+	markerContent.WriteString("Sources:\n")
+	for _, repo := range installedRepos {
+		markerContent.WriteString(fmt.Sprintf("  - https://github.com/%s\n", repo))
+	}
+	if err := os.WriteFile(markerPath, []byte(markerContent.String()), 0644); err != nil {
+		return fmt.Errorf("failed to create install marker: %w", err)
+	}
+
+	fmt.Printf("\n✓ Official skills installed successfully! Total: %d\n", totalInstalled)
+	return nil
+}
+
+// installRepoSkills 安装单个仓库的技能
+// 返回安装的文件数量和可能的错误
+func (i *Installer) installRepoSkills(repo OfficialRepo) (int, error) {
+	skillsDir := filepath.Join(i.workspace, "skills")
+	zipPath := filepath.Join(i.workspace, fmt.Sprintf(".tmp_skills_%s.zip", strings.ReplaceAll(repo.Repo, "/", "_")))
 	defer os.Remove(zipPath)
 
 	var lastErr error
 	for _, source := range mirrorSources {
-		zipURL := fmt.Sprintf(source.url, AnthricSkillsRepo, DefaultSkillsBranch)
-		fmt.Printf("📦 Trying %s...\n", source.name)
+		zipURL := fmt.Sprintf(source.url, repo.Repo, DefaultSkillsBranch)
+		fmt.Printf("  Trying %s...\n", source.name)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		err := i.downloadFileWithContext(ctx, zipURL, zipPath)
 		cancel()
 
 		if err == nil {
-			fmt.Printf("  ✓ Downloaded from %s\n", source.name)
+			fmt.Printf("    ✓ Downloaded from %s\n", source.name)
 			break
 		}
 
 		lastErr = err
 		// 检查是否是网络连接问题
 		if isNetworkError(err) {
-			fmt.Printf("  ✗ %s unavailable, trying next mirror...\n", source.name)
+			fmt.Printf("    ✗ %s unavailable\n", source.name)
 			continue
 		}
 		// 其他错误直接返回
-		return fmt.Errorf("download failed from %s: %w", source.name, err)
+		return 0, fmt.Errorf("download failed from %s: %w", source.name, err)
 	}
 
 	// 检查是否下载成功
 	if _, err := os.Stat(zipPath); os.IsNotExist(err) {
-		return &NetworkError{
-			Message: "failed to download skills from all mirrors",
+		return 0, &NetworkError{
+			Message: fmt.Sprintf("failed to download %s from all mirrors", repo.Name),
 			Cause:   lastErr,
 		}
 	}
 
 	// 解压并安装
-	if err := i.extractSkills(zipPath, skillsDir); err != nil {
-		return fmt.Errorf("failed to extract skills: %w", err)
+	count, err := i.extractSkills(zipPath, skillsDir)
+	if err != nil {
+		return 0, fmt.Errorf("failed to extract skills: %w", err)
 	}
 
-	// 创建安装标记
-	markerPath := filepath.Join(skillsDir, SkillsInstallMarker)
-	markerContent := fmt.Sprintf("Official skills installed at: %s\nSource: https://github.com/%s\n",
-		time.Now().Format(time.RFC3339), AnthricSkillsRepo)
-	if err := os.WriteFile(markerPath, []byte(markerContent), 0644); err != nil {
-		return fmt.Errorf("failed to create install marker: %w", err)
-	}
-
-	fmt.Println("✓ Official skills installed successfully!")
-	return nil
+	return count, nil
 }
 
 // NetworkError 网络错误类型
@@ -229,10 +283,11 @@ func (i *Installer) downloadFileWithContext(ctx context.Context, url, filepath s
 }
 
 // extractSkills 解压 zip 文件中的 skills 到目标目录
-func (i *Installer) extractSkills(zipPath, targetDir string) error {
+// 返回安装的文件数量
+func (i *Installer) extractSkills(zipPath, targetDir string) (int, error) {
 	r, err := zip.OpenReader(zipPath)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer r.Close()
 
@@ -252,7 +307,7 @@ func (i *Installer) extractSkills(zipPath, targetDir string) error {
 	}
 
 	if skillsPrefix == "" {
-		return fmt.Errorf("could not find skills directory in archive")
+		return 0, fmt.Errorf("could not find skills directory in archive")
 	}
 
 	installedCount := 0
@@ -272,25 +327,25 @@ func (i *Installer) extractSkills(zipPath, targetDir string) error {
 
 		if f.FileInfo().IsDir() {
 			if err := os.MkdirAll(targetPath, f.Mode()); err != nil {
-				return err
+				return 0, err
 			}
 			continue
 		}
 
 		// 创建文件
 		if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
-			return err
+			return 0, err
 		}
 
 		rc, err := f.Open()
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		out, err := os.Create(targetPath)
 		if err != nil {
 			rc.Close()
-			return err
+			return 0, err
 		}
 
 		_, err = io.Copy(out, rc)
@@ -298,14 +353,13 @@ func (i *Installer) extractSkills(zipPath, targetDir string) error {
 		rc.Close()
 
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		installedCount++
 	}
 
-	fmt.Printf("  Installed %d skill files\n", installedCount)
-	return nil
+	return installedCount, nil
 }
 
 // InstallIfNeeded 如果需要则安装官方 skills（用于自动检测）
@@ -379,7 +433,8 @@ Options:
      maxclaw skills install --official
 
   2. Manual download:
-     - Download: https://github.com/anthropics/skills/archive/refs/heads/main.zip
+     - Anthropics: https://github.com/anthropics/skills/archive/refs/heads/main.zip
+     - Playwright: https://github.com/microsoft/playwright-cli/archive/refs/heads/main.zip
      - Extract the 'skills' folder to: ~/.maxclaw/workspace/skills/
 
   3. Use a mirror:

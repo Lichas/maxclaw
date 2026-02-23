@@ -4,6 +4,12 @@
 
 ### 变更
 
+#### 首次安装时同时安装 Playwright CLI skills
+- **变更**：在安装官方 skills 时，新增 `microsoft/playwright-cli` 仓库作为第二个技能源。
+- **行为**：按顺序安装 Anthropics → Playwright 的 skills，网络失败时跳过单个仓库不中断整体流程。
+- **位置**：`internal/skills/installer.go`、`internal/cli/onboard.go`。
+- **验证**：`go test ./internal/skills/...`、`make build`。
+
 #### 支持全局 Skills 目录 `~/.agents/skills/`
 - **变更**：新增配置项 `agents.defaults.enableGlobalSkills`（默认启用），允许从 `~/.agents/skills/` 加载全局 skills 作为工作区 skills 的补充。
 - **行为**：工作区 skills 优先（同名时覆盖全局），合并后统一排序。

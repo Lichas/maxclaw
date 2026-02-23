@@ -78,5 +78,15 @@
     "status": "success",
     "output": "ok",
     "durationMs": 0
+  },
+  {
+    "id": "exec_1771862260948261000",
+    "jobId": "job_1771862260948259000",
+    "jobTitle": "log-test",
+    "startedAt": "2026-02-23T23:57:40.948261+08:00",
+    "endedAt": "2026-02-23T23:57:40.948532+08:00",
+    "status": "success",
+    "output": "ok",
+    "durationMs": 0
   }
 ]

@@ -53,7 +53,8 @@ var onboardCmd = &cobra.Command{
 		fmt.Println("  Created memory/heartbeat.md")
 
 		// 安装官方 skills
-		fmt.Println("\n📦 Installing official skills from anthropics/skills...")
+		fmt.Println("\n📦 Installing official skills...")
+		fmt.Println("  Sources: anthropics/skills, microsoft/playwright-cli")
 		installer := skills.NewInstaller(config.GetWorkspacePath())
 		if err := installer.InstallOfficialSkills(); err != nil {
 			// 检查是否是网络错误
@@ -71,7 +72,7 @@ var onboardCmd = &cobra.Command{
 			// 列出已安装的 skills
 			installedSkills, _ := installer.ListInstalledSkills()
 			if len(installedSkills) > 0 {
-				fmt.Printf("  Installed %d official skills:\n", len(installedSkills))
+				fmt.Printf("  Total installed: %d official skills\n", len(installedSkills))
 				for _, skill := range installedSkills {
 					fmt.Printf("    - %s\n", skill)
 				}
