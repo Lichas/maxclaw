@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 修复聊天界面会话切换时串流状态与输入框串联
+- **变更**：聊天页将输入草稿按 `sessionKey` 存储；将“生成中/打断提示”状态按会话隔离；并为流式回调增加会话守卫，避免旧会话请求在切换后污染当前会话渲染与打断按钮状态。
+- **位置**：`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 修复无 API Key 时 gateway 启动失败导致 Electron 无法启动
 - **变更**：`gateway` 启动改为缺少 API key 时进入“仅配置模式”而不是直接退出；Web UI 可正常启动，模型请求会返回明确的配置错误提示。
 - **位置**：`internal/cli/gateway.go`、`internal/cli/gateway_test.go`。

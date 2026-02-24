@@ -144,7 +144,7 @@ export function ChatView() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionTitle, setSessionTitle] = useState('New thread');
-  const [input, setInput] = useState('');
+  const [inputBySession, setInputBySession] = useState<Record<string, string>>({});
   const [streamingTimeline, setStreamingTimeline] = useState<TimelineEntry[]>([]);
   const [availableSkills, setAvailableSkills] = useState<SkillSummary[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
@@ -164,10 +164,9 @@ export function ChatView() {
   // File attachments state
   const [attachedFiles, setAttachedFiles] = useState<UploadedFile[]>([]);
 
-  // Interrupt/append mode state
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [interruptMode, setInterruptMode] = useState<'cancel' | 'append'>('cancel');
-  const [interruptHintVisible, setInterruptHintVisible] = useState(false);
+  // Interrupt state scoped to active session.
+  const [generatingSessionKey, setGeneratingSessionKey] = useState<string | null>(null);
+  const [interruptHintSessionKey, setInterruptHintSessionKey] = useState<string | null>(null);
 
   // @mention skills state
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -262,8 +261,42 @@ export function ChatView() {
   const entrySeqRef = useRef(0);
   const streamingTimelineRef = useRef<TimelineEntry[]>([]);
   const previewRequestRef = useRef(0);
+  const currentSessionKeyRef = useRef(currentSessionKey);
+  const activeStreamSessionRef = useRef<string | null>(null);
+
+  const input = inputBySession[currentSessionKey] || '';
+  const isGenerating = generatingSessionKey === currentSessionKey;
+  const interruptHintVisible = interruptHintSessionKey === currentSessionKey;
 
   const isStarterMode = messages.length === 0 && streamingTimeline.length === 0;
+
+  const setInputForSession = (sessionKey: string, value: string) => {
+    setInputBySession((prev) => {
+      if ((prev[sessionKey] || '') === value) {
+        return prev;
+      }
+      return { ...prev, [sessionKey]: value };
+    });
+  };
+
+  const setInputForCurrentSession = (value: string) => {
+    setInputForSession(currentSessionKey, value);
+  };
+
+  const clearInputForSession = (sessionKey: string) => {
+    setInputBySession((prev) => {
+      if (!(sessionKey in prev)) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[sessionKey];
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    currentSessionKeyRef.current = currentSessionKey;
+  }, [currentSessionKey]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -477,7 +510,7 @@ export function ChatView() {
   const insertMention = (skillName: string) => {
     const beforeCursor = input.slice(0, input.lastIndexOf('@' + mentionQuery));
     const afterCursor = input.slice(input.lastIndexOf('@' + mentionQuery) + 1 + mentionQuery.length);
-    setInput(beforeCursor + '@' + skillName + ' ' + afterCursor);
+    setInputForCurrentSession(beforeCursor + '@' + skillName + ' ' + afterCursor);
     setMentionOpen(false);
     setMentionQuery('');
     setMentionIndex(0);
@@ -524,7 +557,7 @@ export function ChatView() {
 
     setMentionOpen(false);
     setSlashOpen(false);
-    setInput(value);
+    setInputForCurrentSession(value);
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -568,7 +601,7 @@ export function ChatView() {
         const cmd = filteredSlashCommands[slashIndex];
         if (cmd) {
           cmd.action();
-          setInput('');
+          clearInputForSession(currentSessionKey);
         }
         setSlashOpen(false);
         return;
@@ -837,12 +870,12 @@ export function ChatView() {
     if (success) {
       // Clear input if content was sent
       if (content) {
-        setInput('');
+        clearInputForSession(currentSessionKey);
       }
       // Show feedback toast
       showToast(mode === 'cancel' ? '已发送打断请求' : '已补充上下文');
       // Reset interrupt hint
-      setInterruptHintVisible(false);
+      setInterruptHintSessionKey((prev) => (prev === currentSessionKey ? null : prev));
     }
   };
 
@@ -851,9 +884,11 @@ export function ChatView() {
     if (!input.trim() || isLoading) {
       return;
     }
+    const requestSessionKey = currentSessionKey;
+    activeStreamSessionRef.current = requestSessionKey;
     setPreviewSidebarCollapsed(true);
-    setIsGenerating(true);
-    setInterruptHintVisible(true);
+    setGeneratingSessionKey(requestSessionKey);
+    setInterruptHintSessionKey(requestSessionKey);
 
     const userMessage: Message = {
       id: `${Date.now()}`,
@@ -868,7 +903,7 @@ export function ChatView() {
     if (shouldUpdateTitle) {
       setSessionTitle(formatSessionTitle(userMessage.content));
     }
-    setInput('');
+    clearInputForSession(requestSessionKey);
     setAttachedFiles([]);
     setSkillsPickerOpen(false);
     resetTypingState();
@@ -879,12 +914,23 @@ export function ChatView() {
     try {
       const result = await sendMessage(
         userMessage.content,
-        currentSessionKey,
+        requestSessionKey,
         (delta) => {
+          if (activeStreamSessionRef.current !== requestSessionKey) {
+            return;
+          }
           assistantContent += delta;
-          enqueueTyping(delta);
+          if (currentSessionKeyRef.current === requestSessionKey) {
+            enqueueTyping(delta);
+          }
         },
         (event) => {
+          if (activeStreamSessionRef.current !== requestSessionKey) {
+            return;
+          }
+          if (currentSessionKeyRef.current !== requestSessionKey) {
+            return;
+          }
           const activity = toStreamActivity(event);
           if (!activity) {
             return;
@@ -895,55 +941,72 @@ export function ChatView() {
         userMessage.attachments
       );
 
-      if (result.sessionKey && result.sessionKey !== currentSessionKey) {
+      if (result.sessionKey && result.sessionKey !== requestSessionKey) {
         dispatch(setCurrentSessionKey(result.sessionKey));
+      }
+      if (activeStreamSessionRef.current !== requestSessionKey) {
+        return;
       }
 
       if (!assistantContent && result.response) {
         assistantContent = result.response;
-        enqueueTyping(result.response);
+        if (currentSessionKeyRef.current === requestSessionKey) {
+          enqueueTyping(result.response);
+        }
       }
 
-      await waitForTypingDrain();
+      if (currentSessionKeyRef.current === requestSessionKey) {
+        await waitForTypingDrain();
+      }
 
       const durationMs = Date.now() - startTime;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-assistant`,
-          role: 'assistant',
-          content: assistantContent,
-          timestamp: new Date(),
-          timeline: streamingTimelineRef.current.length > 0 ? [...streamingTimelineRef.current] : undefined,
-          durationMs
-        }
-      ]);
-      setPreviewSidebarCollapsed(true);
+      if (currentSessionKeyRef.current === requestSessionKey) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-assistant`,
+            role: 'assistant',
+            content: assistantContent,
+            timestamp: new Date(),
+            timeline: streamingTimelineRef.current.length > 0 ? [...streamingTimelineRef.current] : undefined,
+            durationMs
+          }
+        ]);
+        setPreviewSidebarCollapsed(true);
+      }
       resetTypingState();
     } catch (err) {
+      if (activeStreamSessionRef.current !== requestSessionKey) {
+        return;
+      }
       const errorTimeline = streamingTimelineRef.current.length > 0 ? [...streamingTimelineRef.current] : undefined;
       const durationMs = Date.now() - startTime;
       resetTypingState();
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `${Date.now()}-error`,
-          role: 'assistant',
-          content: err instanceof Error ? `消息发送失败：${err.message}` : '消息发送失败，请检查 Gateway 状态后重试。',
-          timestamp: new Date(),
-          timeline: errorTimeline,
-          durationMs
-        }
-      ]);
-      setPreviewSidebarCollapsed(true);
+      if (currentSessionKeyRef.current === requestSessionKey) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-error`,
+            role: 'assistant',
+            content: err instanceof Error ? `消息发送失败：${err.message}` : '消息发送失败，请检查 Gateway 状态后重试。',
+            timestamp: new Date(),
+            timeline: errorTimeline,
+            durationMs
+          }
+        ]);
+        setPreviewSidebarCollapsed(true);
+      }
     } finally {
-      setIsGenerating(false);
-      setInterruptHintVisible(false);
+      if (activeStreamSessionRef.current === requestSessionKey) {
+        activeStreamSessionRef.current = null;
+      }
+      setGeneratingSessionKey((prev) => (prev === requestSessionKey ? null : prev));
+      setInterruptHintSessionKey((prev) => (prev === requestSessionKey ? null : prev));
     }
   };
 
   const applyTemplate = (prompt: string) => {
-    setInput(prompt);
+    setInputForCurrentSession(prompt);
     inputRef.current?.focus();
   };
 
@@ -1240,7 +1303,7 @@ export function ChatView() {
                 type="button"
                 onClick={() => {
                   cmd.action();
-                  setInput('');
+                  clearInputForSession(currentSessionKey);
                   setSlashOpen(false);
                 }}
                 className={`w-full rounded-lg px-2 py-2 text-left transition-colors ${
