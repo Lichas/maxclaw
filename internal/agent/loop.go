@@ -52,6 +52,8 @@ type AgentLoop struct {
 	intentAnalyzer *IntentAnalyzer
 	currentIC      *InterruptibleContext
 	icMu           sync.RWMutex
+
+	PlanManager         *PlanManager  // Task plan manager for multi-step execution
 }
 
 // StreamEvent is a structured event for UI streaming consumers.
@@ -110,6 +112,7 @@ func NewAgentLoop(
 		sessions:            session.NewManager(workspace),
 		tools:               tools.NewRegistry(),
 		intentAnalyzer:      NewIntentAnalyzer(),
+		PlanManager:         NewPlanManager(workspace),
 	}
 
 	if len(loop.MCPServers) > 0 {

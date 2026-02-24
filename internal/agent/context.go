@@ -507,3 +507,39 @@ func globPaths(pattern string) []string {
 	}
 	return matches
 }
+
+// BuildSystemPromptWithPlan creates system prompt with plan context
+func (cb *ContextBuilder) BuildSystemPromptWithPlan(plan *Plan) string {
+	basePrompt := cb.buildSystemPrompt("", "", "", nil)
+
+	if plan == nil {
+		return basePrompt
+	}
+
+	var b strings.Builder
+	b.WriteString(basePrompt)
+	b.WriteString("\n\n## 当前任务规划\n\n")
+	b.WriteString(plan.ToContextString())
+	b.WriteString("\n你可以使用 [Step] 描述 格式声明新步骤。\n")
+	b.WriteString("完成当前步骤后，系统会自动推进到下一步。\n")
+
+	return b.String()
+}
+
+// BuildMessagesWithPlanAndSkillRefs builds messages with plan context
+func (cb *ContextBuilder) BuildMessagesWithPlanAndSkillRefs(
+	history []providers.Message,
+	userContent string,
+	skillRefs []string,
+	media *bus.MediaAttachment,
+	channel, chatID string,
+	plan *Plan,
+) []providers.Message {
+	systemPrompt := cb.BuildSystemPromptWithPlan(plan)
+	// Reuse existing logic from BuildMessagesWithSkillRefs but with our systemPrompt
+	messages := cb.BuildMessagesWithSkillRefs(history, userContent, skillRefs, media, channel, chatID)
+	if len(messages) > 0 && messages[0].Role == "system" {
+		messages[0].Content = systemPrompt
+	}
+	return messages
+}
