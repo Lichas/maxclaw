@@ -563,7 +563,7 @@ async function buildFilePreview(inputPath: string, options?: FileResolveOptions)
       extension,
       kind,
       size: stat.size,
-      fileUrl: pathToFileURL(resolvedPath).toString()
+      fileUrl: `${pathToFileURL(resolvedPath).toString()}?t=${Date.now()}`
     };
 
     if (kind === 'markdown' || kind === 'text') {
