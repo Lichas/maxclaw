@@ -3,12 +3,14 @@ package cli
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/Lichas/maxclaw/internal/bus"
 	"github.com/Lichas/maxclaw/internal/channels"
+	"github.com/Lichas/maxclaw/internal/config"
 )
 
 type mockChannel struct {
@@ -125,4 +127,42 @@ func TestHandleOutboundMessagesContinueAfterError(t *testing.T) {
 		calls, _, _ := ch.snapshot()
 		return calls >= 2
 	})
+}
+
+func TestBuildGatewayProviderWithoutAPIKeyFallsBack(t *testing.T) {
+	cfg := config.DefaultConfig()
+	provider, warning, err := buildGatewayProvider(cfg, "", "")
+	if err != nil {
+		t.Fatalf("buildGatewayProvider returned error: %v", err)
+	}
+	if provider == nil {
+		t.Fatal("expected fallback provider, got nil")
+	}
+	if warning == "" {
+		t.Fatal("expected startup warning for missing API key")
+	}
+
+	streamErr := provider.ChatStream(context.Background(), nil, nil, "", nil)
+	if streamErr == nil {
+		t.Fatal("expected stream error when API key is missing")
+	}
+	if !strings.Contains(streamErr.Error(), "no API key configured") {
+		t.Fatalf("unexpected stream error: %v", streamErr)
+	}
+}
+
+func TestBuildGatewayProviderWithAPIKeyUsesOpenAIProvider(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Agents.Defaults.Model = "gpt-4o-mini"
+
+	provider, warning, err := buildGatewayProvider(cfg, "sk-test", "https://example.com/v1")
+	if err != nil {
+		t.Fatalf("buildGatewayProvider returned error: %v", err)
+	}
+	if provider == nil {
+		t.Fatal("expected provider, got nil")
+	}
+	if warning != "" {
+		t.Fatalf("expected no warning with API key, got: %s", warning)
+	}
 }

@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 修复无 API Key 时 gateway 启动失败导致 Electron 无法启动
+- **变更**：`gateway` 启动改为缺少 API key 时进入“仅配置模式”而不是直接退出；Web UI 可正常启动，模型请求会返回明确的配置错误提示。
+- **位置**：`internal/cli/gateway.go`、`internal/cli/gateway_test.go`。
+- **验证**：`go test ./internal/cli -run 'TestBuildGatewayProvider|TestHandleOutboundMessages'`、`make build`、`HOME=$(mktemp -d) ./build/maxclaw gateway -p 18991`（确认进程可启动并监听）。
+
 #### Electron 技能市场新增推荐技能下拉选择
 - **变更**：GitHub 方式安装技能时，提供6个官方推荐技能源的下拉选择（Anthropics、Playwright CLI、Vercel Labs、Vercel Skills、Remotion、Superpowers）。
 - **位置**：`electron/src/renderer/views/SkillsView.tsx`。

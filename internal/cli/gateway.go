@@ -45,25 +45,19 @@ var gatewayCmd = &cobra.Command{
 			lg.Gateway.Printf("gateway starting port=%d model=%s workspace=%s", gatewayPort, cfg.Agents.Defaults.Model, cfg.Agents.Defaults.Workspace)
 		}
 
-		// 检查 API key
 		apiKey := cfg.GetAPIKey("")
 		apiBase := cfg.GetAPIBase("")
-		if apiKey == "" {
-			return fmt.Errorf("no API key configured. Set one in ~/.maxclaw/config.json")
+		provider, bootWarning, err := buildGatewayProvider(cfg, apiKey, apiBase)
+		if err != nil {
+			return err
 		}
 
 		fmt.Printf("%s Starting maxclaw gateway on port %d...\n\n", logo, gatewayPort)
-
-		// 创建 Provider
-		provider, err := providers.NewOpenAIProvider(
-			apiKey,
-			apiBase,
-			cfg.Agents.Defaults.Model,
-			cfg.Agents.Defaults.MaxTokens,
-			cfg.Agents.Defaults.Temperature,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to create provider: %w", err)
+		if bootWarning != "" {
+			fmt.Printf("⚠ %s\n", bootWarning)
+			if lg := logging.Get(); lg != nil && lg.Gateway != nil {
+				lg.Gateway.Printf("startup warning: %s", bootWarning)
+			}
 		}
 
 		// 创建组件
@@ -341,6 +335,51 @@ var gatewayCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func buildGatewayProvider(cfg *config.Config, apiKey, apiBase string) (providers.LLMProvider, string, error) {
+	if apiKey == "" {
+		return &unavailableProvider{
+			model:  cfg.Agents.Defaults.Model,
+			reason: "no API key configured. Set one in ~/.maxclaw/config.json (or via Web UI settings) to enable model requests",
+		}, "No API key configured. Gateway started in configuration-only mode; model requests will fail until key is set.", nil
+	}
+
+	provider, err := providers.NewOpenAIProvider(
+		apiKey,
+		apiBase,
+		cfg.Agents.Defaults.Model,
+		cfg.Agents.Defaults.MaxTokens,
+		cfg.Agents.Defaults.Temperature,
+	)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create provider: %w", err)
+	}
+	return provider, "", nil
+}
+
+type unavailableProvider struct {
+	model  string
+	reason string
+}
+
+func (p *unavailableProvider) Chat(ctx context.Context, messages []providers.Message, tools []map[string]interface{}, model string) (*providers.Response, error) {
+	return nil, fmt.Errorf("%s", p.reason)
+}
+
+func (p *unavailableProvider) ChatStream(ctx context.Context, messages []providers.Message, tools []map[string]interface{}, model string, handler providers.StreamHandler) error {
+	err := fmt.Errorf("%s", p.reason)
+	if handler != nil {
+		handler.OnError(err)
+	}
+	return err
+}
+
+func (p *unavailableProvider) GetDefaultModel() string {
+	if p.model != "" {
+		return p.model
+	}
+	return "gpt-4"
 }
 
 // handleOutboundMessages 处理出站消息
