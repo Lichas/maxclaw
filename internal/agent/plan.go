@@ -261,15 +261,30 @@ func NewStepDetector() *StepDetector {
 			"现在", "接下来", "然后", "继续", "开始", "现在让我",
 			"next", "now", "then", "continue", "let me", "proceed",
 		},
-		maxIterationsPerStep: 10,
+		maxIterationsPerStep: 5, // Reduced from 10 for faster step progression
 	}
 }
 
+// completionMarkers are explicit markers that LLM can use to signal step completion
+var completionMarkers = []string{
+	"[done]", "[完成]", "[step done]", "[步骤完成]",
+	"[complete]", "[completed]", "[结束]",
+}
+
 // DetectCompletion analyzes LLM output to determine if current step is complete
+// Uses hybrid strategy: explicit markers > transition words > timeout fallback
 func (sd *StepDetector) DetectCompletion(llmOutput string, iterationInStep int) bool {
-	// Strategy 1: Transition word detection (requires at least 2 iterations)
-	if iterationInStep >= 2 {
-		lowerOutput := strings.ToLower(llmOutput)
+	lowerOutput := strings.ToLower(llmOutput)
+
+	// Strategy 1: LLM explicit completion markers (highest priority, works immediately)
+	for _, marker := range completionMarkers {
+		if strings.Contains(lowerOutput, marker) {
+			return true
+		}
+	}
+
+	// Strategy 2: Transition word detection (requires at least 1 iteration)
+	if iterationInStep >= 1 {
 		for _, word := range sd.transitionWords {
 			if strings.Contains(lowerOutput, strings.ToLower(word)) {
 				return true
@@ -277,7 +292,7 @@ func (sd *StepDetector) DetectCompletion(llmOutput string, iterationInStep int) 
 		}
 	}
 
-	// Strategy 2: Timeout fallback
+	// Strategy 3: Timeout fallback (reduced from 10 to 5)
 	if iterationInStep >= sd.maxIterationsPerStep {
 		return true
 	}

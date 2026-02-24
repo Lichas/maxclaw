@@ -527,7 +527,10 @@ func (cb *ContextBuilder) BuildSystemPromptWithPlan(plan *Plan) string {
 	} else {
 		b.WriteString("\n你可以使用 [Step] 描述 格式声明新步骤。\n")
 	}
-	b.WriteString("完成当前步骤后，系统会自动推进到下一步。\n")
+	b.WriteString("\n步骤控制指令:\n")
+	b.WriteString("- 步骤完成后，说 \"[完成]\" 或 \"[Done]\" 推进到下一步\n")
+	b.WriteString("- 或使用 \"现在...\"、\"接下来...\" 等转换词\n")
+	b.WriteString("- 系统会自动跟踪进度并保存到 plan.json\n")
 
 	return b.String()
 }

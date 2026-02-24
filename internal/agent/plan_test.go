@@ -115,13 +115,13 @@ func TestStepDetector_DetectCompletion(t *testing.T) {
 		{
 			name:            "transition word but too early",
 			output:          "现在开始下载",
-			iterationInStep: 1,
+			iterationInStep: 0,
 			wantComplete:    false,
 		},
 		{
 			name:            "timeout fallback",
 			output:          "some random output",
-			iterationInStep: 10,
+			iterationInStep: 5,
 			wantComplete:    true,
 		},
 		{
