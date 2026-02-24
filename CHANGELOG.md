@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 补充聊天文件预览误识别问题根因记录（仅文档）
+- **变更**：在 Bug 文档新增“聊天文件预览误识别（带点号文本被当作文件）”记录，说明触发条件、根因与修复方案，便于后续回归排查。
+- **位置**：`BUGFIX.md`。
+- **验证**：`make build`。
+
 #### 修复聊天文件预览误识别：仅展示当前 Session 可解析且真实存在的文件
 - **变更**：聊天消息与执行过程中的“文件操作卡片”改为先按 `workspace/.sessions/<sessionKey>` 解析路径并校验文件存在，再显示“预览/打开目录”；避免把域名、指标数值（如 `101.82ms`）等包含点号的普通文本误识别成文件。
 - **位置**：`electron/src/main/ipc.ts`、`electron/src/preload/index.ts`、`electron/src/renderer/types/electron.d.ts`、`electron/src/renderer/views/ChatView.tsx`。
