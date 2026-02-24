@@ -9,6 +9,11 @@
 - **位置**：`internal/cli/gateway.go`、`internal/cli/gateway_test.go`。
 - **验证**：`go test ./internal/cli -run 'TestBuildGatewayProvider|TestHandleOutboundMessages'`、`make build`、`HOME=$(mktemp -d) ./build/maxclaw gateway -p 18991`（确认进程可启动并监听）。
 
+#### 修复 `make electron-start` 缺少 vite 依赖预检
+- **变更**：新增 `electron-ensure-deps` 目标，在 `electron-start` 前检查 `electron/node_modules/.bin/vite`；缺依赖时自动执行 `npm ci`（无 lockfile 则回退 `npm install`），避免启动过程才报 `vite: command not found`。
+- **位置**：`Makefile`。
+- **验证**：`rm -f electron/node_modules/.bin/vite && make electron-start`（自动安装后进入构建流程）、`make build`。
+
 #### Electron 技能市场新增推荐技能下拉选择
 - **变更**：GitHub 方式安装技能时，提供6个官方推荐技能源的下拉选择（Anthropics、Playwright CLI、Vercel Labs、Vercel Skills、Remotion、Superpowers）。
 - **位置**：`electron/src/renderer/views/SkillsView.tsx`。

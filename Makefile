@@ -106,6 +106,14 @@ lint: fmt vet
 	@echo "Linting complete"
 
 # Electron Desktop App
+electron-ensure-deps:
+	@if [ ! -x electron/node_modules/.bin/vite ]; then \
+		echo "Electron dependencies missing (vite). Installing..."; \
+		cd electron && if [ -f package-lock.json ]; then npm ci; else npm install; fi; \
+	else \
+		echo "Electron dependencies OK"; \
+	fi
+
 electron-install:
 	cd electron && npm install
 
@@ -115,7 +123,7 @@ electron-dev:
 electron-build:
 	cd electron && npm run build
 
-electron-start: build
+electron-start: build electron-ensure-deps
 	cd electron && npm start
 
 electron-dist: build
@@ -153,6 +161,7 @@ help:
 	@echo "  webui-dev      - Run web UI dev server"
 	@echo "  webfetch-install - Install Playwright web fetcher"
 	@echo "  electron-install - Install Electron app dependencies"
+	@echo "  electron-ensure-deps - Ensure Electron runtime deps (vite/electron) are installed"
 	@echo "  electron-dev     - Run Electron app in dev mode (with hot reload)"
 	@echo "  electron-start   - Build and run Electron app (production mode)"
 	@echo "  electron-build   - Build Electron app"
