@@ -4,6 +4,12 @@
 
 ### 变更
 
+#### 修复切换渠道时会话列表未正确隔离的问题
+- **问题**：在 Sidebar 中切换渠道（如从桌面切换到 Telegram）时，会话列表虽然过滤，但当前选中的会话 `currentSessionKey` 没有同步更新，导致右侧聊天视图仍显示之前渠道的会话。
+- **修复**：添加 `useEffect` 监听 `channelFilter` 变化，自动选择目标渠道的最新会话；如果该渠道没有会话，自动创建一个新的草稿会话。
+- **位置**：`electron/src/renderer/components/Sidebar.tsx`。
+- **验证**：`cd electron && npm run build`。
+
 #### MCP 管理功能（新增）
 - **变更**：Electron 左侧栏新增"MCP 管理"栏目，支持添加、编辑、删除、测试 MCP 服务器；支持 STDIO（命令行）和 SSE（HTTP Stream）两种类型；MCP 服务器名称和工具名中的中文自动转为拼音。
 - **后端 API**：新增 `/api/mcp`、`/api/mcp/{name}/test` 等端点。

@@ -212,6 +212,7 @@ export function Sidebar() {
     [mergedSessions, channelFilter]
   );
 
+  // Sync current session with channel filter - when switching channels, select the most recent session of that channel
   useEffect(() => {
     if (channelOptions.length === 0) {
       return;
@@ -219,8 +220,31 @@ export function Sidebar() {
     const normalizedFilter = normalizeChannelKey(channelFilter);
     if (!channelOptions.includes(normalizedFilter)) {
       setChannelFilter(channelOptions[0]);
+      return;
     }
-  }, [channelOptions, channelFilter]);
+
+    // When channel filter changes, check if current session belongs to this channel
+    const currentChannel = extractSessionChannel(currentSessionKey);
+    if (currentChannel !== normalizedFilter) {
+      // Find the most recent session of the selected channel
+      const channelSessions = mergedSessions.filter(
+        (session) => extractSessionChannel(session.key) === normalizedFilter
+      );
+
+      if (channelSessions.length > 0) {
+        // Select the most recent session of this channel
+        dispatch(setCurrentSessionKey(channelSessions[0].key));
+      } else {
+        // No sessions for this channel, create a draft session
+        const newSessionKey = `${normalizedFilter}:${Date.now()}`;
+        setDraftSessions((prev) => ({
+          ...prev,
+          [newSessionKey]: buildDraftSession(newSessionKey)
+        }));
+        dispatch(setCurrentSessionKey(newSessionKey));
+      }
+    }
+  }, [channelFilter, channelOptions, mergedSessions, currentSessionKey, dispatch]);
 
   const handleNewTask = () => {
     const newSessionKey = `desktop:${Date.now()}`;
