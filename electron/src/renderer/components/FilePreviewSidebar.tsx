@@ -18,10 +18,11 @@ interface FilePreviewSidebarProps {
   selected: FileReference | null;
   preview: PreviewPayload | null;
   loading: boolean;
-  mode?: 'file' | 'browser';
+  mode?: 'tree' | 'file' | 'browser';
   browserAvailable?: boolean;
   browserPanel?: React.ReactNode;
-  onModeChange?: (mode: 'file' | 'browser') => void;
+  treePanel?: React.ReactNode;
+  onModeChange?: (mode: 'tree' | 'file' | 'browser') => void;
   onToggle: () => void;
   onResize: (nextWidth: number) => void;
   onOpenFile: () => void;
@@ -39,9 +40,10 @@ export function FilePreviewSidebar({
   selected,
   preview,
   loading,
-  mode = 'file',
+  mode = 'tree',
   browserAvailable = false,
   browserPanel,
+  treePanel,
   onModeChange,
   onToggle,
   onResize,
@@ -73,7 +75,7 @@ export function FilePreviewSidebar({
       <aside className="hidden h-full w-11 border-l border-border/70 bg-background/60 md:flex md:flex-col md:items-center md:pt-3">
         <button
           onClick={() => {
-            onModeChange?.('file');
+            onModeChange?.('tree');
             onToggle();
           }}
           className="rounded-md border border-border/80 bg-background p-1.5 text-foreground/70 transition-colors hover:bg-secondary hover:text-foreground"
@@ -122,8 +124,19 @@ export function FilePreviewSidebar({
         </button>
 
         <div className="min-w-0 flex-1">
-          {browserAvailable && onModeChange ? (
+          {onModeChange ? (
             <div className="inline-flex rounded-lg border border-border/80 bg-secondary/40 p-1">
+              <button
+                type="button"
+                onClick={() => onModeChange('tree')}
+                className={`rounded px-2 py-1 text-[11px] transition-colors ${
+                  mode === 'tree'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-foreground/70 hover:bg-background/80'
+                }`}
+              >
+                文件树
+              </button>
               <button
                 type="button"
                 onClick={() => onModeChange('file')}
@@ -133,17 +146,19 @@ export function FilePreviewSidebar({
               >
                 文件预览
               </button>
-              <button
-                type="button"
-                onClick={() => onModeChange('browser')}
-                className={`rounded px-2 py-1 text-[11px] transition-colors ${
-                  mode === 'browser'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-foreground/70 hover:bg-background/80'
-                }`}
-              >
-                Browser Co-Pilot
-              </button>
+              {browserAvailable && (
+                <button
+                  type="button"
+                  onClick={() => onModeChange('browser')}
+                  className={`rounded px-2 py-1 text-[11px] transition-colors ${
+                    mode === 'browser'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-foreground/70 hover:bg-background/80'
+                  }`}
+                >
+                  Browser
+                </button>
+              )}
             </div>
           ) : (
             <p className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/55">文件预览</p>
@@ -160,24 +175,34 @@ export function FilePreviewSidebar({
         )}
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
-        {mode === 'browser' ? (
-          browserAvailable ? (
-            <div className="space-y-3">{browserPanel}</div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-border/80 bg-card/60 px-3 py-4 text-sm text-foreground/60">
-              当前会话尚无 Browser 活动。执行 browser 工具后会在这里显示协作面板。
-            </div>
-          )
-        ) : (
-          <>
+      <div className="min-h-0 flex-1 overflow-y-auto p-0">
+        {mode === 'tree' && (
+          <div className="h-full">
+            {treePanel}
+          </div>
+        )}
+
+        {mode === 'browser' && (
+          <div className="space-y-3 p-3">
+            {browserAvailable ? (
+              browserPanel
+            ) : (
+              <div className="rounded-xl border border-dashed border-border/80 bg-card/60 px-3 py-4 text-sm text-foreground/60">
+                当前会话尚无 Browser 活动。执行 browser 工具后会在这里显示协作面板。
+              </div>
+            )}
+          </div>
+        )}
+
+        {mode === 'file' && (
+          <div className="p-3">
             {loading && (
               <div className="rounded-xl border border-border/70 bg-card/70 px-3 py-4 text-sm text-foreground/65">正在渲染预览...</div>
             )}
 
             {!loading && !selected && (
               <div className="rounded-xl border border-dashed border-border/80 bg-card/60 px-3 py-4 text-sm text-foreground/60">
-                点击聊天消息中的文件按钮，在这里查看预览。
+                点击文件树中的文件，在这里查看预览。
               </div>
             )}
 
@@ -195,7 +220,7 @@ export function FilePreviewSidebar({
                 <FilePreviewBody preview={preview} imageAssist={imageAssist} />
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </aside>
