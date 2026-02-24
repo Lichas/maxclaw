@@ -90,7 +90,7 @@ export function MCPView() {
       args: server.args?.join(' ') || '',
       env: server.env ? Object.entries(server.env).map(([k, v]) => `${k}=${v}`).join('\n') : '',
       url: server.url || '',
-      headers: server.headers ? Object.entries(server.headers).map(([k, v]) => `${k}=${v}`).join('\n') : '',
+      headers: server.headers ? Object.entries(server.headers).map(([k, v]) => `${k}: ${v}`).join('\n') : '',
       description: server.description || ''
     });
     setIsModalOpen(true);
@@ -461,7 +461,7 @@ export function MCPView() {
                   <p className="mt-3 text-sm text-foreground/70">{server.description}</p>
                 )}
 
-                {testResults[server.name]?.status !== 'idle' && testResults[server.name]?.status !== 'testing' && (
+                {(testResults[server.name]?.status === 'success' || testResults[server.name]?.status === 'error') && (
                   <div className={`mt-3 rounded-lg px-3 py-2 ${
                     testResults[server.name]?.status === 'success'
                       ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50'
