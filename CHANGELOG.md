@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 修复 browser 多步调用时状态丢失导致 snapshot 读到 about:blank
+- **变更**：`browser` 工具为会话状态新增 `lastURL` 记忆，在 `navigate` 后记录最近页面；后续 `snapshot/screenshot/act` 若未传 `url` 且当前页是 `about:blank`，会自动恢复到上次页面再执行。无法恢复时返回明确错误提示（要求先 `navigate` 或传 `url`），避免静默输出空白结果。
+- **位置**：`webfetcher/browser.mjs`。
+- **验证**：`node --check webfetcher/browser.mjs`、`make build`。
+
 #### web_fetch 增强自动浏览器回退与动态页面等待能力
 - **变更**：`web_fetch` 在 `http/auto` 模式下会优先 HTTP 抓取，遇到反爬/登录墙/“启用 JavaScript”提示时自动回退到 `chrome`（失败再回退 `browser`）；同时新增可配置等待参数（`render_wait_ms`、`smart_wait_ms`、`stable_wait_ms`、`wait_for_selector`、`wait_for_text`、`wait_for_no_text`），提升 JS-heavy 页面抓取稳定性。
 - **位置**：`pkg/tools/web.go`、`webfetcher/fetch.mjs`、`internal/config/schema.go`、`internal/agent/web_fetch.go` 及对应测试文件。

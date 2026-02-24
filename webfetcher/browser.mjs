@@ -299,12 +299,21 @@ async function readSessionState(sessionId) {
     const data = await fs.readFile(file, 'utf8');
     const parsed = JSON.parse(data);
     if (parsed && typeof parsed === 'object') {
+      if (!Array.isArray(parsed.lastSnapshot)) {
+        parsed.lastSnapshot = [];
+      }
+      if (typeof parsed.activeTab !== 'number') {
+        parsed.activeTab = 0;
+      }
+      if (typeof parsed.lastURL !== 'string') {
+        parsed.lastURL = '';
+      }
       return parsed;
     }
   } catch {
     // ignore
   }
-  return { activeTab: 0, lastSnapshot: [] };
+  return { activeTab: 0, lastSnapshot: [], lastURL: '' };
 }
 
 async function writeSessionState(sessionId, state) {
@@ -355,6 +364,30 @@ function normalizeRequest(raw) {
 
 function actionNeedsURL(action) {
   return action === 'navigate';
+}
+
+function isBlankPageURL(raw) {
+  const value = String(raw || '').trim().toLowerCase();
+  return value === '' || value === 'about:blank';
+}
+
+async function restorePageIfNeeded(req, page, state) {
+  if (req.url || req.action === 'navigate' || req.action === 'tabs') {
+    return false;
+  }
+
+  if (!isBlankPageURL(page.url())) {
+    return false;
+  }
+
+  const fallbackURL = typeof state.lastURL === 'string' ? state.lastURL.trim() : '';
+  if (!fallbackURL) {
+    return false;
+  }
+
+  await page.goto(fallbackURL, { waitUntil: DEFAULT_WAIT_UNTIL, timeout: req.timeoutMs });
+  await page.waitForTimeout(900).catch(() => {});
+  return true;
 }
 
 async function openBrowserContext(req) {
@@ -535,12 +568,17 @@ async function runAction(req, context, state, warnings) {
 
   const { page, activeIndex } = await activePage(context, state);
   state.activeTab = activeIndex;
+  const restored = await restorePageIfNeeded(req, page, state).catch(() => false);
+  if (restored) {
+    warnings.push(`restored previous page: ${page.url()}`);
+  }
 
   if (req.action === 'navigate') {
     await page.goto(req.url, { waitUntil: DEFAULT_WAIT_UNTIL, timeout: req.timeoutMs });
     await page.waitForTimeout(900).catch(() => {});
     const title = normalizeText(await page.title().catch(() => ''));
     state.lastSnapshot = [];
+    state.lastURL = page.url();
     const summary = `Navigated to ${page.url()}\nTitle: ${title || '(empty)'}`;
     return { summary: summaryWithWarnings(summary, warnings), data: { url: page.url(), title } };
   }
@@ -550,8 +588,12 @@ async function runAction(req, context, state, warnings) {
       await page.goto(req.url, { waitUntil: DEFAULT_WAIT_UNTIL, timeout: req.timeoutMs });
       await page.waitForTimeout(900).catch(() => {});
     }
+    if (isBlankPageURL(page.url())) {
+      throw new Error('snapshot requires an active page; call navigate(url) first or pass url in snapshot');
+    }
     const snapshot = await collectSnapshot(page, req.maxChars);
     state.lastSnapshot = snapshot.refs;
+    state.lastURL = snapshot.url;
     const refLines = snapshot.refs
       .slice(0, 25)
       .map((item) => `[${item.ref}] <${item.tag}> ${item.label || '(no label)'} ${item.selector ? ` selector=${item.selector}` : ''}`)
@@ -577,11 +619,15 @@ async function runAction(req, context, state, warnings) {
       await page.goto(req.url, { waitUntil: DEFAULT_WAIT_UNTIL, timeout: req.timeoutMs });
       await page.waitForTimeout(900).catch(() => {});
     }
+    if (isBlankPageURL(page.url())) {
+      throw new Error('screenshot requires an active page; call navigate(url) first or pass url in screenshot');
+    }
     const outputPath = req.path
       ? path.resolve(expandUserPath(req.path))
       : path.join(os.homedir(), '.maxclaw', 'browser', 'screenshots', `${req.sessionId}-${Date.now()}.png`);
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await page.screenshot({ path: outputPath, fullPage: req.fullPage });
+    state.lastURL = page.url();
     const summary = `Screenshot saved: ${outputPath}`;
     return { summary: summaryWithWarnings(summary, warnings), data: { path: outputPath, url: page.url() } };
   }
@@ -599,6 +645,9 @@ async function runAction(req, context, state, warnings) {
     if (sub !== 'wait' && !selector) {
       throw new Error('selector or ref is required for act(click/type/press)');
     }
+    if (isBlankPageURL(page.url()) && sub !== 'wait') {
+      throw new Error('act requires an active page; call navigate(url) first or pass url in a preceding action');
+    }
 
     if (sub === 'click') {
       await page.click(selector, { timeout: req.timeoutMs });
@@ -614,6 +663,7 @@ async function runAction(req, context, state, warnings) {
 
     await page.waitForTimeout(Math.max(300, Math.min(req.waitMs || 700, 4000))).catch(() => {});
     const title = normalizeText(await page.title().catch(() => ''));
+    state.lastURL = page.url();
     const summary = `Action ${sub} completed on ${page.url()}\nTitle: ${title || '(empty)'}`;
     return { summary: summaryWithWarnings(summary, warnings), data: { url: page.url(), title, action: sub } };
   }
@@ -652,6 +702,12 @@ async function runAction(req, context, state, warnings) {
     }
 
     const tabs = await summarizeTabs(context, clampTabIndex(state.activeTab, context.pages().length));
+    if (tabs.length > 0) {
+      const currentTab = tabs.find((t) => t.active) || tabs[0];
+      if (currentTab && currentTab.url && !isBlankPageURL(currentTab.url)) {
+        state.lastURL = currentTab.url;
+      }
+    }
     const lines = tabs.map((t) => `${t.active ? '*' : ' '}[${t.index}] ${t.title || '(untitled)'} ${t.url}`);
     const summary = `Tabs (${tabs.length})\n${lines.join('\n')}`;
     return { summary: summaryWithWarnings(summary, warnings), data: { tabs } };
