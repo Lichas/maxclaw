@@ -58,6 +58,8 @@ const electronAPI = {
       ipcRenderer.invoke('system:openInFolder', targetPath, options),
     previewFile: (targetPath: string, options?: { workspace?: string; sessionKey?: string }) =>
       ipcRenderer.invoke('system:previewFile', targetPath, options),
+    fileExists: (targetPath: string, options?: { workspace?: string; sessionKey?: string }) =>
+      ipcRenderer.invoke('system:fileExists', targetPath, options),
     selectFolder: () => ipcRenderer.invoke('system:selectFolder'),
     selectFile: (filters?: Array<{ name: string; extensions: string[] }>) =>
       ipcRenderer.invoke('system:selectFile', filters)

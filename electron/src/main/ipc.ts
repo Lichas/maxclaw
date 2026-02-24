@@ -118,6 +118,13 @@ interface OpenPathResult {
   error?: string;
 }
 
+interface FileExistsResult {
+  exists: boolean;
+  resolvedPath?: string;
+  isFile?: boolean;
+  error?: string;
+}
+
 function sendTerminalData(sessionKey: string, chunk: string): void {
   if (currentMainWindow && !currentMainWindow.isDestroyed()) {
     currentMainWindow.webContents.send('terminal:data', { sessionKey, chunk });
@@ -315,6 +322,27 @@ function resolveLocalFilePath(inputPath: string, options?: FileResolveOptions): 
   const workspace = (options?.workspace || '').trim();
   const baseDir = resolveSessionOutputDir(workspace, options?.sessionKey) || workspace || process.cwd();
   return path.resolve(baseDir, candidate);
+}
+
+function checkFileExists(targetPath: string, options?: FileResolveOptions): FileExistsResult {
+  try {
+    const resolvedPath = resolveLocalFilePath(targetPath, options);
+    const stat = fs.statSync(resolvedPath);
+    return {
+      exists: true,
+      isFile: stat.isFile(),
+      resolvedPath
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if ((error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT') {
+      return { exists: false };
+    }
+    return {
+      exists: false,
+      error: message
+    };
+  }
 }
 
 function detectPreviewKind(ext: string): PreviewKind {
@@ -651,6 +679,10 @@ export function createIPCHandlers(
 
   ipcMain.handle('system:previewFile', async (_, targetPath: string, options?: FileResolveOptions) => {
     return buildFilePreview(targetPath, options);
+  });
+
+  ipcMain.handle('system:fileExists', async (_, targetPath: string, options?: FileResolveOptions) => {
+    return checkFileExists(targetPath, options);
   });
 
   ipcMain.handle('system:selectFolder', async () => {

@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 修复聊天文件预览误识别：仅展示当前 Session 可解析且真实存在的文件
+- **变更**：聊天消息与执行过程中的“文件操作卡片”改为先按 `workspace/.sessions/<sessionKey>` 解析路径并校验文件存在，再显示“预览/打开目录”；避免把域名、指标数值（如 `101.82ms`）等包含点号的普通文本误识别成文件。
+- **位置**：`electron/src/main/ipc.ts`、`electron/src/preload/index.ts`、`electron/src/renderer/types/electron.d.ts`、`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 修复 browser 多步调用时状态丢失导致 snapshot 读到 about:blank
 - **变更**：`browser` 工具为会话状态新增 `lastURL` 记忆，在 `navigate` 后记录最近页面；后续 `snapshot/screenshot/act` 若未传 `url` 且当前页是 `about:blank`，会自动恢复到上次页面再执行。无法恢复时返回明确错误提示（要求先 `navigate` 或传 `url`），避免静默输出空白结果。
 - **位置**：`webfetcher/browser.mjs`。

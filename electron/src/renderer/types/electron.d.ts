@@ -60,6 +60,10 @@ export interface ElectronAPI {
       targetPath: string,
       options?: { workspace?: string; sessionKey?: string }
     ) => Promise<FilePreviewResult>;
+    fileExists: (
+      targetPath: string,
+      options?: { workspace?: string; sessionKey?: string }
+    ) => Promise<{ exists: boolean; resolvedPath?: string; isFile?: boolean; error?: string }>;
     selectFolder: () => Promise<string | null>;
     selectFile: (filters?: Array<{ name: string; extensions: string[] }>) => Promise<string | null>;
   };

@@ -136,6 +136,10 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+function fileReferenceCacheKey(sessionKey: string, pathHint: string): string {
+  return `${sessionKey}::${pathHint.trim().toLowerCase()}`;
+}
+
 export function ChatView() {
   const dispatch = useDispatch();
   const { currentSessionKey, sidebarCollapsed, terminalVisible } = useSelector((state: RootState) => state.ui);
@@ -160,6 +164,7 @@ export function ChatView() {
   const [selectedFileRef, setSelectedFileRef] = useState<FileReference | null>(null);
   const [previewData, setPreviewData] = useState<PreviewPayload | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [existingFileRefs, setExistingFileRefs] = useState<Record<string, boolean>>({});
 
   // File attachments state
   const [attachedFiles, setAttachedFiles] = useState<UploadedFile[]>([]);
@@ -262,6 +267,7 @@ export function ChatView() {
   const streamingTimelineRef = useRef<TimelineEntry[]>([]);
   const previewRequestRef = useRef(0);
   const currentSessionKeyRef = useRef(currentSessionKey);
+  const pendingFileRefChecksRef = useRef<Set<string>>(new Set());
 
   const input = inputBySession[currentSessionKey] || '';
   const isGenerating = Boolean(generatingSessions[currentSessionKey]);
@@ -421,6 +427,70 @@ export function ChatView() {
       cancelled = true;
     };
   }, [getConfig]);
+
+  useEffect(() => {
+    const refsToCheck = new Map<string, FileReference>();
+    const addReferences = (content: string) => {
+      const refs = extractFileReferences(content);
+      refs.forEach((reference) => {
+        const key = fileReferenceCacheKey(currentSessionKey, reference.pathHint);
+        refsToCheck.set(key, reference);
+      });
+    };
+
+    messages.forEach((message) => {
+      addReferences(message.content);
+      (message.timeline || []).forEach((entry) => {
+        if (entry.kind === 'text') {
+          addReferences(entry.text || '');
+          return;
+        }
+        const activityText = [entry.activity.summary, entry.activity.detail || ''].filter(Boolean).join('\n');
+        addReferences(activityText);
+      });
+    });
+
+    streamingTimeline.forEach((entry) => {
+      if (entry.kind === 'text') {
+        addReferences(entry.text || '');
+        return;
+      }
+      const activityText = [entry.activity.summary, entry.activity.detail || ''].filter(Boolean).join('\n');
+      addReferences(activityText);
+    });
+
+    refsToCheck.forEach((reference, key) => {
+      if (existingFileRefs[key] !== undefined || pendingFileRefChecksRef.current.has(key)) {
+        return;
+      }
+      pendingFileRefChecksRef.current.add(key);
+      void window.electronAPI.system
+        .fileExists(reference.pathHint, {
+          workspace: workspacePath,
+          sessionKey: currentSessionKey
+        })
+        .then((result) => {
+          const exists = Boolean(result.exists && (result.isFile ?? true));
+          setExistingFileRefs((prev) => {
+            if (prev[key] === exists) {
+              return prev;
+            }
+            return { ...prev, [key]: exists };
+          });
+        })
+        .catch(() => {
+          setExistingFileRefs((prev) => {
+            if (prev[key] === false) {
+              return prev;
+            }
+            return { ...prev, [key]: false };
+          });
+        })
+        .finally(() => {
+          pendingFileRefChecksRef.current.delete(key);
+        });
+    });
+  }, [messages, streamingTimeline, currentSessionKey, workspacePath, existingFileRefs]);
 
   useEffect(() => {
     if (!skillsPickerOpen) {
@@ -1216,7 +1286,9 @@ export function ChatView() {
   };
 
   const renderFileActions = (content: string, keyPrefix: string) => {
-    const references = extractFileReferences(content);
+    const references = extractFileReferences(content).filter(
+      (reference) => existingFileRefs[fileReferenceCacheKey(currentSessionKey, reference.pathHint)] === true
+    );
     if (references.length === 0) {
       return null;
     }
