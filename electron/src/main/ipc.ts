@@ -125,6 +125,20 @@ interface FileExistsResult {
   error?: string;
 }
 
+interface FileListEntry {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  size?: number;
+  modifiedTime?: string;
+}
+
+interface FileListResult {
+  success: boolean;
+  entries?: FileListEntry[];
+  error?: string;
+}
+
 function sendTerminalData(sessionKey: string, chunk: string): void {
   if (currentMainWindow && !currentMainWindow.isDestroyed()) {
     currentMainWindow.webContents.send('terminal:data', { sessionKey, chunk });
@@ -341,6 +355,59 @@ function checkFileExists(targetPath: string, options?: FileResolveOptions): File
     return {
       exists: false,
       error: message
+    };
+  }
+}
+
+async function listDirectory(dirPath: string, options?: FileResolveOptions): Promise<FileListResult> {
+  try {
+    const resolvedPath = resolveLocalFilePath(dirPath, options);
+    const stat = await fs.promises.stat(resolvedPath);
+
+    if (!stat.isDirectory()) {
+      return {
+        success: false,
+        error: 'Path is not a directory'
+      };
+    }
+
+    const entries = await fs.promises.readdir(resolvedPath, { withFileTypes: true });
+    const result: FileListEntry[] = [];
+
+    for (const entry of entries) {
+      // 隐藏文件和目录不显示
+      if (entry.name.startsWith('.')) {
+        continue;
+      }
+
+      const entryPath = path.join(resolvedPath, entry.name);
+      const entryStat = await fs.promises.stat(entryPath);
+
+      result.push({
+        name: entry.name,
+        path: entryPath,
+        type: entry.isDirectory() ? 'directory' : 'file',
+        size: entryStat.size,
+        modifiedTime: entryStat.mtime.toISOString()
+      });
+    }
+
+    // 按类型排序：目录在前，然后按名称排序
+    result.sort((a, b) => {
+      if (a.type !== b.type) {
+        return a.type === 'directory' ? -1 : 1;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    return {
+      success: true,
+      entries: result
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
     };
   }
 }
@@ -683,6 +750,10 @@ export function createIPCHandlers(
 
   ipcMain.handle('system:fileExists', async (_, targetPath: string, options?: FileResolveOptions) => {
     return checkFileExists(targetPath, options);
+  });
+
+  ipcMain.handle('system:listDirectory', async (_, dirPath: string, options?: FileResolveOptions) => {
+    return listDirectory(dirPath, options);
   });
 
   ipcMain.handle('system:selectFolder', async () => {
