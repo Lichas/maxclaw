@@ -517,6 +517,13 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 		// Create plan on first tool call if not exists
 		if plan == nil && len(toolCalls) > 0 && i == 0 {
 			plan = CreatePlan(msg.Content)
+
+			// Extract step declarations from this first LLM output
+			newSteps := ExtractStepDeclarations(content)
+			for _, desc := range newSteps {
+				plan.AddStep(desc)
+			}
+
 			a.PlanManager.Save(msg.SessionKey, plan)
 
 			// Rebuild messages with plan context
@@ -584,7 +591,7 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 				messages = a.context.AddToolResult(messages, tc.ID, tc.Function.Name, result)
 			}
 
-			// After tool execution, update plan
+			// After tool execution, update plan and refresh messages with latest plan context
 			if plan != nil && plan.Status == PlanStatusRunning {
 				plan.IterationCount++
 
@@ -604,15 +611,27 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 				}
 
 				a.PlanManager.Save(msg.SessionKey, plan)
+
+				// Update system message with latest plan context for next iteration
+				if len(messages) > 0 && messages[0].Role == "system" {
+					messages[0].Content = a.context.BuildSystemPromptWithPlan(plan)
+				}
 			}
 		} else {
-			// 没有工具调用，结束循环
+			// 没有工具调用，但可能有步骤声明或任务完成
 			finalContent = content
 			maxIterationReached = false
+
+			// Update plan: extract step declarations even without tool calls
 			if plan != nil && plan.Status == PlanStatusRunning {
+				newSteps := ExtractStepDeclarations(content)
+				for _, desc := range newSteps {
+					plan.AddStep(desc)
+				}
 				plan.Status = PlanStatusCompleted
 				a.PlanManager.Save(msg.SessionKey, plan)
 			}
+
 			emitEvent(StreamEvent{
 				Type:      "status",
 				Iteration: iteration,

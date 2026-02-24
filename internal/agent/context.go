@@ -520,7 +520,13 @@ func (cb *ContextBuilder) BuildSystemPromptWithPlan(plan *Plan) string {
 	b.WriteString(basePrompt)
 	b.WriteString("\n\n## 当前任务规划\n\n")
 	b.WriteString(plan.ToContextString())
-	b.WriteString("\n你可以使用 [Step] 描述 格式声明新步骤。\n")
+
+	// 如果还没有步骤，要求 LLM 先规划
+	if len(plan.Steps) == 0 {
+		b.WriteString("\n请先规划任务步骤，使用 [Step] 描述 格式声明所有步骤，然后开始执行第一步。\n")
+	} else {
+		b.WriteString("\n你可以使用 [Step] 描述 格式声明新步骤。\n")
+	}
 	b.WriteString("完成当前步骤后，系统会自动推进到下一步。\n")
 
 	return b.String()
