@@ -110,13 +110,13 @@ type FeishuConfig struct {
 
 // AgentDefaults 默认代理配置
 type AgentDefaults struct {
-	Workspace             string   `json:"workspace" mapstructure:"workspace"`
-	Model                 string   `json:"model" mapstructure:"model"`
-	MaxTokens             int      `json:"maxTokens" mapstructure:"maxTokens"`
-	Temperature           float64  `json:"temperature" mapstructure:"temperature"`
-	MaxToolIterations     int      `json:"maxToolIterations" mapstructure:"maxToolIterations"`
-	EnableGlobalSkills    bool     `json:"enableGlobalSkills" mapstructure:"enableGlobalSkills"`
-	GlobalSkillsPaths     []string `json:"globalSkillsPaths,omitempty" mapstructure:"globalSkillsPaths"`
+	Workspace          string   `json:"workspace" mapstructure:"workspace"`
+	Model              string   `json:"model" mapstructure:"model"`
+	MaxTokens          int      `json:"maxTokens" mapstructure:"maxTokens"`
+	Temperature        float64  `json:"temperature" mapstructure:"temperature"`
+	MaxToolIterations  int      `json:"maxToolIterations" mapstructure:"maxToolIterations"`
+	EnableGlobalSkills bool     `json:"enableGlobalSkills" mapstructure:"enableGlobalSkills"`
+	GlobalSkillsPaths  []string `json:"globalSkillsPaths,omitempty" mapstructure:"globalSkillsPaths"`
 }
 
 // AgentsConfig 代理配置
@@ -132,13 +132,19 @@ type WebSearchConfig struct {
 
 // WebFetchConfig 网页抓取配置
 type WebFetchConfig struct {
-	Mode       string               `json:"mode" mapstructure:"mode"`
-	NodePath   string               `json:"nodePath,omitempty" mapstructure:"nodePath"`
-	ScriptPath string               `json:"scriptPath,omitempty" mapstructure:"scriptPath"`
-	Timeout    int                  `json:"timeout,omitempty" mapstructure:"timeout"`
-	UserAgent  string               `json:"userAgent,omitempty" mapstructure:"userAgent"`
-	WaitUntil  string               `json:"waitUntil,omitempty" mapstructure:"waitUntil"`
-	Chrome     WebFetchChromeConfig `json:"chrome,omitempty" mapstructure:"chrome"`
+	Mode            string               `json:"mode" mapstructure:"mode"`
+	NodePath        string               `json:"nodePath,omitempty" mapstructure:"nodePath"`
+	ScriptPath      string               `json:"scriptPath,omitempty" mapstructure:"scriptPath"`
+	Timeout         int                  `json:"timeout,omitempty" mapstructure:"timeout"`
+	UserAgent       string               `json:"userAgent,omitempty" mapstructure:"userAgent"`
+	WaitUntil       string               `json:"waitUntil,omitempty" mapstructure:"waitUntil"`
+	RenderWaitMs    int                  `json:"renderWaitMs,omitempty" mapstructure:"renderWaitMs"`
+	SmartWaitMs     int                  `json:"smartWaitMs,omitempty" mapstructure:"smartWaitMs"`
+	StableWaitMs    int                  `json:"stableWaitMs,omitempty" mapstructure:"stableWaitMs"`
+	WaitForSelector string               `json:"waitForSelector,omitempty" mapstructure:"waitForSelector"`
+	WaitForText     string               `json:"waitForText,omitempty" mapstructure:"waitForText"`
+	WaitForNoText   string               `json:"waitForNoText,omitempty" mapstructure:"waitForNoText"`
+	Chrome          WebFetchChromeConfig `json:"chrome,omitempty" mapstructure:"chrome"`
 }
 
 // WebFetchChromeConfig Chrome 抓取配置
@@ -324,10 +330,13 @@ func DefaultConfig() *Config {
 					MaxResults: 5,
 				},
 				Fetch: WebFetchConfig{
-					Mode:      "http",
-					Timeout:   30,
-					UserAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-					WaitUntil: "domcontentloaded",
+					Mode:         "http",
+					Timeout:      30,
+					UserAgent:    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+					WaitUntil:    "domcontentloaded",
+					RenderWaitMs: 600,
+					SmartWaitMs:  4000,
+					StableWaitMs: 500,
 					Chrome: WebFetchChromeConfig{
 						ProfileName:     "chrome",
 						Channel:         "chrome",

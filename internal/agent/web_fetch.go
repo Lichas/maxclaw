@@ -11,12 +11,18 @@ import (
 // BuildWebFetchOptions converts config to tool options and resolves default script path.
 func BuildWebFetchOptions(cfg *config.Config) tools.WebFetchOptions {
 	opts := tools.WebFetchOptions{
-		Mode:       cfg.Tools.Web.Fetch.Mode,
-		NodePath:   cfg.Tools.Web.Fetch.NodePath,
-		ScriptPath: cfg.Tools.Web.Fetch.ScriptPath,
-		TimeoutSec: cfg.Tools.Web.Fetch.Timeout,
-		UserAgent:  cfg.Tools.Web.Fetch.UserAgent,
-		WaitUntil:  cfg.Tools.Web.Fetch.WaitUntil,
+		Mode:            cfg.Tools.Web.Fetch.Mode,
+		NodePath:        cfg.Tools.Web.Fetch.NodePath,
+		ScriptPath:      cfg.Tools.Web.Fetch.ScriptPath,
+		TimeoutSec:      cfg.Tools.Web.Fetch.Timeout,
+		UserAgent:       cfg.Tools.Web.Fetch.UserAgent,
+		WaitUntil:       cfg.Tools.Web.Fetch.WaitUntil,
+		RenderWaitMs:    cfg.Tools.Web.Fetch.RenderWaitMs,
+		SmartWaitMs:     cfg.Tools.Web.Fetch.SmartWaitMs,
+		StableWaitMs:    cfg.Tools.Web.Fetch.StableWaitMs,
+		WaitForSelector: cfg.Tools.Web.Fetch.WaitForSelector,
+		WaitForText:     cfg.Tools.Web.Fetch.WaitForText,
+		WaitForNoText:   cfg.Tools.Web.Fetch.WaitForNoText,
 		Chrome: tools.WebFetchChromeOptions{
 			CDPEndpoint:      cfg.Tools.Web.Fetch.Chrome.CDPEndpoint,
 			ProfileName:      cfg.Tools.Web.Fetch.Chrome.ProfileName,

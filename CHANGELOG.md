@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### web_fetch 增强自动浏览器回退与动态页面等待能力
+- **变更**：`web_fetch` 在 `http/auto` 模式下会优先 HTTP 抓取，遇到反爬/登录墙/“启用 JavaScript”提示时自动回退到 `chrome`（失败再回退 `browser`）；同时新增可配置等待参数（`render_wait_ms`、`smart_wait_ms`、`stable_wait_ms`、`wait_for_selector`、`wait_for_text`、`wait_for_no_text`），提升 JS-heavy 页面抓取稳定性。
+- **位置**：`pkg/tools/web.go`、`webfetcher/fetch.mjs`、`internal/config/schema.go`、`internal/agent/web_fetch.go` 及对应测试文件。
+- **验证**：`go test ./pkg/tools -run 'TestNormalizeWebFetchOptionsChromeDefaults|TestNormalizeWebFetchOptionsChromeCdpEndpointDoesNotForceUserDataDir|TestShouldFallbackToBrowserFetch'`、`go test ./internal/agent -run 'TestBuildWebFetchOptionsIncludesChromeConfig|TestBuildWebFetchOptionsUsesConfigDefaults'`、`go test ./internal/config -run 'TestDefaultConfig'`、`node --check webfetcher/fetch.mjs`、`make build`。
+
 #### 浏览器截图默认落到 Session 目录并支持在执行过程中直接预览
 - **变更**：`browser` 工具在 `action=screenshot` 且未显式传 `path` 时，默认保存到当前会话目录 `workspace/.sessions/<sessionKey>/screenshots/`；若传相对路径，也会按当前会话目录解析。聊天页“执行过程”中的工具结果新增文件操作按钮，可直接预览截图并打开所在目录。
 - **位置**：`pkg/tools/browser.go`、`pkg/tools/browser_test.go`、`electron/src/renderer/views/ChatView.tsx`。

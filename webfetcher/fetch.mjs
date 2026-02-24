@@ -9,6 +9,9 @@ const DEFAULT_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const DEFAULT_WAIT_UNTIL = 'domcontentloaded';
 const DEFAULT_CDP_LAUNCH_TIMEOUT_MS = 15000;
+const DEFAULT_RENDER_WAIT_MS = 600;
+const DEFAULT_SMART_WAIT_MS = 4000;
+const DEFAULT_STABLE_WAIT_MS = 500;
 const DEFAULT_CHROME_ARGS = [
   '--disable-sync',
   '--disable-background-networking',
@@ -321,17 +324,35 @@ function normalizeChromeConfig(raw) {
   };
 }
 
+function normalizeIntOption(raw, fallback, min, max) {
+  const value = Number.isFinite(raw) ? Number(raw) : fallback;
+  const lowerBounded = Math.max(min, value);
+  if (Number.isFinite(max) && max > 0) {
+    return Math.min(max, lowerBounded);
+  }
+  return lowerBounded;
+}
+
 function normalizeRequest(raw) {
   const timeoutMs = Number.isFinite(raw.timeoutMs) && raw.timeoutMs > 0 ? raw.timeoutMs : 30000;
   const userAgent = typeof raw.userAgent === 'string' && raw.userAgent.trim() ? raw.userAgent : DEFAULT_UA;
   const waitUntil = normalizeWaitUntil(raw.waitUntil);
   const mode = normalizeMode(raw.mode);
+  const renderWaitMs = normalizeIntOption(raw.renderWaitMs, DEFAULT_RENDER_WAIT_MS, 0, 30000);
+  const smartWaitMs = normalizeIntOption(raw.smartWaitMs, DEFAULT_SMART_WAIT_MS, 0, 60000);
+  const stableWaitMs = normalizeIntOption(raw.stableWaitMs, DEFAULT_STABLE_WAIT_MS, 0, 10000);
   return {
     url: raw.url,
     timeoutMs,
     userAgent,
     waitUntil,
     mode,
+    renderWaitMs,
+    smartWaitMs,
+    stableWaitMs,
+    waitForSelector: typeof raw.waitForSelector === 'string' ? raw.waitForSelector.trim() : '',
+    waitForText: typeof raw.waitForText === 'string' ? raw.waitForText.trim() : '',
+    waitForNoText: typeof raw.waitForNoText === 'string' ? raw.waitForNoText.trim() : '',
     chrome: normalizeChromeConfig(raw.chrome),
   };
 }
@@ -354,11 +375,94 @@ function normalizeText(raw) {
   return raw.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+async function waitForDomStability(page, stableDurationMs, timeoutMs) {
+  if (stableDurationMs <= 0 || timeoutMs <= 0) {
+    return false;
+  }
+
+  const pollIntervalMs = 200;
+  const started = Date.now();
+  let stableForMs = 0;
+  let lastSnapshot = '';
+
+  while (Date.now() - started < timeoutMs) {
+    let snapshot = '';
+    try {
+      snapshot = await page.evaluate(() => {
+        const body = document.body;
+        const html = document.documentElement;
+        const textLen = body ? (body.innerText || '').length : 0;
+        const htmlLen = html ? (html.outerHTML || '').length : 0;
+        return `${textLen}:${htmlLen}`;
+      });
+    } catch {
+      return false;
+    }
+
+    if (snapshot === lastSnapshot) {
+      stableForMs += pollIntervalMs;
+      if (stableForMs >= stableDurationMs) {
+        return true;
+      }
+    } else {
+      stableForMs = 0;
+      lastSnapshot = snapshot;
+    }
+
+    await sleep(pollIntervalMs);
+  }
+
+  return false;
+}
+
+async function runSmartWaits(page, req) {
+  const renderWaitMs = normalizeIntOption(req.renderWaitMs, DEFAULT_RENDER_WAIT_MS, 0, 30000);
+  const smartWaitMs = normalizeIntOption(req.smartWaitMs, DEFAULT_SMART_WAIT_MS, 0, 60000);
+  const stableWaitMs = normalizeIntOption(req.stableWaitMs, DEFAULT_STABLE_WAIT_MS, 0, 10000);
+  const budgetMs = Math.min(req.timeoutMs, smartWaitMs);
+
+  if (renderWaitMs > 0) {
+    await page.waitForTimeout(renderWaitMs).catch(() => {});
+  }
+
+  if (req.waitForSelector) {
+    await page.waitForSelector(req.waitForSelector, { timeout: Math.min(req.timeoutMs, budgetMs || req.timeoutMs) }).catch(() => {});
+  }
+
+  if (req.waitForText) {
+    const target = req.waitForText.toLowerCase();
+    await page
+      .waitForFunction(
+        (needle) => (document.body?.innerText || '').toLowerCase().includes(needle),
+        target,
+        { timeout: Math.min(req.timeoutMs, budgetMs || req.timeoutMs) }
+      )
+      .catch(() => {});
+  }
+
+  if (req.waitForNoText) {
+    const target = req.waitForNoText.toLowerCase();
+    await page
+      .waitForFunction(
+        (needle) => !(document.body?.innerText || '').toLowerCase().includes(needle),
+        target,
+        { timeout: Math.min(req.timeoutMs, budgetMs || req.timeoutMs) }
+      )
+      .catch(() => {});
+  }
+
+  if (budgetMs > 0) {
+    await page.waitForLoadState('networkidle', { timeout: budgetMs }).catch(() => {});
+  }
+  if (stableWaitMs > 0 && budgetMs > 0) {
+    await waitForDomStability(page, stableWaitMs, budgetMs).catch(() => {});
+  }
+}
+
 async function readPage(page, req) {
   await page.goto(req.url, { waitUntil: req.waitUntil, timeout: req.timeoutMs });
 
-  // Let SPA content hydrate before reading visible text.
-  await page.waitForTimeout(1200).catch(() => {});
+  await runSmartWaits(page, req);
 
   const { title, text } = await page.evaluate(() => {
     const pageTitle = (document.title || '').trim();

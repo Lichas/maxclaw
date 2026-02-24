@@ -15,6 +15,12 @@ func TestBuildWebFetchOptionsIncludesChromeConfig(t *testing.T) {
 	cfg.Tools.Web.Fetch.Timeout = 45
 	cfg.Tools.Web.Fetch.UserAgent = "custom-agent"
 	cfg.Tools.Web.Fetch.WaitUntil = "networkidle"
+	cfg.Tools.Web.Fetch.RenderWaitMs = 1200
+	cfg.Tools.Web.Fetch.SmartWaitMs = 9000
+	cfg.Tools.Web.Fetch.StableWaitMs = 700
+	cfg.Tools.Web.Fetch.WaitForSelector = "#app"
+	cfg.Tools.Web.Fetch.WaitForText = "dashboard"
+	cfg.Tools.Web.Fetch.WaitForNoText = "loading"
 	cfg.Tools.Web.Fetch.Chrome = config.WebFetchChromeConfig{
 		CDPEndpoint:      "http://127.0.0.1:9222",
 		ProfileName:      "host",
@@ -34,6 +40,12 @@ func TestBuildWebFetchOptionsIncludesChromeConfig(t *testing.T) {
 	assert.Equal(t, 45, got.TimeoutSec)
 	assert.Equal(t, "custom-agent", got.UserAgent)
 	assert.Equal(t, "networkidle", got.WaitUntil)
+	assert.Equal(t, 1200, got.RenderWaitMs)
+	assert.Equal(t, 9000, got.SmartWaitMs)
+	assert.Equal(t, 700, got.StableWaitMs)
+	assert.Equal(t, "#app", got.WaitForSelector)
+	assert.Equal(t, "dashboard", got.WaitForText)
+	assert.Equal(t, "loading", got.WaitForNoText)
 	assert.Equal(t, "http://127.0.0.1:9222", got.Chrome.CDPEndpoint)
 	assert.Equal(t, "host", got.Chrome.ProfileName)
 	assert.Equal(t, "/tmp/chrome-profile", got.Chrome.UserDataDir)
@@ -54,4 +66,7 @@ func TestBuildWebFetchOptionsUsesConfigDefaults(t *testing.T) {
 	assert.True(t, got.Chrome.Headless)
 	assert.True(t, got.Chrome.AutoStartCDP)
 	assert.Equal(t, 15000, got.Chrome.LaunchTimeoutMs)
+	assert.Equal(t, 600, got.RenderWaitMs)
+	assert.Equal(t, 4000, got.SmartWaitMs)
+	assert.Equal(t, 500, got.StableWaitMs)
 }

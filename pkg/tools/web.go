@@ -133,13 +133,19 @@ type WebFetchTool struct {
 
 // WebFetchOptions 网页抓取选项
 type WebFetchOptions struct {
-	Mode       string
-	NodePath   string
-	ScriptPath string
-	TimeoutSec int
-	UserAgent  string
-	WaitUntil  string
-	Chrome     WebFetchChromeOptions
+	Mode            string
+	NodePath        string
+	ScriptPath      string
+	TimeoutSec      int
+	UserAgent       string
+	WaitUntil       string
+	RenderWaitMs    int
+	SmartWaitMs     int
+	StableWaitMs    int
+	WaitForSelector string
+	WaitForText     string
+	WaitForNoText   string
+	Chrome          WebFetchChromeOptions
 }
 
 // WebFetchChromeOptions Chrome 抓取选项
@@ -158,6 +164,9 @@ type WebFetchChromeOptions struct {
 const (
 	defaultWebFetchUserAgent     = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 	defaultWebFetchWaitUntil     = "domcontentloaded"
+	defaultWebFetchRenderWaitMs  = 600
+	defaultWebFetchSmartWaitMs   = 4000
+	defaultWebFetchStableWaitMs  = 500
 	defaultChromeProfileName     = "chrome"
 	defaultChromeChannel         = "chrome"
 	defaultChromeLaunchTimeoutMs = 15000
@@ -182,6 +191,42 @@ func NewWebFetchTool(options WebFetchOptions) *WebFetchTool {
 						"description": "Maximum content length to return (default: 10000)",
 						"minimum":     100,
 						"maximum":     50000,
+					},
+					"timeout": map[string]interface{}{
+						"type":        "integer",
+						"description": "Request timeout in seconds (default from config)",
+						"minimum":     1,
+						"maximum":     180,
+					},
+					"render_wait_ms": map[string]interface{}{
+						"type":        "integer",
+						"description": "Initial render wait time in milliseconds for browser/chrome mode",
+						"minimum":     0,
+						"maximum":     30000,
+					},
+					"smart_wait_ms": map[string]interface{}{
+						"type":        "integer",
+						"description": "Additional smart wait budget in milliseconds for dynamic pages",
+						"minimum":     0,
+						"maximum":     60000,
+					},
+					"stable_wait_ms": map[string]interface{}{
+						"type":        "integer",
+						"description": "DOM stability wait duration in milliseconds for browser/chrome mode",
+						"minimum":     0,
+						"maximum":     10000,
+					},
+					"wait_for_selector": map[string]interface{}{
+						"type":        "string",
+						"description": "Wait until CSS selector appears before extracting content",
+					},
+					"wait_for_text": map[string]interface{}{
+						"type":        "string",
+						"description": "Wait until page text contains this string",
+					},
+					"wait_for_no_text": map[string]interface{}{
+						"type":        "string",
+						"description": "Wait until page text no longer contains this string",
 					},
 				},
 				"required": []string{"url"},
@@ -213,13 +258,17 @@ func (t *WebFetchTool) Execute(ctx context.Context, params map[string]interface{
 
 	switch mode {
 	case "browser", "chrome":
-		return t.executeBrowserFetch(ctx, fetchURL, maxLength, mode)
+		return t.executeBrowserFetch(ctx, fetchURL, maxLength, mode, params)
+	case "auto":
+		return t.executeAutoFetch(ctx, fetchURL, maxLength, params)
+	case "http":
+		return t.executeAutoFetch(ctx, fetchURL, maxLength, params)
 	default:
-		return t.executeHTTPFetch(ctx, fetchURL, maxLength)
+		return t.executeHTTPFetch(ctx, fetchURL, maxLength, params)
 	}
 }
 
-func (t *WebFetchTool) executeHTTPFetch(ctx context.Context, fetchURL string, maxLength int) (string, error) {
+func (t *WebFetchTool) executeHTTPFetch(ctx context.Context, fetchURL string, maxLength int, params map[string]interface{}) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", fetchURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
@@ -228,7 +277,7 @@ func (t *WebFetchTool) executeHTTPFetch(ctx context.Context, fetchURL string, ma
 	req.Header.Set("User-Agent", t.options.UserAgent)
 
 	client := &http.Client{
-		Timeout: time.Duration(t.options.TimeoutSec) * time.Second,
+		Timeout: time.Duration(resolveWebFetchTimeoutSec(params, t.options.TimeoutSec)) * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 {
 				return fmt.Errorf("too many redirects")
@@ -269,7 +318,7 @@ func (t *WebFetchTool) executeHTTPFetch(ctx context.Context, fetchURL string, ma
 	return truncateText(text, maxLength), nil
 }
 
-func (t *WebFetchTool) executeBrowserFetch(ctx context.Context, fetchURL string, maxLength int, mode string) (string, error) {
+func (t *WebFetchTool) executeBrowserFetch(ctx context.Context, fetchURL string, maxLength int, mode string, params map[string]interface{}) (string, error) {
 	scriptPath := strings.TrimSpace(t.options.ScriptPath)
 	if scriptPath == "" {
 		return "", fmt.Errorf("web_fetch browser/chrome mode requires tools.web.fetch.scriptPath")
@@ -283,13 +332,23 @@ func (t *WebFetchTool) executeBrowserFetch(ctx context.Context, fetchURL string,
 	if nodePath == "" {
 		nodePath = "node"
 	}
+	timeoutSec := resolveWebFetchTimeoutSec(params, t.options.TimeoutSec)
+	renderWaitMs := resolveWebFetchMsOption(params, "render_wait_ms", t.options.RenderWaitMs, 0, 30000)
+	smartWaitMs := resolveWebFetchMsOption(params, "smart_wait_ms", t.options.SmartWaitMs, 0, 60000)
+	stableWaitMs := resolveWebFetchMsOption(params, "stable_wait_ms", t.options.StableWaitMs, 0, 10000)
 
 	req := browserFetchRequest{
-		URL:       fetchURL,
-		TimeoutMs: t.options.TimeoutSec * 1000,
-		UserAgent: t.options.UserAgent,
-		WaitUntil: t.options.WaitUntil,
-		Mode:      mode,
+		URL:             fetchURL,
+		TimeoutMs:       timeoutSec * 1000,
+		UserAgent:       t.options.UserAgent,
+		WaitUntil:       t.options.WaitUntil,
+		Mode:            mode,
+		RenderWaitMs:    renderWaitMs,
+		SmartWaitMs:     smartWaitMs,
+		StableWaitMs:    stableWaitMs,
+		WaitForSelector: resolveWebFetchStringOption(params, "wait_for_selector", t.options.WaitForSelector),
+		WaitForText:     resolveWebFetchStringOption(params, "wait_for_text", t.options.WaitForText),
+		WaitForNoText:   resolveWebFetchStringOption(params, "wait_for_no_text", t.options.WaitForNoText),
 	}
 	if mode == "chrome" {
 		req.Chrome = &browserChromeRequest{
@@ -332,13 +391,51 @@ func (t *WebFetchTool) executeBrowserFetch(ctx context.Context, fetchURL string,
 	return truncateText(text, maxLength), nil
 }
 
+func (t *WebFetchTool) executeAutoFetch(ctx context.Context, fetchURL string, maxLength int, params map[string]interface{}) (string, error) {
+	httpText, httpErr := t.executeHTTPFetch(ctx, fetchURL, maxLength, params)
+	if httpErr == nil && !shouldFallbackToBrowserFetch(httpText) {
+		return httpText, nil
+	}
+
+	chromeText, chromeErr := t.executeBrowserFetch(ctx, fetchURL, maxLength, "chrome", params)
+	if chromeErr == nil {
+		return chromeText, nil
+	}
+
+	browserText, browserErr := t.executeBrowserFetch(ctx, fetchURL, maxLength, "browser", params)
+	if browserErr == nil {
+		return browserText, nil
+	}
+
+	if httpErr != nil {
+		return "", fmt.Errorf(
+			"web_fetch auto mode failed: http=%v; chrome=%v; browser=%v",
+			httpErr,
+			chromeErr,
+			browserErr,
+		)
+	}
+
+	return "", fmt.Errorf(
+		"web_fetch auto mode detected dynamic/auth wall but browser fallback failed: chrome=%v; browser=%v",
+		chromeErr,
+		browserErr,
+	)
+}
+
 type browserFetchRequest struct {
-	URL       string                `json:"url"`
-	TimeoutMs int                   `json:"timeoutMs"`
-	UserAgent string                `json:"userAgent,omitempty"`
-	WaitUntil string                `json:"waitUntil,omitempty"`
-	Mode      string                `json:"mode,omitempty"`
-	Chrome    *browserChromeRequest `json:"chrome,omitempty"`
+	URL             string                `json:"url"`
+	TimeoutMs       int                   `json:"timeoutMs"`
+	UserAgent       string                `json:"userAgent,omitempty"`
+	WaitUntil       string                `json:"waitUntil,omitempty"`
+	Mode            string                `json:"mode,omitempty"`
+	RenderWaitMs    int                   `json:"renderWaitMs,omitempty"`
+	SmartWaitMs     int                   `json:"smartWaitMs,omitempty"`
+	StableWaitMs    int                   `json:"stableWaitMs,omitempty"`
+	WaitForSelector string                `json:"waitForSelector,omitempty"`
+	WaitForText     string                `json:"waitForText,omitempty"`
+	WaitForNoText   string                `json:"waitForNoText,omitempty"`
+	Chrome          *browserChromeRequest `json:"chrome,omitempty"`
 }
 
 type browserChromeRequest struct {
@@ -361,6 +458,81 @@ type browserFetchResult struct {
 	Error string `json:"error,omitempty"`
 }
 
+var browserFallbackKeywords = []string{
+	"enable javascript",
+	"javascript is required",
+	"please enable javascript",
+	"请启用javascript",
+	"请启用 javascript",
+	"需要启用javascript",
+	"需要启用 javascript",
+	"access denied",
+	"access forbidden",
+	"verification required",
+	"security check",
+	"captcha",
+	"bot detected",
+	"are you human",
+	"需要登录",
+	"请登录",
+	"登录后",
+	"登录验证",
+}
+
+func shouldFallbackToBrowserFetch(content string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(content))
+	if normalized == "" {
+		return true
+	}
+	for _, keyword := range browserFallbackKeywords {
+		if strings.Contains(normalized, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+func resolveWebFetchTimeoutSec(params map[string]interface{}, fallback int) int {
+	timeoutSec := fallback
+	if timeoutSec <= 0 {
+		timeoutSec = 30
+	}
+	if v, ok := params["timeout"].(float64); ok {
+		candidate := int(v)
+		if candidate >= 1 && candidate <= 180 {
+			timeoutSec = candidate
+		}
+	}
+	return timeoutSec
+}
+
+func resolveWebFetchMsOption(params map[string]interface{}, key string, fallback, min, max int) int {
+	value := fallback
+	if value < min {
+		value = min
+	}
+	if max > 0 && value > max {
+		value = max
+	}
+	if v, ok := params[key].(float64); ok {
+		candidate := int(v)
+		if candidate >= min && (max <= 0 || candidate <= max) {
+			value = candidate
+		}
+	}
+	return value
+}
+
+func resolveWebFetchStringOption(params map[string]interface{}, key, fallback string) string {
+	if raw, ok := params[key].(string); ok {
+		if trimmed := strings.TrimSpace(raw); trimmed != "" {
+			return trimmed
+		}
+		return ""
+	}
+	return strings.TrimSpace(fallback)
+}
+
 func normalizeWebFetchOptions(options WebFetchOptions) WebFetchOptions {
 	if strings.TrimSpace(options.Mode) == "" {
 		options.Mode = "http"
@@ -374,6 +546,21 @@ func normalizeWebFetchOptions(options WebFetchOptions) WebFetchOptions {
 	if strings.TrimSpace(options.WaitUntil) == "" {
 		options.WaitUntil = defaultWebFetchWaitUntil
 	}
+	if options.RenderWaitMs <= 0 {
+		options.RenderWaitMs = defaultWebFetchRenderWaitMs
+	}
+	if options.SmartWaitMs <= 0 {
+		options.SmartWaitMs = defaultWebFetchSmartWaitMs
+	}
+	if options.StableWaitMs < 0 {
+		options.StableWaitMs = 0
+	}
+	if options.StableWaitMs == 0 {
+		options.StableWaitMs = defaultWebFetchStableWaitMs
+	}
+	options.WaitForSelector = strings.TrimSpace(options.WaitForSelector)
+	options.WaitForText = strings.TrimSpace(options.WaitForText)
+	options.WaitForNoText = strings.TrimSpace(options.WaitForNoText)
 	if strings.TrimSpace(options.Chrome.ProfileName) == "" {
 		options.Chrome.ProfileName = defaultChromeProfileName
 	}
