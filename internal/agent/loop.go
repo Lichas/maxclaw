@@ -524,6 +524,13 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 				plan.AddStep(desc)
 			}
 
+			// If steps were declared, mark the first one as running since we're already executing
+			if len(plan.Steps) > 0 {
+				plan.Steps[0].Status = StepStatusRunning
+				now := time.Now()
+				plan.Steps[0].StartedAt = &now
+			}
+
 			a.PlanManager.Save(msg.SessionKey, plan)
 
 			// Rebuild messages with plan context
