@@ -1,7 +1,10 @@
 package tools
 
 import (
+	"context"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,4 +53,36 @@ func TestBrowserSessionID(t *testing.T) {
 	assert.Equal(t, "telegram_chat-42", browserSessionID("telegram", "chat-42"))
 	assert.Equal(t, "default", browserSessionID("", ""))
 	assert.Equal(t, "weird___id", browserSessionID("weird<>", " id"))
+}
+
+func TestResolveBrowserScreenshotPathDefaultsToSessionDirectory(t *testing.T) {
+	tmpDir := t.TempDir()
+	SetWorkspaceDir(tmpDir)
+	t.Cleanup(func() {
+		SetWorkspaceDir("")
+	})
+
+	ctx := WithRuntimeContextWithSession(context.Background(), "desktop", "desktop:task-1", "desktop:task-1")
+	resolved := resolveBrowserScreenshotPath(ctx, "", "desktop_task-1")
+
+	expectedPrefix := filepath.Join(tmpDir, ".sessions", "desktop_task-1", "screenshots") + string(os.PathSeparator)
+	assert.True(t, strings.HasPrefix(resolved, expectedPrefix), "resolved=%s", resolved)
+	assert.True(t, strings.HasSuffix(resolved, ".png"), "resolved=%s", resolved)
+}
+
+func TestResolveBrowserScreenshotPathResolvesRelativePathInSessionDirectory(t *testing.T) {
+	tmpDir := t.TempDir()
+	SetWorkspaceDir(tmpDir)
+	t.Cleanup(func() {
+		SetWorkspaceDir("")
+	})
+
+	ctx := WithRuntimeContextWithSession(context.Background(), "desktop", "desktop:task-2", "desktop:task-2")
+	resolved := resolveBrowserScreenshotPath(ctx, "captures/home.png", "desktop_task-2")
+
+	assert.Equal(
+		t,
+		filepath.Join(tmpDir, ".sessions", "desktop_task-2", "captures", "home.png"),
+		resolved,
+	)
 }

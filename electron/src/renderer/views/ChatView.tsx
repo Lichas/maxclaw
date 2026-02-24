@@ -1040,25 +1040,34 @@ export function ChatView() {
     const renderActivityItem = (
       entry: Extract<TimelineEntry, { kind: 'activity' }>,
       defaultOpen?: boolean
-    ) => (
-      <details key={entry.id} open={defaultOpen} className="rounded-lg border border-border/65 bg-background/90">
-        <summary className="cursor-pointer list-none px-3 py-2.5">
-          <div className="flex items-center gap-2 text-sm text-foreground/80">
-            <ActivityTypeIcon type={entry.activity.type} className="h-4 w-4 flex-shrink-0" />
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground/45">
-              {getActivityLabel(entry.activity.type)}
-            </span>
-            <span className="truncate">{entry.activity.summary}</span>
-            <ChevronDownIcon className="ml-auto h-3.5 w-3.5 flex-shrink-0 text-foreground/40" />
-          </div>
-        </summary>
-        {entry.activity.detail && (
-          <pre className="border-t border-border/60 px-3 py-2 whitespace-pre-wrap break-all font-sans text-foreground/60">
-            {entry.activity.detail}
-          </pre>
-        )}
-      </details>
-    );
+    ) => {
+      const activityContent = [entry.activity.summary, entry.activity.detail || ''].filter(Boolean).join('\n');
+      const fileActions = renderFileActions(activityContent, `${entry.id}-activity-files`);
+      return (
+        <details key={entry.id} open={defaultOpen} className="rounded-lg border border-border/65 bg-background/90">
+          <summary className="cursor-pointer list-none px-3 py-2.5">
+            <div className="flex items-center gap-2 text-sm text-foreground/80">
+              <ActivityTypeIcon type={entry.activity.type} className="h-4 w-4 flex-shrink-0" />
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground/45">
+                {getActivityLabel(entry.activity.type)}
+              </span>
+              <span className="truncate">{entry.activity.summary}</span>
+              <ChevronDownIcon className="ml-auto h-3.5 w-3.5 flex-shrink-0 text-foreground/40" />
+            </div>
+          </summary>
+          {entry.activity.detail && (
+            <pre className="border-t border-border/60 px-3 py-2 whitespace-pre-wrap break-all font-sans text-foreground/60">
+              {entry.activity.detail}
+            </pre>
+          )}
+          {fileActions && (
+            <div className={entry.activity.detail ? 'px-3 pb-2' : 'border-t border-border/60 px-3 py-2'}>
+              {fileActions}
+            </div>
+          )}
+        </details>
+      );
+    };
 
     if (!streaming) {
       return (

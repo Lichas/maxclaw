@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // BrowserToolOptions browser automation options.
@@ -188,6 +189,9 @@ func (t *BrowserTool) Execute(ctx context.Context, params map[string]interface{}
 
 	channel, chatID := RuntimeContextFrom(ctx)
 	req.SessionID = browserSessionID(channel, chatID)
+	if action == "screenshot" {
+		req.Path = resolveBrowserScreenshotPath(ctx, req.Path, req.SessionID)
+	}
 
 	scriptPath := strings.TrimSpace(t.options.ScriptPath)
 	if scriptPath == "" {
@@ -323,6 +327,40 @@ func browserSessionID(channel, chatID string) string {
 		return "default"
 	}
 	return sanitized
+}
+
+func resolveBrowserScreenshotPath(ctx context.Context, requestedPath, sessionID string) string {
+	requestedPath = strings.TrimSpace(requestedPath)
+	if requestedPath == "" {
+		return defaultBrowserScreenshotPath(ctx, sessionID)
+	}
+
+	if requestedPath == "~" || strings.HasPrefix(requestedPath, "~/") || filepath.IsAbs(requestedPath) {
+		return requestedPath
+	}
+
+	if sessionBase, ok := sessionBaseDirFromContext(ctx); ok {
+		return filepath.Join(sessionBase, requestedPath)
+	}
+
+	return requestedPath
+}
+
+func defaultBrowserScreenshotPath(ctx context.Context, sessionID string) string {
+	nowMillis := time.Now().UnixMilli()
+	fileName := fmt.Sprintf("browser-%d.png", nowMillis)
+
+	if sessionBase, ok := sessionBaseDirFromContext(ctx); ok {
+		return filepath.Join(sessionBase, "screenshots", fileName)
+	}
+
+	homeDir, err := os.UserHomeDir()
+	baseName := sanitizePathSegment(sessionID)
+	if err == nil && strings.TrimSpace(homeDir) != "" {
+		return filepath.Join(homeDir, ".maxclaw", "browser", "screenshots", fmt.Sprintf("%s-%d.png", baseName, nowMillis))
+	}
+
+	return filepath.Join(".maxclaw", "browser", "screenshots", fmt.Sprintf("%s-%d.png", baseName, nowMillis))
 }
 
 func asString(v interface{}) string {

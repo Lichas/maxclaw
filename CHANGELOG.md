@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 浏览器截图默认落到 Session 目录并支持在执行过程中直接预览
+- **变更**：`browser` 工具在 `action=screenshot` 且未显式传 `path` 时，默认保存到当前会话目录 `workspace/.sessions/<sessionKey>/screenshots/`；若传相对路径，也会按当前会话目录解析。聊天页“执行过程”中的工具结果新增文件操作按钮，可直接预览截图并打开所在目录。
+- **位置**：`pkg/tools/browser.go`、`pkg/tools/browser_test.go`、`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`go test ./pkg/tools -run 'TestBrowserOptionsFromWebFetch|TestNormalizeBrowserToolOptionsDefaults|TestBrowserSessionID|TestResolveBrowserScreenshotPathDefaultsToSessionDirectory|TestResolveBrowserScreenshotPathResolvesRelativePathInSessionDirectory'`、`cd electron && npm run build`、`make build`。
+
 #### 修复 browser/web_fetch 缺少 Playwright 依赖时直接崩溃
 - **变更**：为 Node 浏览器脚本执行增加依赖自愈逻辑：检测到 `playwright` 模块缺失时自动在 `webfetcher` 目录执行 `npm ci`（无 lockfile 则 `npm install`）并重试一次；失败时返回可操作错误提示（包含 `make webfetch-install` 建议）。
 - **位置**：`pkg/tools/playwright_deps.go`、`pkg/tools/browser.go`、`pkg/tools/web.go`、`pkg/tools/playwright_deps_test.go`。
