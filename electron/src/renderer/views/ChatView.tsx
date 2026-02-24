@@ -7,6 +7,7 @@ import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import { FileAttachment, UploadedFile } from '../components/FileAttachment';
 import { CustomSelect } from '../components/CustomSelect';
 import { FilePreviewSidebar } from '../components/FilePreviewSidebar';
+import { FileTreeSidebar } from '../components/FileTreeSidebar';
 import { extractFileReferences, FileReference } from '../utils/fileReferences';
 
 interface Message {
@@ -1520,7 +1521,7 @@ export function ChatView() {
   );
   const previewSidebarMode = browserCopilotVisible
     ? previewModeBySession[currentSessionKey] || 'browser'
-    : 'file';
+    : 'tree';
   const browserCopilotNeedsManualIntervention = Boolean(
     browserActivityContext.needsManualIntervention ||
       isLoginInterventionText(browserCopilotOutput) ||
@@ -1864,6 +1865,24 @@ export function ChatView() {
       mode={previewSidebarMode}
       browserAvailable={browserCopilotVisible}
       browserPanel={renderBrowserCopilotPanel()}
+      treePanel={(
+        <FileTreeSidebar
+          sessionKey={currentSessionKey}
+          workspacePath={workspacePath}
+          onSelectFile={(path) => {
+            // 创建 FileReference 并预览
+            const fileRef: FileReference = {
+              id: path.toLowerCase(),
+              pathHint: path,
+              displayName: path.split(/[/\\]/).pop() || path,
+              extension: path.split('.').pop() || '',
+              kind: 'binary'
+            };
+            void previewReference(fileRef);
+          }}
+          selectedPath={selectedFileRef?.pathHint}
+        />
+      )}
       onModeChange={(mode) => {
         setPreviewModeForSession(currentSessionKey, mode);
       }}
