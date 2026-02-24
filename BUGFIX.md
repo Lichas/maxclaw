@@ -12,7 +12,7 @@
 
 | 类别 | 数量 | Bug 列表 |
 |------|------|---------|
-| **UI/Frontend** | 7 | [会话串联](#2026-02-24---electron-聊天会话切换串联输入框与打断状态未隔离), [架构图对比度](#2026-02-23---字符架构图代码块颜色对比度过低), [聊天窗口高度](#2026-02-23---electron-聊天窗口信息流高度异常), [流式事件](#2026-02-21---electron-聊天窗只见文本不见执行过程), [窗口双闪](#2026-02-21---electron-启动时窗口闪动两次), [SkillsView 循环](#2026-02-22---skillsview-无限循环), [Electron 安装](#2026-02-20---electron-安装后无法启动) |
+| **UI/Frontend** | 8 | [并发会话](#2026-02-24---electron-长任务并发时会话列表丢失新会话发送受阻并触发-context-canceled), [会话串联](#2026-02-24---electron-聊天会话切换串联输入框与打断状态未隔离), [架构图对比度](#2026-02-23---字符架构图代码块颜色对比度过低), [聊天窗口高度](#2026-02-23---electron-聊天窗口信息流高度异常), [流式事件](#2026-02-21---electron-聊天窗只见文本不见执行过程), [窗口双闪](#2026-02-21---electron-启动时窗口闪动两次), [SkillsView 循环](#2026-02-22---skillsview-无限循环), [Electron 安装](#2026-02-20---electron-安装后无法启动) |
 | **LLM/Provider** | 4 | [消息格式错误](#bug-1-openai-provider-消息格式错误), [DeepSeek 禁用工具](#bug-2-deepseek-模型工具被禁用), [模型不使用工具](#bug-3-模型不使用工具), [DeepSeek 400](#bug-4-deepseek-返回-400) |
 | **Channels** | 3 | [WhatsApp 自发消息](#2026-02-08---whatsapp-收不到回复), [Telegram 代理](#2026-02-15---telegram-收不到回复), [Telegram 间歇无回复](#2026-02-15--2026-02-16-事件总结telegram-间歇性无回复) |
 | **Daemon/部署** | 3 | [未清理 Gateway](#2026-02-16---make-up-daemon-未清理旧-gateway-进程), [假启动](#2026-02-16---daemon-假启动未被检测), [Electron 安装](#2026-02-20---electron-安装后无法启动) |
@@ -23,7 +23,7 @@
 
 | 日期 | Bug |
 |------|-----|
-| 2026-02-24 | [会话串联](#2026-02-24---electron-聊天会话切换串联输入框与打断状态未隔离) |
+| 2026-02-24 | [并发会话](#2026-02-24---electron-长任务并发时会话列表丢失新会话发送受阻并触发-context-canceled), [会话串联](#2026-02-24---electron-聊天会话切换串联输入框与打断状态未隔离) |
 | 2026-02-23 | [架构图对比度](#2026-02-23---字符架构图代码块颜色对比度过低), [聊天窗口高度](#2026-02-23---electron-聊天窗口信息流高度异常), [Agent 回复慢](#2026-02-23---agent-简单问候hi回复慢定位分析) |
 | 2026-02-22 | [SkillsView 循环](#2026-02-22---skillsview-无限循环) |
 | 2026-02-21 | [流式事件](#2026-02-21---electron-聊天窗只见文本不见执行过程), [窗口双闪](#2026-02-21---electron-启动时窗口闪动两次) |
@@ -53,6 +53,36 @@ go test ./...
 make build
 cd electron && npm run build
 ```
+
+---
+
+## 2026-02-24 - Electron 长任务并发时会话列表丢失、新会话发送受阻并触发 `context canceled`
+
+**问题**：
+- 会话 A 执行长任务时，新建会话 B 后左侧历史列表偶发看不到会话 A（直到 A 完成才重新出现）。
+- 会话 B 输入内容后发送按钮不可用，无法并行发起第二个任务。
+- 某些切换路径下，会话 A 在后端日志出现 `context canceled`，任务被提前终止。
+
+**根因**：
+- `ChatView` 发送可用性绑定了全局 `isLoading`，任何会话在请求中都会锁住当前会话发送。
+- `Sidebar` 定时刷新后端会话列表时会覆盖本地临时会话；而后端原先在整轮完成后才落盘用户消息，导致“进行中会话尚不可见”窗口期。
+- 前端流式状态此前采用单路“活跃流”心智模型，跨会话切换时请求归属与 UI 展示会话可能错位，放大中断/取消现象。
+
+**修复**：
+- 发送/禁用逻辑改为按会话判断（`isGenerating` 按 `sessionKey` 维度），允许不同会话并行发送。
+- 侧栏增加本地 draft 会话合并策略，刷新时保留未落盘会话，避免列表闪失。
+- Agent 在执行前先保存用户消息到 session 文件，缩短“会话不可见”时间窗。
+- 流式状态管理改为按会话维度维护，避免跨会话请求互相覆盖。
+
+**修复文件**：
+- `electron/src/renderer/views/ChatView.tsx`
+- `electron/src/renderer/components/Sidebar.tsx`
+- `internal/agent/loop.go`
+
+**验证**：
+- `cd electron && npm run build`
+- `go test ./internal/agent -run 'TestAgentLoopProcessDirectEventStreamEmitsStructuredEvents|TestAgentLoopProcessDirectUsesProvidedSessionKey'`
+- `make build`
 
 ---
 

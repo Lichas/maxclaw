@@ -9,6 +9,11 @@
 - **位置**：`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/components/Sidebar.tsx`、`internal/agent/loop.go`。
 - **验证**：`cd electron && npm run build`、`go test ./internal/agent -run 'TestAgentLoopProcessDirectEventStreamEmitsStructuredEvents|TestAgentLoopProcessDirectUsesProvidedSessionKey'`、`make build`。
 
+#### 补充长任务并发会话问题根因记录（仅文档）
+- **变更**：在 Bug 文档新增“长任务并发时会话列表丢失、新会话发送受阻并触发 context canceled”记录，补充触发路径、根因与修复对应关系，便于回归排查。
+- **位置**：`BUGFIX.md`。
+- **验证**：`make build`。
+
 #### 修复聊天界面会话切换时串流状态与输入框串联
 - **变更**：聊天页将输入草稿按 `sessionKey` 存储；将“生成中/打断提示”状态按会话隔离；并为流式回调增加会话守卫，避免旧会话请求在切换后污染当前会话渲染与打断按钮状态。
 - **位置**：`electron/src/renderer/views/ChatView.tsx`。
