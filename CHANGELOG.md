@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### Browser Co-Pilot 迁移到右侧预览栏并与文件预览同位交互
+- **变更**：右侧预览栏新增“文件预览 / Browser Co-Pilot”切换，Browser Co-Pilot 改为在同一侧栏展示；文件预览和浏览器协作可在同一位置切换，聊天区仅保留“打开 Browser Co-Pilot 侧栏”快捷入口（当侧栏折叠时显示）。
+- **位置**：`electron/src/renderer/components/FilePreviewSidebar.tsx`、`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 优化 Browser Co-Pilot 登录介入判定与“打开页面一闪而过”
 - **变更**：
   - Browser Co-Pilot 新增登录/验证拦截信号识别（login/signin/passport/captcha/启用 JavaScript 等），仅在检测到拦截时强调“需要人工介入”，默认提示改为自动执行优先。

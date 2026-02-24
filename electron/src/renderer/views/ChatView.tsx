@@ -201,6 +201,7 @@ export function ChatView() {
   const [selectedFileRef, setSelectedFileRef] = useState<FileReference | null>(null);
   const [previewData, setPreviewData] = useState<PreviewPayload | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewModeBySession, setPreviewModeBySession] = useState<Record<string, 'file' | 'browser'>>({});
   const [existingFileRefs, setExistingFileRefs] = useState<Record<string, boolean>>({});
   const [browserCopilotOutputBySession, setBrowserCopilotOutputBySession] = useState<Record<string, string>>({});
   const [browserCopilotBusyBySession, setBrowserCopilotBusyBySession] = useState<Record<string, boolean>>({});
@@ -402,6 +403,15 @@ export function ChatView() {
         return prev;
       }
       return { ...prev, [sessionKey]: trimmed };
+    });
+  };
+
+  const setPreviewModeForSession = (sessionKey: string, mode: 'file' | 'browser') => {
+    setPreviewModeBySession((prev) => {
+      if (prev[sessionKey] === mode) {
+        return prev;
+      }
+      return { ...prev, [sessionKey]: mode };
     });
   };
 
@@ -1361,6 +1371,7 @@ export function ChatView() {
   };
 
   const previewReference = async (reference: FileReference) => {
+    setPreviewModeForSession(currentSessionKey, 'file');
     setPreviewSidebarCollapsed(false);
     setSelectedFileRef(reference);
     setPreviewLoading(true);
@@ -1419,6 +1430,8 @@ export function ChatView() {
 
   const handleBrowserCopilotAction = async (params: Record<string, unknown>) => {
     const requestSessionKey = currentSessionKey;
+    setPreviewModeForSession(requestSessionKey, 'browser');
+    setPreviewSidebarCollapsed(false);
     setBrowserCopilotBusy(requestSessionKey, true);
     setBrowserCopilotError(requestSessionKey, '');
     try {
@@ -1504,6 +1517,9 @@ export function ChatView() {
   const browserCopilotVisible = Boolean(
     browserActivityContext.hasBrowserActivity || browserCopilotOutput || browserCopilotError
   );
+  const previewSidebarMode = browserCopilotVisible
+    ? previewModeBySession[currentSessionKey] || 'browser'
+    : 'file';
   const browserCopilotNeedsManualIntervention = Boolean(
     browserActivityContext.needsManualIntervention ||
       isLoginInterventionText(browserCopilotOutput) ||
@@ -1524,7 +1540,7 @@ export function ChatView() {
     }
 
     return (
-      <div className="mb-3 rounded-xl border border-border/70 bg-card/70 p-3">
+      <div className="rounded-xl border border-border/70 bg-card/70 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-foreground/55">Browser Co-Pilot</p>
@@ -1597,6 +1613,26 @@ export function ChatView() {
             {renderMarkdownWithActions(browserCopilotOutput, `${currentSessionKey}-browser-copilot-output`)}
           </div>
         )}
+      </div>
+    );
+  };
+
+  const renderBrowserCopilotQuickEntry = () => {
+    if (!browserCopilotVisible || !previewSidebarCollapsed) {
+      return null;
+    }
+    return (
+      <div className="mb-2 flex justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            setPreviewModeForSession(currentSessionKey, 'browser');
+            setPreviewSidebarCollapsed(false);
+          }}
+          className="rounded-md border border-border/80 bg-background px-3 py-1.5 text-xs text-foreground/75 transition-colors hover:bg-secondary"
+        >
+          打开 Browser Co-Pilot 侧栏
+        </button>
       </div>
     );
   };
@@ -1844,6 +1880,12 @@ export function ChatView() {
       selected={selectedFileRef}
       preview={previewData}
       loading={previewLoading}
+      mode={previewSidebarMode}
+      browserAvailable={browserCopilotVisible}
+      browserPanel={renderBrowserCopilotPanel()}
+      onModeChange={(mode) => {
+        setPreviewModeForSession(currentSessionKey, mode);
+      }}
       onToggle={() => setPreviewSidebarCollapsed((prev) => !prev)}
       onResize={setPreviewSidebarWidth}
       onOpenFile={() => {
@@ -1879,7 +1921,7 @@ export function ChatView() {
                 <p className="mt-3 text-base text-foreground/55">7x24 小时帮你干活的全场景个人助理 Agent</p>
               </div>
 
-              {renderBrowserCopilotPanel()}
+              {renderBrowserCopilotQuickEntry()}
               {renderComposer(true)}
 
               <section className="mt-10">
@@ -1980,7 +2022,7 @@ export function ChatView() {
           </div>
 
           <div className="p-4 pt-3">
-            {renderBrowserCopilotPanel()}
+            {renderBrowserCopilotQuickEntry()}
             {renderComposer(false)}
             {terminalVisible && (
               <Suspense

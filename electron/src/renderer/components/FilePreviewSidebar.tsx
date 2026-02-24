@@ -18,6 +18,10 @@ interface FilePreviewSidebarProps {
   selected: FileReference | null;
   preview: PreviewPayload | null;
   loading: boolean;
+  mode?: 'file' | 'browser';
+  browserAvailable?: boolean;
+  browserPanel?: React.ReactNode;
+  onModeChange?: (mode: 'file' | 'browser') => void;
   onToggle: () => void;
   onResize: (nextWidth: number) => void;
   onOpenFile: () => void;
@@ -35,6 +39,10 @@ export function FilePreviewSidebar({
   selected,
   preview,
   loading,
+  mode = 'file',
+  browserAvailable = false,
+  browserPanel,
+  onModeChange,
   onToggle,
   onResize,
   onOpenFile,
@@ -96,10 +104,35 @@ export function FilePreviewSidebar({
           <PanelCloseIcon className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/55">文件预览</p>
-          <p className="truncate text-sm text-foreground">{selected ? selected.displayName : '未选择文件'}</p>
+          {browserAvailable && onModeChange ? (
+            <div className="inline-flex rounded-md border border-border/80 bg-background p-0.5">
+              <button
+                type="button"
+                onClick={() => onModeChange('file')}
+                className={`rounded px-2 py-1 text-[11px] transition-colors ${
+                  mode === 'file' ? 'bg-secondary text-foreground' : 'text-foreground/65 hover:bg-secondary/60'
+                }`}
+              >
+                文件预览
+              </button>
+              <button
+                type="button"
+                onClick={() => onModeChange('browser')}
+                className={`rounded px-2 py-1 text-[11px] transition-colors ${
+                  mode === 'browser' ? 'bg-secondary text-foreground' : 'text-foreground/65 hover:bg-secondary/60'
+                }`}
+              >
+                Browser Co-Pilot
+              </button>
+            </div>
+          ) : (
+            <p className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/55">文件预览</p>
+          )}
+          <p className="truncate text-sm text-foreground">
+            {mode === 'browser' ? '浏览器协作面板' : selected ? selected.displayName : '未选择文件'}
+          </p>
         </div>
-        {selected && (
+        {mode === 'file' && selected && (
           <button
             onClick={onOpenFile}
             className="rounded-md border border-border/80 bg-background px-2 py-1 text-xs text-foreground/75 transition-colors hover:bg-secondary hover:text-foreground"
@@ -110,6 +143,16 @@ export function FilePreviewSidebar({
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        {mode === 'browser' ? (
+          browserAvailable ? (
+            <div className="space-y-3">{browserPanel}</div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border/80 bg-card/60 px-3 py-4 text-sm text-foreground/60">
+              当前会话尚无 Browser 活动。执行 browser 工具后会在这里显示协作面板。
+            </div>
+          )
+        ) : (
+          <>
         {loading && (
           <div className="rounded-xl border border-border/70 bg-card/70 px-3 py-4 text-sm text-foreground/65">
             正在渲染预览...
@@ -135,6 +178,8 @@ export function FilePreviewSidebar({
             </div>
             <FilePreviewBody preview={preview} imageAssist={imageAssist} />
           </div>
+        )}
+          </>
         )}
       </div>
     </aside>
