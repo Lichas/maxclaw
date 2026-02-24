@@ -9,6 +9,7 @@ const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_MAX_CHARS = 8000;
 const DEFAULT_WAIT_UNTIL = 'domcontentloaded';
 const DEFAULT_CDP_LAUNCH_TIMEOUT_MS = 15000;
+const DEFAULT_PROFILE_WAIT_TIMEOUT_MS = 8000;
 const DEFAULT_CHROME_ARGS = [
   '--disable-sync',
   '--disable-background-networking',
@@ -19,6 +20,24 @@ const DEFAULT_CHROME_ARGS = [
   '--password-store=basic',
   '--no-first-run',
   '--no-default-browser-check',
+];
+const LOGIN_URL_KEYWORDS = ['/signin', '/login', '/passport', 'passport.', 'oauth', 'sso', 'auth'];
+const LOGIN_TEXT_KEYWORDS = [
+  'login',
+  'sign in',
+  'signin',
+  'please log in',
+  '请登录',
+  '需要登录',
+  '登录',
+  '验证码',
+  'captcha',
+  'verification',
+  'security check',
+  'access denied',
+  'enable javascript',
+  '启用javascript',
+  '启用 javascript',
 ];
 
 function readStdin() {
@@ -77,6 +96,15 @@ function sanitizeProfileName(input) {
     .replace(/[^a-zA-Z0-9._-]+/g, '-')
     .replace(/^-+|-+$/g, '');
   return normalized || 'chrome';
+}
+
+async function exists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function resolveChromeUserDataDir(userDataDir, profileName) {
@@ -148,20 +176,6 @@ function endpointHttpBase(cdpEndpoint) {
   return parsed.toString().replace(/\/$/, '');
 }
 
-function endpointPort(cdpEndpoint) {
-  if (typeof cdpEndpoint !== 'string' || !cdpEndpoint.trim()) {
-    return '';
-  }
-
-  const raw = cdpEndpoint.trim();
-  const withScheme = /^[a-z]+:\/\//i.test(raw) ? raw : `http://${raw}`;
-  const parsed = new URL(withScheme);
-  if (!isLoopbackHost(parsed.hostname)) {
-    return '';
-  }
-  return parsed.port || '9222';
-}
-
 function isLoopbackHost(hostname) {
   const host = String(hostname || '').toLowerCase();
   return host === '127.0.0.1' || host === 'localhost' || host === '::1';
@@ -169,6 +183,117 @@ function isLoopbackHost(hostname) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function runCommandCapture(command, args, timeoutMs = 2000) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    let finished = false;
+    const timer = setTimeout(() => {
+      if (finished) {
+        return;
+      }
+      finished = true;
+      child.kill('SIGKILL');
+      reject(new Error(`${command} timeout`));
+    }, timeoutMs);
+
+    child.stdout.on('data', (chunk) => {
+      stdout += String(chunk || '');
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += String(chunk || '');
+    });
+    child.on('error', (err) => {
+      if (finished) {
+        return;
+      }
+      finished = true;
+      clearTimeout(timer);
+      reject(err);
+    });
+    child.on('exit', (code) => {
+      if (finished) {
+        return;
+      }
+      finished = true;
+      clearTimeout(timer);
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        reject(new Error(`${command} exited with code ${code}: ${stderr || stdout}`));
+      }
+    });
+  });
+}
+
+async function hasBrowserProcessWithUserDataDir(userDataDir) {
+  if (process.platform !== 'darwin' && process.platform !== 'linux') {
+    return true;
+  }
+
+  try {
+    const { stdout } = await runCommandCapture('ps', ['-axo', 'command'], 2000);
+    const needle = `--user-data-dir=${userDataDir}`.toLowerCase();
+    const lines = stdout.split('\n');
+    return lines.some((line) => {
+      const lower = line.toLowerCase();
+      if (!lower.includes(needle)) {
+        return false;
+      }
+      return lower.includes('chrome') || lower.includes('chromium') || lower.includes('msedge');
+    });
+  } catch {
+    return false;
+  }
+}
+
+async function removeStaleSingletonFiles(userDataDir) {
+  const candidates = ['SingletonLock', 'SingletonCookie', 'SingletonSocket'];
+  for (const file of candidates) {
+    const p = path.join(userDataDir, file);
+    try {
+      await fs.unlink(p);
+    } catch {
+      // ignore
+    }
+  }
+}
+
+async function waitForProfileReady(userDataDir, timeoutMs = DEFAULT_PROFILE_WAIT_TIMEOUT_MS) {
+  const lockPath = path.join(userDataDir, 'SingletonLock');
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    if (!(await exists(lockPath))) {
+      return;
+    }
+    const inUse = await hasBrowserProcessWithUserDataDir(userDataDir);
+    if (!inUse) {
+      await removeStaleSingletonFiles(userDataDir);
+      if (!(await exists(lockPath))) {
+        return;
+      }
+    }
+    await sleep(250);
+  }
+}
+
+async function waitForBrowserProcessStart(userDataDir, timeoutMs = 4000) {
+  if (process.platform !== 'darwin' && process.platform !== 'linux') {
+    return true;
+  }
+
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await hasBrowserProcessWithUserDataDir(userDataDir)) {
+      return true;
+    }
+    await sleep(250);
+  }
+  return false;
 }
 
 function launchDetached(command, args) {
@@ -295,6 +420,43 @@ async function ensureHostChromeCDP(chrome) {
 
   await waitForCDPReady(base, launchTimeoutMs);
   return { started: true };
+}
+
+function hasKeyword(text, keywords) {
+  const lower = String(text || '').toLowerCase();
+  if (!lower) {
+    return false;
+  }
+  return keywords.some((keyword) => lower.includes(String(keyword).toLowerCase()));
+}
+
+async function detectLoginIntervention(page) {
+  const currentURL = String(page.url() || '');
+  if (hasKeyword(currentURL, LOGIN_URL_KEYWORDS)) {
+    return { required: true, reason: 'url matched login pattern' };
+  }
+
+  let title = '';
+  try {
+    title = normalizeText(await page.title());
+  } catch {
+    title = '';
+  }
+  if (hasKeyword(title, LOGIN_TEXT_KEYWORDS)) {
+    return { required: true, reason: 'title indicates login or verification' };
+  }
+
+  let bodyText = '';
+  try {
+    bodyText = await page.evaluate(() => (document.body?.innerText || '').slice(0, 6000));
+  } catch {
+    bodyText = '';
+  }
+  if (hasKeyword(bodyText, LOGIN_TEXT_KEYWORDS)) {
+    return { required: true, reason: 'page text indicates login or verification' };
+  }
+
+  return { required: false, reason: '' };
 }
 
 function sanitizeSessionId(input) {
@@ -457,22 +619,50 @@ async function launchManagedBrowserWindow(req, state, warnings) {
   }
 
   const chrome = req.chrome;
-  const useHostProfile = Boolean(chrome.cdpEndpoint);
-  const userDataDir = useHostProfile
-    ? resolveHostChromeUserDataDir(chrome.hostUserDataDir, chrome.channel)
-    : resolveChromeUserDataDir(chrome.userDataDir, chrome.profileName);
+  if (chrome.cdpEndpoint) {
+    if (chrome.autoStartCDP) {
+      try {
+        const autoStart = await ensureHostChromeCDP(chrome);
+        if (autoStart.started) {
+          warnings.push('auto-started host Chrome for CDP open action');
+        }
+      } catch (cdpErr) {
+        warnings.push(`auto-start host Chrome failed: ${cdpErr && cdpErr.message ? cdpErr.message : String(cdpErr)}`);
+      }
+    }
+    const browser = await chromium.connectOverCDP(chrome.cdpEndpoint, { timeout: req.timeoutMs });
+    try {
+      const context = browser.contexts()[0];
+      if (!context) {
+        throw new Error('no browser context found via CDP');
+      }
+      const page = await context.newPage();
+      await page.goto(targetURL, { waitUntil: DEFAULT_WAIT_UNTIL, timeout: req.timeoutMs });
+      await page.bringToFront().catch(() => {});
+      state.lastURL = page.url();
+      const summary = [
+        `Opened ${page.url()} in CDP browser context`,
+        `Channel: ${chrome.channel || 'chrome'}`,
+      ].join('\n');
+      return {
+        summary: summaryWithWarnings(summary, warnings),
+        data: { url: page.url(), mode: 'cdp', channel: chrome.channel || 'chrome' },
+      };
+    } finally {
+      await browser.close().catch(() => {});
+    }
+  }
+
+  const userDataDir = resolveChromeUserDataDir(chrome.userDataDir, chrome.profileName);
 
   if (!userDataDir) {
     throw new Error('cannot resolve Chrome user data directory for open action');
   }
 
   await fs.mkdir(userDataDir, { recursive: true });
+  await waitForProfileReady(userDataDir);
 
   const startupArgs = [`--user-data-dir=${userDataDir}`, '--new-window', targetURL];
-  const cdpPort = endpointPort(chrome.cdpEndpoint);
-  if (cdpPort) {
-    startupArgs.unshift(`--remote-debugging-port=${cdpPort}`);
-  }
 
   if (process.platform === 'darwin') {
     const appName = resolveChromeAppName(chrome.channel);
@@ -497,6 +687,14 @@ async function launchManagedBrowserWindow(req, state, warnings) {
     await launchDetached('cmd', ['/c', 'start', '', appBinary, ...startupArgs]);
   } else {
     throw new Error(`open action not supported on platform: ${process.platform}`);
+  }
+
+  const started = await waitForBrowserProcessStart(userDataDir, 5000);
+  if (!started) {
+    throw new Error(
+      `managed browser did not stay running for profile: ${userDataDir}. ` +
+        'Profile may still be locked by an active browser action; retry after current tool step finishes.'
+    );
   }
 
   state.lastURL = targetURL;
@@ -654,10 +852,17 @@ async function runAction(req, context, state, warnings) {
     await page.goto(req.url, { waitUntil: DEFAULT_WAIT_UNTIL, timeout: req.timeoutMs });
     await page.waitForTimeout(900).catch(() => {});
     const title = normalizeText(await page.title().catch(() => ''));
+    const loginCheck = await detectLoginIntervention(page);
+    if (loginCheck.required) {
+      warnings.push(`login intervention required: ${loginCheck.reason}`);
+    }
     state.lastSnapshot = [];
     state.lastURL = page.url();
     const summary = `Navigated to ${page.url()}\nTitle: ${title || '(empty)'}`;
-    return { summary: summaryWithWarnings(summary, warnings), data: { url: page.url(), title } };
+    return {
+      summary: summaryWithWarnings(summary, warnings),
+      data: { url: page.url(), title, loginRequired: loginCheck.required },
+    };
   }
 
   if (req.action === 'snapshot') {
@@ -669,6 +874,10 @@ async function runAction(req, context, state, warnings) {
       throw new Error('snapshot requires an active page; call navigate(url) first or pass url in snapshot');
     }
     const snapshot = await collectSnapshot(page, req.maxChars);
+    const loginCheck = await detectLoginIntervention(page);
+    if (loginCheck.required) {
+      warnings.push(`login intervention required: ${loginCheck.reason}`);
+    }
     state.lastSnapshot = snapshot.refs;
     state.lastURL = snapshot.url;
     const refLines = snapshot.refs
@@ -687,7 +896,7 @@ async function runAction(req, context, state, warnings) {
       .join('\n');
     return {
       summary: summaryWithWarnings(summary, warnings),
-      data: { url: snapshot.url, title: snapshot.title, refs: snapshot.refs.length },
+      data: { url: snapshot.url, title: snapshot.title, refs: snapshot.refs.length, loginRequired: loginCheck.required },
     };
   }
 

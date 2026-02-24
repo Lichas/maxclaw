@@ -4,6 +4,14 @@
 
 ### 变更
 
+#### 优化 Browser Co-Pilot 登录介入判定与“打开页面一闪而过”
+- **变更**：
+  - Browser Co-Pilot 新增登录/验证拦截信号识别（login/signin/passport/captcha/启用 JavaScript 等），仅在检测到拦截时强调“需要人工介入”，默认提示改为自动执行优先。
+  - `browser action=open` 在打开当前 Profile 前会等待/清理陈旧 `Singleton*` 锁并校验浏览器进程是否真正启动；当 Profile 仍被占用时返回明确错误，避免“按钮点击后窗口一闪而过却显示成功”。
+  - 聊天生成进行中禁用“用当前Profile打开页面”，避免与正在运行的浏览器步骤抢占同一 Profile。
+- **位置**：`electron/src/renderer/views/ChatView.tsx`、`webfetcher/browser.mjs`。
+- **验证**：`node --check webfetcher/browser.mjs`、`cd electron && npm run build`、`make build`。
+
 #### 修复 Browser Co-Pilot“打开当前页面”未复用浏览器工具 Profile
 - **变更**：Browser Co-Pilot 的“打开当前页面”从系统默认浏览器改为调用 `browser` 工具新动作 `action=open`，按当前工具配置复用同一 Chrome Profile（`userDataDir` / `cdpEndpoint` 对应 host profile），并返回实际打开信息。
 - **位置**：`electron/src/renderer/views/ChatView.tsx`、`pkg/tools/browser.go`、`webfetcher/browser.mjs`。

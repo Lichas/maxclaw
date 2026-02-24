@@ -145,6 +145,32 @@ function isBrowserActivitySummary(summary: string): boolean {
   return normalized.startsWith('browser ') || normalized.startsWith('browser ->');
 }
 
+function isLoginInterventionText(text: string): boolean {
+  const normalized = text.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+  const keywords = [
+    'login',
+    'sign in',
+    'signin',
+    'passport',
+    'oauth',
+    'sso',
+    'captcha',
+    'verification',
+    'security check',
+    'access denied',
+    'enable javascript',
+    '请登录',
+    '需要登录',
+    '验证码',
+    '启用javascript',
+    '启用 javascript'
+  ];
+  return keywords.some((keyword) => normalized.includes(keyword));
+}
+
 function extractFirstURL(text: string): string {
   const matched = text.match(/https?:\/\/[^\s)>\]'"`]+/i);
   return matched ? matched[0] : '';
@@ -305,9 +331,12 @@ export function ChatView() {
       }
     }
 
+    const needsManualIntervention = collectTexts.some((text) => isLoginInterventionText(text));
+
     return {
       hasBrowserActivity: collectTexts.length > 0,
-      latestURL
+      latestURL,
+      needsManualIntervention
     };
   }, [messages, streamingTimeline]);
 
@@ -1475,6 +1504,11 @@ export function ChatView() {
   const browserCopilotVisible = Boolean(
     browserActivityContext.hasBrowserActivity || browserCopilotOutput || browserCopilotError
   );
+  const browserCopilotNeedsManualIntervention = Boolean(
+    browserActivityContext.needsManualIntervention ||
+      isLoginInterventionText(browserCopilotOutput) ||
+      isLoginInterventionText(browserCopilotError)
+  );
   const browserScreenshotInteractive = Boolean(
     selectedFileRef &&
       previewData?.success &&
@@ -1495,7 +1529,9 @@ export function ChatView() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-foreground/55">Browser Co-Pilot</p>
             <p className="text-sm text-foreground/80">
-              手动在真实浏览器完成登录/点击后，可在这里让 Agent 同步当前页面状态继续执行。
+              {browserCopilotNeedsManualIntervention
+                ? '检测到登录/验证拦截，需要你在真实浏览器介入后再继续同步。'
+                : '默认自动执行；仅在检测到登录/验证时才需要你手动介入。'}
             </p>
           </div>
           {browserCopilotURL && (
@@ -1507,7 +1543,7 @@ export function ChatView() {
                   url: browserCopilotURL
                 })
               }
-              disabled={browserCopilotBusy}
+              disabled={browserCopilotBusy || isGenerating}
               className="rounded-md border border-border/80 bg-background px-2 py-1 text-xs text-foreground/75 transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
             >
               用当前Profile打开页面
