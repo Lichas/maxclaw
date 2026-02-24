@@ -206,6 +206,22 @@ func TestReadFileTool(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "session scoped", result)
 	})
+
+	t.Run("read missing file should not create session directory", func(t *testing.T) {
+		sessionCtx := WithRuntimeContextWithSession(ctx, "desktop", "ignored-chat", "desktop:no-create")
+		sessionDir := filepath.Join(tmpDir, ".sessions", "desktop_no-create")
+
+		_, statErr := os.Stat(sessionDir)
+		require.True(t, os.IsNotExist(statErr))
+
+		_, err := tool.Execute(sessionCtx, map[string]interface{}{
+			"path": "missing.md",
+		})
+		require.Error(t, err)
+
+		_, statErr = os.Stat(sessionDir)
+		assert.True(t, os.IsNotExist(statErr))
+	})
 }
 
 func TestWriteFileTool(t *testing.T) {

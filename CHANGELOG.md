@@ -15,7 +15,7 @@
 - **验证**：`rm -f electron/node_modules/.bin/vite && make electron-start`（自动安装后进入构建流程）、`make build`。
 
 #### 修复 session 目录不存在时 `list_dir` 报错
-- **变更**：工具路径解析在 session 相对路径模式下会先确保 `workspace/.sessions/<session_key>` 目录存在，避免首次会话执行 `list_dir "."` 因目录不存在而失败。
+- **变更**：改为按需创建 session 目录：仅在 `list_dir` 读取目录时自动创建缺失目录；`read_file` 等不需要创建目录的场景不再触发目录创建，避免无谓副作用。
 - **位置**：`pkg/tools/filesystem.go`、`pkg/tools/tools_test.go`。
 - **验证**：`go test ./pkg/tools -run 'TestListDirTool|TestWriteFileTool|TestReadFileTool'`、`make build`。
 

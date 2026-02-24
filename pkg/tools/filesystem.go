@@ -73,9 +73,6 @@ func resolvePath(ctx context.Context, path string) (string, error) {
 			if err := isPathAllowed(absBase); err != nil {
 				return "", err
 			}
-			if err := os.MkdirAll(absBase, 0755); err != nil {
-				return "", fmt.Errorf("failed to prepare session directory: %w", err)
-			}
 
 			absPath, err := filepath.Abs(filepath.Join(absBase, path))
 			if err != nil {
@@ -408,6 +405,22 @@ func (t *ListDirTool) Execute(ctx context.Context, params map[string]interface{}
 	recursive := false
 	if v, ok := params["recursive"].(bool); ok {
 		recursive = v
+	}
+
+	info, statErr := os.Stat(resolvedPath)
+	if statErr != nil {
+		if os.IsNotExist(statErr) {
+			if err := os.MkdirAll(resolvedPath, 0755); err != nil {
+				return "", fmt.Errorf("failed to create directory: %w", err)
+			}
+			info, statErr = os.Stat(resolvedPath)
+		}
+		if statErr != nil {
+			return "", fmt.Errorf("failed to stat directory: %w", statErr)
+		}
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("path is not a directory: %s", resolvedPath)
 	}
 
 	var result strings.Builder
