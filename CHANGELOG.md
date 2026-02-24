@@ -3,6 +3,14 @@
 ## [Unreleased]
 
 ### Added
+- File tree sidebar in Electron app
+  - New "File Tree" tab in right sidebar alongside "File Preview" and "Browser Co-Pilot"
+  - Displays session directory structure at `~/.maxclaw/workspace/.sessions/{session}/`
+  - Click files to preview, click folders to expand/collapse
+  - Real-time file preview with timestamp-based cache busting
+  - Shows session key in header and full path in footer
+  - Refresh button to reload directory contents
+  - Loading states and error handling
 - File-based planning system for complex multi-step tasks
   - Auto-create plan on first tool call
   - Step tracking with progress indicators
