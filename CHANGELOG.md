@@ -9,6 +9,11 @@
 - **位置**：`electron/src/renderer/views/ChatView.tsx`。
 - **验证**：`cd electron && npm run build`、`make build`。
 
+#### 补充聊天会话串联问题根因记录（仅文档）
+- **变更**：在 Bug 文档中新增“聊天会话切换串联（输入框与打断状态未隔离）”条目，记录触发条件、根因与修复要点，便于后续回归排查。
+- **位置**：`BUGFIX.md`。
+- **验证**：`make build`。
+
 #### 修复无 API Key 时 gateway 启动失败导致 Electron 无法启动
 - **变更**：`gateway` 启动改为缺少 API key 时进入“仅配置模式”而不是直接退出；Web UI 可正常启动，模型请求会返回明确的配置错误提示。
 - **位置**：`internal/cli/gateway.go`、`internal/cli/gateway_test.go`。

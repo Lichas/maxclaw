@@ -12,7 +12,7 @@
 
 | 类别 | 数量 | Bug 列表 |
 |------|------|---------|
-| **UI/Frontend** | 6 | [架构图对比度](#2026-02-23---字符架构图代码块颜色对比度过低), [聊天窗口高度](#2026-02-23---electron-聊天窗口信息流高度异常), [流式事件](#2026-02-21---electron-聊天窗只见文本不见执行过程), [窗口双闪](#2026-02-21---electron-启动时窗口闪动两次), [SkillsView 循环](#2026-02-22---skillsview-无限循环), [Electron 安装](#2026-02-20---electron-安装后无法启动) |
+| **UI/Frontend** | 7 | [会话串联](#2026-02-24---electron-聊天会话切换串联输入框与打断状态未隔离), [架构图对比度](#2026-02-23---字符架构图代码块颜色对比度过低), [聊天窗口高度](#2026-02-23---electron-聊天窗口信息流高度异常), [流式事件](#2026-02-21---electron-聊天窗只见文本不见执行过程), [窗口双闪](#2026-02-21---electron-启动时窗口闪动两次), [SkillsView 循环](#2026-02-22---skillsview-无限循环), [Electron 安装](#2026-02-20---electron-安装后无法启动) |
 | **LLM/Provider** | 4 | [消息格式错误](#bug-1-openai-provider-消息格式错误), [DeepSeek 禁用工具](#bug-2-deepseek-模型工具被禁用), [模型不使用工具](#bug-3-模型不使用工具), [DeepSeek 400](#bug-4-deepseek-返回-400) |
 | **Channels** | 3 | [WhatsApp 自发消息](#2026-02-08---whatsapp-收不到回复), [Telegram 代理](#2026-02-15---telegram-收不到回复), [Telegram 间歇无回复](#2026-02-15--2026-02-16-事件总结telegram-间歇性无回复) |
 | **Daemon/部署** | 3 | [未清理 Gateway](#2026-02-16---make-up-daemon-未清理旧-gateway-进程), [假启动](#2026-02-16---daemon-假启动未被检测), [Electron 安装](#2026-02-20---electron-安装后无法启动) |
@@ -23,6 +23,7 @@
 
 | 日期 | Bug |
 |------|-----|
+| 2026-02-24 | [会话串联](#2026-02-24---electron-聊天会话切换串联输入框与打断状态未隔离) |
 | 2026-02-23 | [架构图对比度](#2026-02-23---字符架构图代码块颜色对比度过低), [聊天窗口高度](#2026-02-23---electron-聊天窗口信息流高度异常), [Agent 回复慢](#2026-02-23---agent-简单问候hi回复慢定位分析) |
 | 2026-02-22 | [SkillsView 循环](#2026-02-22---skillsview-无限循环) |
 | 2026-02-21 | [流式事件](#2026-02-21---electron-聊天窗只见文本不见执行过程), [窗口双闪](#2026-02-21---electron-启动时窗口闪动两次) |
@@ -52,6 +53,31 @@ go test ./...
 make build
 cd electron && npm run build
 ```
+
+---
+
+## 2026-02-24 - Electron 聊天会话切换串联（输入框与打断状态未隔离）
+
+**问题**：
+- 会话 A 正在流式生成时切到会话 B，B 会出现 A 的“补充/打断”状态与流式渲染残留。
+- 新建会话后输入框仍继承上一个会话的中间状态，造成“串线”感。
+
+**根因**：
+- `ChatView` 中 `input`、`isGenerating`、`interruptHintVisible` 使用组件级单实例状态，而不是按 `sessionKey` 隔离。
+- 流式回调闭包没有会话守卫：会话切换后，旧请求的 `delta/status/tool_*` 仍可写入当前可见会话 UI。
+- 结果是“请求归属会话”和“当前展示会话”发生错位，导致渲染与交互状态串联。
+
+**修复**：
+- 输入草稿改为 `inputBySession`，按 `sessionKey` 存储与读取。
+- 生成态与打断提示改为按会话跟踪（`generatingSessionKey`、`interruptHintSessionKey`）。
+- 为流式回调增加会话守卫（active/request session 对齐检查），阻断旧会话请求污染当前会话。
+
+**修复文件**：
+- `electron/src/renderer/views/ChatView.tsx`
+
+**验证**：
+- `cd electron && npm run build`
+- `make build`
 
 ---
 
