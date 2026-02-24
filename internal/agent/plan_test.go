@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -183,5 +184,78 @@ func TestIsContinueIntent(t *testing.T) {
 				t.Errorf("IsContinueIntent(%q) = %v, want %v", tt.content, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestPlan_GenerateProgressSummary(t *testing.T) {
+	plan := &Plan{
+		ID:               "plan_test",
+		Goal:             "下载分析腾讯财报",
+		Status:           PlanStatusRunning,
+		CurrentStepIndex: 1,
+		IterationCount:   15,
+		Steps: []*Step{
+			{
+				ID:          "step_1",
+				Description: "搜索PDF链接",
+				Status:      StepStatusCompleted,
+				Result:      "找到5个链接",
+			},
+			{
+				ID:          "step_2",
+				Description: "下载PDF文件",
+				Status:      StepStatusRunning,
+				Progress:    &Progress{Current: 2, Total: 5},
+			},
+			{
+				ID:          "step_3",
+				Description: "提取数据",
+				Status:      StepStatusPending,
+			},
+		},
+	}
+
+	summary := plan.GenerateProgressSummary()
+
+	if !strings.Contains(summary, "下载分析腾讯财报") {
+		t.Error("summary should contain goal")
+	}
+	if !strings.Contains(summary, "1/3 步已完成") {
+		t.Error("summary should show correct progress")
+	}
+	if !strings.Contains(summary, "下载PDF文件") {
+		t.Error("summary should show current step")
+	}
+	if !strings.Contains(summary, "(2/5)") {
+		t.Error("summary should show step progress")
+	}
+}
+
+func TestPlan_ToContextString(t *testing.T) {
+	plan := &Plan{
+		ID:               "plan_test",
+		Goal:             "测试任务",
+		Status:           PlanStatusRunning,
+		CurrentStepIndex: 0,
+		Steps: []*Step{
+			{
+				ID:          "step_1",
+				Description: "第一步",
+				Status:      StepStatusRunning,
+				Progress:    &Progress{Current: 1, Total: 3},
+			},
+		},
+	}
+
+	contextStr := plan.ToContextString()
+
+	if !strings.Contains(contextStr, "测试任务") {
+		t.Error("context should contain goal")
+	}
+	if !strings.Contains(contextStr, "第一步") {
+		t.Error("context should show current step")
+	}
+	if !strings.Contains(contextStr, "(1/3)") {
+		t.Error("context should show progress")
 	}
 }

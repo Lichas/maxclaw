@@ -319,3 +319,70 @@ func IsContinueIntent(content string) bool {
 
 	return false
 }
+
+// GenerateProgressSummary creates a human-readable progress summary
+func (p *Plan) GenerateProgressSummary() string {
+	var b strings.Builder
+
+	b.WriteString(fmt.Sprintf("当前任务: %s\n", p.Goal))
+
+	completedSteps := 0
+	for _, step := range p.Steps {
+		if step.Status == StepStatusCompleted {
+			completedSteps++
+		}
+	}
+
+	totalSteps := len(p.Steps)
+	if totalSteps > 0 {
+		b.WriteString(fmt.Sprintf("进度: %d/%d 步已完成\n", completedSteps, totalSteps))
+	} else {
+		b.WriteString("进度: 计划中...\n")
+	}
+
+	if currentStep := p.CurrentStep(); currentStep != nil {
+		progress := ""
+		if currentStep.Progress != nil && currentStep.Progress.Total > 0 {
+			progress = fmt.Sprintf(" (%d/%d)", currentStep.Progress.Current, currentStep.Progress.Total)
+		}
+		b.WriteString(fmt.Sprintf("当前步骤: %s%s (进行中)\n", currentStep.Description, progress))
+	}
+
+	b.WriteString(fmt.Sprintf("已用迭代: %d\n", p.IterationCount))
+
+	if len(p.Steps) > 0 {
+		b.WriteString("\n历史步骤:\n")
+		for i, step := range p.Steps {
+			status := "⏸"
+			if step.Status == StepStatusCompleted {
+				status = "✓"
+			} else if step.Status == StepStatusRunning {
+				status = "⏳"
+			}
+			b.WriteString(fmt.Sprintf("%d. %s %s\n", i+1, status, step.Description))
+		}
+	}
+
+	return b.String()
+}
+
+// ToContextString returns a concise version for LLM context
+func (p *Plan) ToContextString() string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("当前任务: %s\n", p.Goal))
+
+	if currentStep := p.CurrentStep(); currentStep != nil {
+		progress := ""
+		if currentStep.Progress != nil && currentStep.Progress.Total > 0 {
+			progress = fmt.Sprintf(" (%d/%d)", currentStep.Progress.Current, currentStep.Progress.Total)
+		}
+		b.WriteString(fmt.Sprintf("当前步骤 (%d/%d): %s%s\n",
+			p.CurrentStepIndex+1, len(p.Steps), currentStep.Description, progress))
+	} else if len(p.Steps) > 0 {
+		b.WriteString("所有步骤已完成\n")
+	} else {
+		b.WriteString("步骤规划中...\n")
+	}
+
+	return b.String()
+}
