@@ -381,6 +381,20 @@ func TestListDirTool(t *testing.T) {
 		assert.Equal(t, "", result)
 		assert.DirExists(t, sessionDir)
 	})
+
+	t.Run("do not auto-create missing non-root session directory", func(t *testing.T) {
+		sessionCtx := WithRuntimeContextWithSession(ctx, "desktop", "ignored-chat", "desktop:1771898529637")
+		sessionRoot := filepath.Join(tmpDir, ".sessions", "desktop_1771898529637")
+
+		_, err := tool.Execute(sessionCtx, map[string]interface{}{
+			"path": "subdir",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no such file or directory")
+
+		_, statErr := os.Stat(sessionRoot)
+		assert.True(t, os.IsNotExist(statErr))
+	})
 }
 
 func TestExecTool(t *testing.T) {

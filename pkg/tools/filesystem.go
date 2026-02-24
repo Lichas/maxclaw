@@ -130,6 +130,24 @@ func sessionBaseDirFromContext(ctx context.Context) (string, bool) {
 	return filepath.Join(root, ".sessions", sanitizePathSegment(sessionKey)), true
 }
 
+func isCurrentSessionRootPath(ctx context.Context, resolvedPath string) bool {
+	sessionBase, ok := sessionBaseDirFromContext(ctx)
+	if !ok {
+		return false
+	}
+
+	absBase, err := filepath.Abs(sessionBase)
+	if err != nil {
+		return false
+	}
+	absPath, err := filepath.Abs(resolvedPath)
+	if err != nil {
+		return false
+	}
+
+	return filepath.Clean(absBase) == filepath.Clean(absPath)
+}
+
 func sanitizePathSegment(input string) string {
 	if input == "" {
 		return "default"
@@ -409,7 +427,7 @@ func (t *ListDirTool) Execute(ctx context.Context, params map[string]interface{}
 
 	info, statErr := os.Stat(resolvedPath)
 	if statErr != nil {
-		if os.IsNotExist(statErr) {
+		if os.IsNotExist(statErr) && isCurrentSessionRootPath(ctx, resolvedPath) {
 			if err := os.MkdirAll(resolvedPath, 0755); err != nil {
 				return "", fmt.Errorf("failed to create directory: %w", err)
 			}
