@@ -19,6 +19,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode"
+
+	"github.com/mozillazg/go-pinyin"
 )
 
 const (
@@ -28,6 +30,18 @@ const (
 	mcpClientVersion   = "0.1.0"
 	maxToolNameLength  = 64
 )
+
+// pinyinArgs 配置 go-pinyin 参数
+var pinyinArgs = pinyin.NewArgs()
+
+func init() {
+	pinyinArgs.Fallback = func(r rune, a pinyin.Args) []string {
+		// 非中文字符返回空，由调用方处理
+		return []string{}
+	}
+	pinyinArgs.Heteronym = false // 不要多音字，取第一个
+	pinyinArgs.Separator = ""
+}
 
 var (
 	// defaultMCPConnectTimeout bounds initialize/list_tools during startup to avoid blocking message handling indefinitely.
@@ -43,6 +57,7 @@ type MCPServerOptions struct {
 	Args    []string
 	Env     map[string]string
 	URL     string
+	Headers map[string]string
 }
 
 type mcpRemoteTool struct {
@@ -84,6 +99,37 @@ func (defaultMCPClientFactory) New(opts MCPServerOptions) (mcpClient, error) {
 		}, nil
 	}
 	return nil, fmt.Errorf("mcp server %q has neither command nor url", opts.Name)
+}
+
+// TestMCPServer 测试单个 MCP 服务器连接
+func TestMCPServer(opts MCPServerOptions) (tools []string, err error) {
+	factory := defaultMCPClientFactory{}
+	client, err := factory.New(opts)
+	if err != nil {
+		return nil, fmt.Errorf("create client failed: %w", err)
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), defaultMCPConnectTimeout)
+	defer cancel()
+
+	if err := client.Initialize(ctx); err != nil {
+		return nil, fmt.Errorf("initialize failed: %w", err)
+	}
+
+	listCtx, listCancel := context.WithTimeout(context.Background(), defaultMCPConnectTimeout)
+	defer listCancel()
+
+	remoteTools, err := client.ListTools(listCtx)
+	if err != nil {
+		return nil, fmt.Errorf("list tools failed: %w", err)
+	}
+
+	toolNames := make([]string, 0, len(remoteTools))
+	for _, tool := range remoteTools {
+		toolNames = append(toolNames, tool.Name)
+	}
+	return toolNames, nil
 }
 
 // MCPConnector 负责连接 MCP 服务器并将其工具注册为本地 Tool。
@@ -310,19 +356,36 @@ func sanitizeMCPToolSegment(s string) string {
 		return "tool"
 	}
 
+	// Use go-pinyin to convert Chinese to pinyin
+	// LazyConvert returns a flat slice of pinyin for each Chinese character
+	pySlice := pinyin.LazyConvert(s, &pinyinArgs)
+
 	var b strings.Builder
-	prevUnderscore := false
+	pyIndex := 0
+
 	for _, r := range s {
-		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+		// ASCII letters, digits, and underscore - keep as is
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
 			b.WriteRune(r)
-			prevUnderscore = false
 			continue
 		}
-		if !prevUnderscore {
+		// Chinese character - use corresponding pinyin
+		if unicode.Is(unicode.Han, r) {
+			if pyIndex < len(pySlice) && pySlice[pyIndex] != "" {
+				if b.Len() > 0 {
+					b.WriteRune('_')
+				}
+				b.WriteString(pySlice[pyIndex])
+			}
+			pyIndex++
+			continue
+		}
+		// Other characters (spaces, hyphens, etc.) - replace with underscore
+		if b.Len() > 0 && b.String()[b.Len()-1] != '_' {
 			b.WriteRune('_')
-			prevUnderscore = true
 		}
 	}
+
 	out := strings.Trim(b.String(), "_")
 	if out == "" {
 		return "tool"
@@ -848,6 +911,7 @@ func (t *stdioMCPTransport) failAllPending(err error) {
 type httpMCPTransport struct {
 	endpoint string
 	client   *http.Client
+	headers  map[string]string
 
 	nextID int64
 
@@ -861,6 +925,7 @@ func newHTTPMCPTransport(opts MCPServerOptions) *httpMCPTransport {
 		client: &http.Client{
 			Timeout: 60 * time.Second,
 		},
+		headers: opts.Headers,
 	}
 }
 
@@ -909,6 +974,11 @@ func (t *httpMCPTransport) send(ctx context.Context, request mcpJSONRPCRequest) 
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "application/json, text/event-stream")
 	httpReq.Header.Set("MCP-Protocol-Version", mcpProtocolVersion)
+
+	// Add custom headers from configuration
+	for key, value := range t.headers {
+		httpReq.Header.Set(key, value)
+	}
 
 	if sid := t.getSessionID(); sid != "" {
 		httpReq.Header.Set("Mcp-Session-Id", sid)

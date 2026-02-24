@@ -4,6 +4,18 @@
 
 ### 变更
 
+#### MCP 管理功能（新增）
+- **变更**：Electron 左侧栏新增"MCP 管理"栏目，支持添加、编辑、删除、测试 MCP 服务器；支持 STDIO（命令行）和 SSE（HTTP Stream）两种类型；MCP 服务器名称和工具名中的中文自动转为拼音。
+- **后端 API**：新增 `/api/mcp`、`/api/mcp/{name}/test` 等端点。
+- **位置**：`electron/src/renderer/views/MCPView.tsx`、`electron/src/renderer/components/Sidebar.tsx`、`internal/webui/server.go`、`pkg/tools/mcp.go`。
+- **验证**：`make build`、`cd electron && npm run build`。
+
+#### 修复 MCP 中文工具名导致 LLM API 400 错误
+- **问题**：MCP 工具名包含中文字符时，DeepSeek/OpenAI API 返回 `Invalid 'tools[0].function.name': string does not match pattern`。
+- **修复**：使用 `github.com/mozillazg/go-pinyin` 库将中文转换为拼音；ASCII 字符保持不变；其他特殊字符转为下划线。
+- **位置**：`pkg/tools/mcp.go`。
+- **验证**：`make build`、发送消息测试响应正常。
+
 #### 预览侧栏 UI 微调：切换图标、Tab 激活态、冗余标题清理
 - **变更**：
   - 左上角侧栏按钮改为更明确的“侧栏收起/展开”切换图标（统一 toggle 语义）。

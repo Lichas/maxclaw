@@ -11,7 +11,7 @@ interface UIState {
   language: 'zh' | 'en';
   sidebarCollapsed: boolean;
   terminalVisible: boolean;
-  activeTab: 'chat' | 'sessions' | 'scheduled' | 'skills' | 'settings';
+  activeTab: 'chat' | 'sessions' | 'scheduled' | 'skills' | 'mcp' | 'settings';
   currentSessionKey: string;
 }
 

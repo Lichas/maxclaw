@@ -172,6 +172,7 @@ type MCPServerConfig struct {
 	Args    []string          `json:"args,omitempty" mapstructure:"args"`
 	Env     map[string]string `json:"env,omitempty" mapstructure:"env"`
 	URL     string            `json:"url,omitempty" mapstructure:"url"`
+	Headers map[string]string `json:"headers,omitempty" mapstructure:"headers"`
 }
 
 // ExecToolConfig Shell 执行配置

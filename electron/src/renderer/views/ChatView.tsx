@@ -930,7 +930,8 @@ export function ChatView() {
       case 'error':
         return {
           type: 'error',
-          summary: event.error || '请求失败'
+          summary: event.error || '请求失败',
+          detail: event.error || ''
         };
       default:
         return null;

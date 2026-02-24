@@ -14,6 +14,8 @@ const zh: Translations = {
   'common.confirm': '确认',
   'common.delete': '删除',
   'common.edit': '编辑',
+  'common.add': '添加',
+  'common.test': '测试',
   'common.loading': '加载中...',
   'common.error': '出错了',
 
@@ -22,6 +24,7 @@ const zh: Translations = {
   'nav.sessions': '搜索任务',
   'nav.scheduled': '定时任务',
   'nav.skills': '技能市场',
+  'nav.mcp': 'MCP 管理',
   'nav.settings': '设置',
 
   // Settings
@@ -107,6 +110,31 @@ const zh: Translations = {
   'scheduled.prompt': '提示词',
   'scheduled.workdir': '工作目录',
 
+  // MCP
+  'mcp.title': 'MCP 管理',
+  'mcp.subtitle': '管理 Model Context Protocol 服务器',
+  'mcp.add': '添加服务器',
+  'mcp.add.title': '添加 MCP 服务器',
+  'mcp.edit.title': '编辑 MCP 服务器',
+  'mcp.form.name': '名称',
+  'mcp.form.type': '类型',
+  'mcp.form.command': '命令',
+  'mcp.form.args': '参数',
+  'mcp.form.argsHint': '用空格分隔多个参数',
+  'mcp.form.env': '环境变量',
+  'mcp.form.envHint': '每行一个，格式：KEY=value',
+  'mcp.form.url': 'SSE 地址',
+  'mcp.form.headers': 'HTTP Headers',
+  'mcp.form.headersHint': '每行一个，格式：Header-Name: value',
+  'mcp.form.description': '描述',
+  'mcp.form.descriptionPlaceholder': '描述这个 MCP 服务器的功能',
+  'mcp.empty': '暂无 MCP 服务器',
+  'mcp.empty.hint': '点击右上角添加 MCP 服务器',
+  'mcp.envVars': '环境变量',
+  'mcp.confirmDelete': '确定要删除 MCP 服务器 "{name}" 吗？',
+  'mcp.testing': '测试中...',
+  'mcp.testFailed': '连接失败',
+
   // Gateway Status
   'gateway.running': '运行中',
   'gateway.stopped': '已停止',
@@ -121,6 +149,8 @@ const en: Translations = {
   'common.confirm': 'Confirm',
   'common.delete': 'Delete',
   'common.edit': 'Edit',
+  'common.add': 'Add',
+  'common.test': 'Test',
   'common.loading': 'Loading...',
   'common.error': 'Error',
 
@@ -129,6 +159,7 @@ const en: Translations = {
   'nav.sessions': 'Search',
   'nav.scheduled': 'Scheduled',
   'nav.skills': 'Skills',
+  'nav.mcp': 'MCP',
   'nav.settings': 'Settings',
 
   // Settings
@@ -213,6 +244,31 @@ const en: Translations = {
   'scheduled.type.once': 'Once',
   'scheduled.prompt': 'Prompt',
   'scheduled.workdir': 'Working Directory',
+
+  // MCP
+  'mcp.title': 'MCP Management',
+  'mcp.subtitle': 'Manage Model Context Protocol servers',
+  'mcp.add': 'Add Server',
+  'mcp.add.title': 'Add MCP Server',
+  'mcp.edit.title': 'Edit MCP Server',
+  'mcp.form.name': 'Name',
+  'mcp.form.type': 'Type',
+  'mcp.form.command': 'Command',
+  'mcp.form.args': 'Arguments',
+  'mcp.form.argsHint': 'Separate multiple arguments with spaces',
+  'mcp.form.env': 'Environment Variables',
+  'mcp.form.envHint': 'One per line, format: KEY=value',
+  'mcp.form.url': 'SSE URL',
+  'mcp.form.headers': 'HTTP Headers',
+  'mcp.form.headersHint': 'One per line, format: Header-Name: value',
+  'mcp.form.description': 'Description',
+  'mcp.form.descriptionPlaceholder': 'Describe what this MCP server does',
+  'mcp.empty': 'No MCP servers',
+  'mcp.empty.hint': 'Click the button above to add an MCP server',
+  'mcp.envVars': 'Environment Variables',
+  'mcp.confirmDelete': 'Are you sure you want to delete MCP server "{name}"?',
+  'mcp.testing': 'Testing...',
+  'mcp.testFailed': 'Connection failed',
 
   // Gateway Status
   'gateway.running': 'Running',

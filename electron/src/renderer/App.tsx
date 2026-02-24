@@ -6,6 +6,7 @@ import { ChatView } from './views/ChatView';
 import { SessionsView } from './views/SessionsView';
 import { ScheduledTasksView } from './views/ScheduledTasksView';
 import { SkillsView } from './views/SkillsView';
+import { MCPView } from './views/MCPView';
 import { SettingsView } from './views/SettingsView';
 import { wsClient } from './services/websocket';
 
@@ -145,6 +146,7 @@ function App() {
           {activeTab === 'sessions' && <SessionsView />}
           {activeTab === 'scheduled' && <ScheduledTasksView />}
           {activeTab === 'skills' && <SkillsView />}
+          {activeTab === 'mcp' && <MCPView />}
           {activeTab === 'settings' && <SettingsView />}
         </main>
       </div>

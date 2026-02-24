@@ -23,6 +23,7 @@ import (
 	"github.com/Lichas/maxclaw/internal/providers"
 	"github.com/Lichas/maxclaw/internal/session"
 	workspaceSkills "github.com/Lichas/maxclaw/internal/skills"
+	"github.com/Lichas/maxclaw/pkg/tools"
 )
 
 type Server struct {
@@ -105,6 +106,8 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	mux.HandleFunc("/api/providers/test", s.handleTestProvider)
 	mux.HandleFunc("/api/channels/", s.handleTestChannel)
 	mux.HandleFunc("/api/channels/whatsapp/status", s.handleWhatsAppStatus)
+	mux.HandleFunc("/api/mcp", s.handleMCP)
+	mux.HandleFunc("/api/mcp/", s.handleMCPByName)
 	mux.HandleFunc("/ws", s.handleWebSocket)
 
 	mux.Handle("/", spaHandler(s.uiDir))
@@ -2058,5 +2061,298 @@ func (s *Server) handleWhatsAppStatus(w http.ResponseWriter, r *http.Request) {
 		"enabled":   ch.IsEnabled(),
 		"connected": false,
 		"status":    "status not available",
+	})
+}
+
+// MCP-related handlers
+func (s *Server) handleMCP(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleMCPList(w, r)
+	case http.MethodPost:
+		s.handleMCPAdd(w, r)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleMCPByName(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/mcp/")
+	parts := strings.Split(path, "/")
+	if len(parts) < 1 || parts[0] == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	name := parts[0]
+
+	// Check for action: /api/mcp/{name}/enable or /api/mcp/{name}/disable or /api/mcp/{name}/test
+	if len(parts) >= 2 {
+		action := parts[1]
+		switch action {
+		case "enable":
+			s.handleMCPEnable(w, r, name, true)
+		case "disable":
+			s.handleMCPEnable(w, r, name, false)
+		case "test":
+			s.handleMCPTest(w, r, name)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+		return
+	}
+
+	// Single resource operations
+	switch r.Method {
+	case http.MethodPut:
+		s.handleMCPUpdate(w, r, name)
+	case http.MethodDelete:
+		s.handleMCPDelete(w, r, name)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleMCPList(w http.ResponseWriter, r *http.Request) {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	servers := make([]map[string]interface{}, 0, len(cfg.Tools.MCPServers))
+	for name, server := range cfg.Tools.MCPServers {
+		serverType := "stdio"
+		endpoint := server.Command
+		if server.URL != "" {
+			serverType = "sse"
+			endpoint = server.URL
+		}
+		servers = append(servers, map[string]interface{}{
+			"name":        name,
+			"type":        serverType,
+			"endpoint":    endpoint,
+			"command":     server.Command,
+			"args":        server.Args,
+			"env":         server.Env,
+			"url":         server.URL,
+			"headers":     server.Headers,
+			"enabled":     true, // MCP servers are enabled if present in config
+			"description": "",   // Can be extended later
+		})
+	}
+
+	writeJSON(w, map[string]interface{}{"servers": servers})
+}
+
+func (s *Server) handleMCPAdd(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name        string            `json:"name"`
+		Type        string            `json:"type"` // "stdio" or "sse"
+		Command     string            `json:"command,omitempty"`
+		Args        []string          `json:"args,omitempty"`
+		Env         map[string]string `json:"env,omitempty"`
+		URL         string            `json:"url,omitempty"`
+		Headers     map[string]string `json:"headers,omitempty"`
+		Description string            `json:"description,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, err)
+		return
+	}
+
+	if req.Name == "" {
+		writeError(w, fmt.Errorf("name is required"))
+		return
+	}
+
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	if cfg.Tools.MCPServers == nil {
+		cfg.Tools.MCPServers = make(map[string]config.MCPServerConfig)
+	}
+
+	// Check if name already exists
+	if _, exists := cfg.Tools.MCPServers[req.Name]; exists {
+		writeError(w, fmt.Errorf("MCP server '%s' already exists", req.Name))
+		return
+	}
+
+	server := config.MCPServerConfig{
+		Command: req.Command,
+		Args:    req.Args,
+		Env:     req.Env,
+		URL:     req.URL,
+		Headers: req.Headers,
+	}
+
+	cfg.Tools.MCPServers[req.Name] = server
+
+	if err := config.SaveConfig(cfg); err != nil {
+		writeError(w, err)
+		return
+	}
+
+	s.cfg = cfg
+	writeJSON(w, map[string]interface{}{
+		"ok":   true,
+		"name": req.Name,
+	})
+}
+
+func (s *Server) handleMCPUpdate(w http.ResponseWriter, r *http.Request, name string) {
+	var req struct {
+		Type        string            `json:"type"` // "stdio" or "sse"
+		Command     string            `json:"command,omitempty"`
+		Args        []string          `json:"args,omitempty"`
+		Env         map[string]string `json:"env,omitempty"`
+		URL         string            `json:"url,omitempty"`
+		Headers     map[string]string `json:"headers,omitempty"`
+		Description string            `json:"description,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, err)
+		return
+	}
+
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	if _, exists := cfg.Tools.MCPServers[name]; !exists {
+		writeError(w, fmt.Errorf("MCP server '%s' not found", name))
+		return
+	}
+
+	server := config.MCPServerConfig{
+		Command: req.Command,
+		Args:    req.Args,
+		Env:     req.Env,
+		URL:     req.URL,
+		Headers: req.Headers,
+	}
+
+	cfg.Tools.MCPServers[name] = server
+
+	if err := config.SaveConfig(cfg); err != nil {
+		writeError(w, err)
+		return
+	}
+
+	s.cfg = cfg
+	writeJSON(w, map[string]interface{}{
+		"ok":   true,
+		"name": name,
+	})
+}
+
+func (s *Server) handleMCPDelete(w http.ResponseWriter, r *http.Request, name string) {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	if _, exists := cfg.Tools.MCPServers[name]; !exists {
+		writeError(w, fmt.Errorf("MCP server '%s' not found", name))
+		return
+	}
+
+	delete(cfg.Tools.MCPServers, name)
+
+	if err := config.SaveConfig(cfg); err != nil {
+		writeError(w, err)
+		return
+	}
+
+	s.cfg = cfg
+	writeJSON(w, map[string]interface{}{
+		"ok":   true,
+		"name": name,
+	})
+}
+
+func (s *Server) handleMCPEnable(w http.ResponseWriter, r *http.Request, name string, enable bool) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	server, exists := cfg.Tools.MCPServers[name]
+	if !exists {
+		writeError(w, fmt.Errorf("MCP server '%s' not found", name))
+		return
+	}
+
+	// MCP servers are enabled/disabled by adding/removing from config
+	// For now, we just toggle a flag in the response
+	// A more complete implementation would store enabled state separately
+
+	_ = server // Use the server variable
+
+	writeJSON(w, map[string]interface{}{
+		"ok":      true,
+		"name":    name,
+		"enabled": enable,
+	})
+}
+
+func (s *Server) handleMCPTest(w http.ResponseWriter, r *http.Request, name string) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	server, exists := cfg.Tools.MCPServers[name]
+	if !exists {
+		writeError(w, fmt.Errorf("MCP server '%s' not found", name))
+		return
+	}
+
+	opts := tools.MCPServerOptions{
+		Name:    name,
+		Command: server.Command,
+		Args:    server.Args,
+		Env:     server.Env,
+		URL:     server.URL,
+		Headers: server.Headers,
+	}
+
+	toolNames, err := tools.TestMCPServer(opts)
+	if err != nil {
+		writeJSON(w, map[string]interface{}{
+			"ok":      false,
+			"name":    name,
+			"error":   err.Error(),
+			"message": "Connection failed",
+		})
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"ok":      true,
+		"name":    name,
+		"tools":   toolNames,
+		"count":   len(toolNames),
+		"message": fmt.Sprintf("Connected successfully, found %d tools", len(toolNames)),
 	})
 }

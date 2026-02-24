@@ -936,6 +936,7 @@ func convertMCPServers(in map[string]config.MCPServerConfig) map[string]tools.MC
 			Args:    append([]string(nil), server.Args...),
 			Env:     cloneStringMap(server.Env),
 			URL:     server.URL,
+			Headers: cloneStringMap(server.Headers),
 		}
 	}
 	return out
