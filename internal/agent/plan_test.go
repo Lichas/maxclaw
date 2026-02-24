@@ -43,3 +43,55 @@ func TestPlan_BasicOperations(t *testing.T) {
 		t.Errorf("expected step 2 running, got %s", plan.Steps[1].Status)
 	}
 }
+
+func TestPlanManager_SaveAndLoad(t *testing.T) {
+	tmpDir := t.TempDir()
+	pm := NewPlanManager(tmpDir)
+	sessionKey := "test:session"
+
+	// Create and save plan
+	plan := CreatePlan("test goal")
+	plan.AddStep("step 1")
+	plan.Steps[0].Status = StepStatusRunning
+	now := time.Now()
+	plan.Steps[0].StartedAt = &now
+
+	if err := pm.Save(sessionKey, plan); err != nil {
+		t.Fatalf("failed to save plan: %v", err)
+	}
+
+	// Load plan
+	loaded, err := pm.Load(sessionKey)
+	if err != nil {
+		t.Fatalf("failed to load plan: %v", err)
+	}
+
+	if loaded == nil {
+		t.Fatal("expected plan to be loaded")
+	}
+
+	if loaded.Goal != "test goal" {
+		t.Errorf("expected goal 'test goal', got %s", loaded.Goal)
+	}
+
+	if len(loaded.Steps) != 1 {
+		t.Errorf("expected 1 step, got %d", len(loaded.Steps))
+	}
+}
+
+func TestPlanManager_Exists(t *testing.T) {
+	tmpDir := t.TempDir()
+	pm := NewPlanManager(tmpDir)
+	sessionKey := "test:session"
+
+	if pm.Exists(sessionKey) {
+		t.Error("expected plan to not exist")
+	}
+
+	plan := CreatePlan("test goal")
+	pm.Save(sessionKey, plan)
+
+	if !pm.Exists(sessionKey) {
+		t.Error("expected plan to exist")
+	}
+}

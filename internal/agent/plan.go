@@ -1,7 +1,9 @@
 package agent
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -138,4 +140,110 @@ func sanitizeSessionKey(key string) string {
 		return "default"
 	}
 	return result
+}
+
+// Load loads a plan for the given session key
+func (pm *PlanManager) Load(sessionKey string) (*Plan, error) {
+	pm.mu.RLock()
+	if plan, ok := pm.plans[sessionKey]; ok {
+		pm.mu.RUnlock()
+		return plan, nil
+	}
+	pm.mu.RUnlock()
+
+	path := pm.planPath(sessionKey)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil // No plan exists
+		}
+		return nil, fmt.Errorf("failed to read plan file: %w", err)
+	}
+
+	var plan Plan
+	if err := json.Unmarshal(data, &plan); err != nil {
+		return nil, fmt.Errorf("failed to parse plan file: %w", err)
+	}
+
+	pm.mu.Lock()
+	pm.plans[sessionKey] = &plan
+	pm.mu.Unlock()
+
+	return &plan, nil
+}
+
+// Save saves a plan for the given session key
+func (pm *PlanManager) Save(sessionKey string, plan *Plan) error {
+	if plan == nil {
+		return nil
+	}
+
+	plan.UpdatedAt = time.Now()
+
+	path := pm.planPath(sessionKey)
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create plan directory: %w", err)
+	}
+
+	data, err := json.MarshalIndent(plan, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal plan: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write plan file: %w", err)
+	}
+
+	pm.mu.Lock()
+	pm.plans[sessionKey] = plan
+	pm.mu.Unlock()
+
+	return nil
+}
+
+// Exists checks if a plan exists for the given session key
+func (pm *PlanManager) Exists(sessionKey string) bool {
+	pm.mu.RLock()
+	_, cached := pm.plans[sessionKey]
+	pm.mu.RUnlock()
+	if cached {
+		return true
+	}
+
+	path := pm.planPath(sessionKey)
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// Delete removes a plan for the given session key
+func (pm *PlanManager) Delete(sessionKey string) error {
+	pm.mu.Lock()
+	delete(pm.plans, sessionKey)
+	pm.mu.Unlock()
+
+	path := pm.planPath(sessionKey)
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+// CreatePlan creates a new plan for a goal
+func CreatePlan(goal string) *Plan {
+	now := time.Now()
+	return &Plan{
+		ID:               generatePlanID(),
+		Goal:             goal,
+		Status:           PlanStatusRunning,
+		CreatedAt:        now,
+		UpdatedAt:        now,
+		Steps:            []*Step{},
+		CurrentStepIndex: 0,
+		IterationCount:   0,
+	}
+}
+
+func generatePlanID() string {
+	return fmt.Sprintf("plan_%d", time.Now().UnixMilli())
 }
