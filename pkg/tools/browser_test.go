@@ -86,3 +86,17 @@ func TestResolveBrowserScreenshotPathResolvesRelativePathInSessionDirectory(t *t
 		resolved,
 	)
 }
+
+func TestEnrichBrowserExecutionErrorAddsProfileLockHint(t *testing.T) {
+	raw := "Error: browserType.launchPersistentContext failed: ProcessSingleton ... SingletonLock"
+	enriched := enrichBrowserExecutionError(raw)
+
+	assert.Contains(t, enriched, raw)
+	assert.Contains(t, enriched, "Chrome profile is already in use")
+	assert.Contains(t, enriched, "tools.web.fetch.chrome.cdpEndpoint")
+}
+
+func TestEnrichBrowserExecutionErrorKeepsUnrelatedMessage(t *testing.T) {
+	raw := "some unrelated browser failure"
+	assert.Equal(t, raw, enrichBrowserExecutionError(raw))
+}

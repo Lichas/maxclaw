@@ -234,7 +234,7 @@ func (t *BrowserTool) Execute(ctx context.Context, params map[string]interface{}
 
 	output, err := runNodeScriptWithPlaywrightRetry(ctx, nodePath, scriptPath, payload)
 	if err != nil {
-		return "", fmt.Errorf("browser command failed: %s", err)
+		return "", fmt.Errorf("browser command failed: %s", enrichBrowserExecutionError(err.Error()))
 	}
 
 	var result browserToolResult
@@ -401,4 +401,15 @@ func asInt(v interface{}) (int, bool) {
 	default:
 		return 0, false
 	}
+}
+
+func enrichBrowserExecutionError(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	lower := strings.ToLower(trimmed)
+
+	if strings.Contains(lower, "processsingleton") || strings.Contains(lower, "singletonlock") {
+		return trimmed + "\nHint: Chrome profile is already in use. Close the other Chrome instance using this userDataDir, or configure tools.web.fetch.chrome.cdpEndpoint (e.g. http://127.0.0.1:9222) to reuse the running browser session."
+	}
+
+	return trimmed
 }

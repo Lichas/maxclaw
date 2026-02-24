@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 改进 browser 配置目录被占用时的报错提示
+- **变更**：当 `browser` 工具因 Chrome 配置目录被占用（`ProcessSingleton`/`SingletonLock`）失败时，错误信息会追加明确操作建议：关闭占用该 `userDataDir` 的浏览器实例，或改用 `tools.web.fetch.chrome.cdpEndpoint` 复用已运行浏览器会话。
+- **位置**：`pkg/tools/browser.go`、`pkg/tools/browser_test.go`。
+- **验证**：`go test ./pkg/tools -run 'TestEnrichBrowserExecutionErrorAddsProfileLockHint|TestEnrichBrowserExecutionErrorKeepsUnrelatedMessage'`、`make build`。
+
 #### 新增 Browser Live Co-Pilot 协作面板（可人工接管点击并回传）
 - **变更**：聊天页新增 Browser Co-Pilot 面板：可一键同步截图/抓取结构快照、打开当前页面到真实浏览器、插入“人工操作后继续”指令；右侧预览栏对浏览器截图启用交互点击，点击坐标会通过后端 Browser API 回传给 `browser` 工具执行 `act(click_xy)`，并自动刷新截图，实现“人机协作接管”闭环。
 - **后端能力**：新增 `POST /api/browser/action`，在当前 `sessionKey` 运行 `browser` 工具（共享会话上下文）；`AgentLoop` 新增 `ExecuteToolWithSession` 入口。
