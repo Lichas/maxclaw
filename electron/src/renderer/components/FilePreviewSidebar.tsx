@@ -72,13 +72,29 @@ export function FilePreviewSidebar({
     return (
       <aside className="hidden h-full w-11 border-l border-border/70 bg-background/60 md:flex md:flex-col md:items-center md:pt-3">
         <button
-          onClick={onToggle}
+          onClick={() => {
+            onModeChange?.('file');
+            onToggle();
+          }}
           className="rounded-md border border-border/80 bg-background p-1.5 text-foreground/70 transition-colors hover:bg-secondary hover:text-foreground"
           title="展开预览栏"
           aria-label="Expand preview sidebar"
         >
           <PanelOpenIcon className="h-4 w-4" />
         </button>
+        {browserAvailable && onModeChange && (
+          <button
+            onClick={() => {
+              onModeChange('browser');
+              onToggle();
+            }}
+            className="mt-2 rounded-md border border-border/80 bg-background p-1.5 text-foreground/70 transition-colors hover:bg-secondary hover:text-foreground"
+            title="打开 Browser Co-Pilot"
+            aria-label="Open browser copilot sidebar"
+          >
+            <BrowserCopilotIcon className="h-4 w-4" />
+          </button>
+        )}
       </aside>
     );
   }
@@ -288,6 +304,17 @@ function PanelCloseIcon({ className }: { className?: string }) {
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <rect x={3} y={4} width={18} height={16} rx={2.5} strokeWidth={1.7} />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M13 4v16m3-8h-4" />
+    </svg>
+  );
+}
+
+function BrowserCopilotIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x={4} y={6} width={16} height={12} rx={2.5} strokeWidth={1.7} />
+      <circle cx={9} cy={12} r={1.2} strokeWidth={1.4} />
+      <circle cx={15} cy={12} r={1.2} strokeWidth={1.4} />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M12 6V3m-3 15h6" />
     </svg>
   );
 }

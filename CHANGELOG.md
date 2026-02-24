@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 调整 Browser Co-Pilot 入口到右上角侧栏图标位
+- **变更**：预览侧栏折叠状态下新增 Browser Co-Pilot 小图标入口（位于文件预览图标下方）；点击后直接展开右侧栏并切换到 Browser Co-Pilot。聊天输入区不再显示“打开 Browser Co-Pilot 侧栏”按钮，入口统一到右上角侧栏位。
+- **位置**：`electron/src/renderer/components/FilePreviewSidebar.tsx`、`electron/src/renderer/views/ChatView.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### Browser Co-Pilot 迁移到右侧预览栏并与文件预览同位交互
 - **变更**：右侧预览栏新增“文件预览 / Browser Co-Pilot”切换，Browser Co-Pilot 改为在同一侧栏展示；文件预览和浏览器协作可在同一位置切换，聊天区仅保留“打开 Browser Co-Pilot 侧栏”快捷入口（当侧栏折叠时显示）。
 - **位置**：`electron/src/renderer/components/FilePreviewSidebar.tsx`、`electron/src/renderer/views/ChatView.tsx`。

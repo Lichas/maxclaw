@@ -1617,26 +1617,6 @@ export function ChatView() {
     );
   };
 
-  const renderBrowserCopilotQuickEntry = () => {
-    if (!browserCopilotVisible || !previewSidebarCollapsed) {
-      return null;
-    }
-    return (
-      <div className="mb-2 flex justify-end">
-        <button
-          type="button"
-          onClick={() => {
-            setPreviewModeForSession(currentSessionKey, 'browser');
-            setPreviewSidebarCollapsed(false);
-          }}
-          className="rounded-md border border-border/80 bg-background px-3 py-1.5 text-xs text-foreground/75 transition-colors hover:bg-secondary"
-        >
-          打开 Browser Co-Pilot 侧栏
-        </button>
-      </div>
-    );
-  };
-
   const renderComposer = (landing: boolean) => (
     <form
       onSubmit={handleSubmit}
@@ -1921,7 +1901,6 @@ export function ChatView() {
                 <p className="mt-3 text-base text-foreground/55">7x24 小时帮你干活的全场景个人助理 Agent</p>
               </div>
 
-              {renderBrowserCopilotQuickEntry()}
               {renderComposer(true)}
 
               <section className="mt-10">
@@ -2022,7 +2001,6 @@ export function ChatView() {
           </div>
 
           <div className="p-4 pt-3">
-            {renderBrowserCopilotQuickEntry()}
             {renderComposer(false)}
             {terminalVisible && (
               <Suspense
