@@ -4,6 +4,14 @@
 
 ### 变更
 
+#### 预览侧栏 UI 微调：切换图标、Tab 激活态、冗余标题清理
+- **变更**：
+  - 左上角侧栏按钮改为更明确的“侧栏收起/展开”切换图标（统一 toggle 语义）。
+  - “文件预览 / Browser Co-Pilot”Tab 激活态增强（高对比底色与前景色），提升可见性。
+  - 移除 Tab 下方冗余副标题文案（“浏览器协作面板”与对应文件模式副标题）。
+- **位置**：`electron/src/renderer/components/FilePreviewSidebar.tsx`。
+- **验证**：`cd electron && npm run build`、`make build`。
+
 #### 调整 Browser Co-Pilot 入口到右上角侧栏图标位
 - **变更**：预览侧栏折叠状态下新增 Browser Co-Pilot 小图标入口（位于文件预览图标下方）；点击后直接展开右侧栏并切换到 Browser Co-Pilot。聊天输入区不再显示“打开 Browser Co-Pilot 侧栏”按钮，入口统一到右上角侧栏位。
 - **位置**：`electron/src/renderer/components/FilePreviewSidebar.tsx`、`electron/src/renderer/views/ChatView.tsx`。

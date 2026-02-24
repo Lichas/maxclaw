@@ -46,7 +46,7 @@ export function FilePreviewSidebar({
   onToggle,
   onResize,
   onOpenFile,
-  imageAssist
+  imageAssist,
 }: FilePreviewSidebarProps) {
   const startResize = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -80,7 +80,7 @@ export function FilePreviewSidebar({
           title="展开预览栏"
           aria-label="Expand preview sidebar"
         >
-          <PanelOpenIcon className="h-4 w-4" />
+          <SidebarToggleIcon className="h-4 w-4" collapsed />
         </button>
         {browserAvailable && onModeChange && (
           <button
@@ -110,6 +110,7 @@ export function FilePreviewSidebar({
         title="拖拽调整预览栏宽度"
         aria-hidden="true"
       />
+
       <header className="flex items-center gap-2 border-b border-border/60 px-3 py-2">
         <button
           onClick={onToggle}
@@ -117,16 +118,17 @@ export function FilePreviewSidebar({
           title="收起预览栏"
           aria-label="Collapse preview sidebar"
         >
-          <PanelCloseIcon className="h-4 w-4" />
+          <SidebarToggleIcon className="h-4 w-4" />
         </button>
+
         <div className="min-w-0 flex-1">
           {browserAvailable && onModeChange ? (
-            <div className="inline-flex rounded-md border border-border/80 bg-background p-0.5">
+            <div className="inline-flex rounded-lg border border-border/80 bg-secondary/40 p-1">
               <button
                 type="button"
                 onClick={() => onModeChange('file')}
                 className={`rounded px-2 py-1 text-[11px] transition-colors ${
-                  mode === 'file' ? 'bg-secondary text-foreground' : 'text-foreground/65 hover:bg-secondary/60'
+                  mode === 'file' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-foreground/70 hover:bg-background/80'
                 }`}
               >
                 文件预览
@@ -135,7 +137,9 @@ export function FilePreviewSidebar({
                 type="button"
                 onClick={() => onModeChange('browser')}
                 className={`rounded px-2 py-1 text-[11px] transition-colors ${
-                  mode === 'browser' ? 'bg-secondary text-foreground' : 'text-foreground/65 hover:bg-secondary/60'
+                  mode === 'browser'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-foreground/70 hover:bg-background/80'
                 }`}
               >
                 Browser Co-Pilot
@@ -144,10 +148,8 @@ export function FilePreviewSidebar({
           ) : (
             <p className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/55">文件预览</p>
           )}
-          <p className="truncate text-sm text-foreground">
-            {mode === 'browser' ? '浏览器协作面板' : selected ? selected.displayName : '未选择文件'}
-          </p>
         </div>
+
         {mode === 'file' && selected && (
           <button
             onClick={onOpenFile}
@@ -169,32 +171,30 @@ export function FilePreviewSidebar({
           )
         ) : (
           <>
-        {loading && (
-          <div className="rounded-xl border border-border/70 bg-card/70 px-3 py-4 text-sm text-foreground/65">
-            正在渲染预览...
-          </div>
-        )}
+            {loading && (
+              <div className="rounded-xl border border-border/70 bg-card/70 px-3 py-4 text-sm text-foreground/65">正在渲染预览...</div>
+            )}
 
-        {!loading && !selected && (
-          <div className="rounded-xl border border-dashed border-border/80 bg-card/60 px-3 py-4 text-sm text-foreground/60">
-            点击聊天消息中的文件按钮，在这里查看预览。
-          </div>
-        )}
+            {!loading && !selected && (
+              <div className="rounded-xl border border-dashed border-border/80 bg-card/60 px-3 py-4 text-sm text-foreground/60">
+                点击聊天消息中的文件按钮，在这里查看预览。
+              </div>
+            )}
 
-        {!loading && selected && preview && !preview.success && (
-          <div className="rounded-xl border border-red-400/45 bg-red-500/10 px-3 py-4 text-sm text-red-400">
-            预览失败: {preview.error || '未知错误'}
-          </div>
-        )}
+            {!loading && selected && preview && !preview.success && (
+              <div className="rounded-xl border border-red-400/45 bg-red-500/10 px-3 py-4 text-sm text-red-400">
+                预览失败: {preview.error || '未知错误'}
+              </div>
+            )}
 
-        {!loading && selected && preview && preview.success && (
-          <div className="space-y-3">
-            <div className="inline-flex rounded-full bg-secondary px-2 py-1 text-[11px] uppercase tracking-wide text-foreground/60">
-              {preview.kind || selected.kind}
-            </div>
-            <FilePreviewBody preview={preview} imageAssist={imageAssist} />
-          </div>
-        )}
+            {!loading && selected && preview && preview.success && (
+              <div className="space-y-3">
+                <div className="inline-flex rounded-full bg-secondary px-2 py-1 text-[11px] uppercase tracking-wide text-foreground/60">
+                  {preview.kind || selected.kind}
+                </div>
+                <FilePreviewBody preview={preview} imageAssist={imageAssist} />
+              </div>
+            )}
           </>
         )}
       </div>
@@ -204,7 +204,7 @@ export function FilePreviewSidebar({
 
 function FilePreviewBody({
   preview,
-  imageAssist
+  imageAssist,
 }: {
   preview: PreviewPayload;
   imageAssist?: FilePreviewSidebarProps['imageAssist'];
@@ -231,9 +231,7 @@ function FilePreviewBody({
         <img
           src={preview.fileUrl}
           alt="preview"
-          className={`max-h-[75vh] w-full rounded-md object-contain ${
-            imageAssist?.enabled ? 'cursor-crosshair ring-1 ring-primary/35' : ''
-          }`}
+          className={`max-h-[75vh] w-full rounded-md object-contain ${imageAssist?.enabled ? 'cursor-crosshair ring-1 ring-primary/35' : ''}`}
           onClick={(event) => {
             if (!imageAssist?.enabled || !imageAssist.onImageClick || imageAssist.busy) {
               return;
@@ -251,9 +249,7 @@ function FilePreviewBody({
           }}
         />
         {imageAssist?.enabled && (
-          <p className="mt-2 text-[11px] text-foreground/55">
-            {imageAssist.hint || '点击截图可把坐标回传给 browser 工具执行点击。'}
-          </p>
+          <p className="mt-2 text-[11px] text-foreground/55">{imageAssist.hint || '点击截图可把坐标回传给 browser 工具执行点击。'}</p>
         )}
       </div>
     );
@@ -290,20 +286,16 @@ function FilePreviewBody({
   );
 }
 
-function PanelOpenIcon({ className }: { className?: string }) {
+function SidebarToggleIcon({ className, collapsed = false }: { className?: string; collapsed?: boolean }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <rect x={3} y={4} width={18} height={16} rx={2.5} strokeWidth={1.7} />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M11 4v16m3-8h4" />
-    </svg>
-  );
-}
-
-function PanelCloseIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x={3} y={4} width={18} height={16} rx={2.5} strokeWidth={1.7} />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M13 4v16m3-8h-4" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M9 4v16" />
+      {collapsed ? (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M15 9l-3 3 3 3" />
+      ) : (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M12 9l3 3-3 3" />
+      )}
     </svg>
   );
 }
