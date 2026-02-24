@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 
 	"github.com/Lichas/maxclaw/internal/bus"
@@ -490,4 +491,47 @@ func TestProcessDirectWithSkillsUsesOnlySelectedSkills(t *testing.T) {
 	require.Len(t, sess.Messages, 2)
 	assert.Equal(t, "hello", strings.TrimSpace(sess.Messages[0].Content))
 	assert.NotContains(t, sess.Messages[0].Content, "@skill:")
+}
+
+func TestAgentLoop_PlanManagerIntegration(t *testing.T) {
+	tmpDir := t.TempDir()
+	pm := NewPlanManager(tmpDir)
+	sessionKey := "test:session"
+
+	// Test plan creation and saving
+	plan := CreatePlan("test goal")
+	plan.AddStep("step 1")
+	plan.Steps[0].Status = StepStatusRunning
+	now := time.Now()
+	plan.Steps[0].StartedAt = &now
+
+	err := pm.Save(sessionKey, plan)
+	if err != nil {
+		t.Fatalf("failed to save plan: %v", err)
+	}
+
+	// Verify plan can be loaded
+	loaded, err := pm.Load(sessionKey)
+	if err != nil {
+		t.Fatalf("failed to load plan: %v", err)
+	}
+
+	if loaded.Goal != "test goal" {
+		t.Errorf("expected goal 'test goal', got %s", loaded.Goal)
+	}
+
+	// Test Exists
+	if !pm.Exists(sessionKey) {
+		t.Error("expected plan to exist")
+	}
+
+	// Test Delete
+	err = pm.Delete(sessionKey)
+	if err != nil {
+		t.Fatalf("failed to delete plan: %v", err)
+	}
+
+	if pm.Exists(sessionKey) {
+		t.Error("expected plan to not exist after delete")
+	}
 }

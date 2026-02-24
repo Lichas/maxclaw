@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added
+- File-based planning system for complex multi-step tasks
+  - Auto-create plan on first tool call
+  - Step tracking with progress indicators
+  - Pause/resume on iteration limit with "继续" command
+  - Plan persisted per-session in ~/.maxclaw/workspace/.sessions/{session}/plan.json
+
 ### 变更
 
 #### 修复切换渠道时会话列表未正确隔离的问题
