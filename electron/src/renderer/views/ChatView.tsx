@@ -140,7 +140,7 @@ export function ChatView() {
   const dispatch = useDispatch();
   const { currentSessionKey, sidebarCollapsed, terminalVisible } = useSelector((state: RootState) => state.ui);
   const isMac = window.electronAPI.platform.isMac;
-  const { sendMessage, getSession, getSessions, getSkills, getModels, getConfig, updateConfig, isLoading } = useGateway();
+  const { sendMessage, getSession, getSessions, getSkills, getModels, getConfig, updateConfig } = useGateway();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionTitle, setSessionTitle] = useState('New thread');
@@ -164,9 +164,9 @@ export function ChatView() {
   // File attachments state
   const [attachedFiles, setAttachedFiles] = useState<UploadedFile[]>([]);
 
-  // Interrupt state scoped to active session.
-  const [generatingSessionKey, setGeneratingSessionKey] = useState<string | null>(null);
-  const [interruptHintSessionKey, setInterruptHintSessionKey] = useState<string | null>(null);
+  // Interrupt state scoped by session.
+  const [generatingSessions, setGeneratingSessions] = useState<Record<string, boolean>>({});
+  const [interruptHintSessions, setInterruptHintSessions] = useState<Record<string, boolean>>({});
 
   // @mention skills state
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -262,11 +262,10 @@ export function ChatView() {
   const streamingTimelineRef = useRef<TimelineEntry[]>([]);
   const previewRequestRef = useRef(0);
   const currentSessionKeyRef = useRef(currentSessionKey);
-  const activeStreamSessionRef = useRef<string | null>(null);
 
   const input = inputBySession[currentSessionKey] || '';
-  const isGenerating = generatingSessionKey === currentSessionKey;
-  const interruptHintVisible = interruptHintSessionKey === currentSessionKey;
+  const isGenerating = Boolean(generatingSessions[currentSessionKey]);
+  const interruptHintVisible = Boolean(interruptHintSessions[currentSessionKey]);
 
   const isStarterMode = messages.length === 0 && streamingTimeline.length === 0;
 
@@ -286,6 +285,40 @@ export function ChatView() {
   const clearInputForSession = (sessionKey: string) => {
     setInputBySession((prev) => {
       if (!(sessionKey in prev)) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[sessionKey];
+      return next;
+    });
+  };
+
+  const setSessionGenerating = (sessionKey: string, value: boolean) => {
+    setGeneratingSessions((prev) => {
+      if (value) {
+        if (prev[sessionKey]) {
+          return prev;
+        }
+        return { ...prev, [sessionKey]: true };
+      }
+      if (!prev[sessionKey]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[sessionKey];
+      return next;
+    });
+  };
+
+  const setSessionInterruptHint = (sessionKey: string, value: boolean) => {
+    setInterruptHintSessions((prev) => {
+      if (value) {
+        if (prev[sessionKey]) {
+          return prev;
+        }
+        return { ...prev, [sessionKey]: true };
+      }
+      if (!prev[sessionKey]) {
         return prev;
       }
       const next = { ...prev };
@@ -875,20 +908,19 @@ export function ChatView() {
       // Show feedback toast
       showToast(mode === 'cancel' ? '已发送打断请求' : '已补充上下文');
       // Reset interrupt hint
-      setInterruptHintSessionKey((prev) => (prev === currentSessionKey ? null : prev));
+      setSessionInterruptHint(currentSessionKey, false);
     }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!input.trim() || isLoading) {
+    if (!input.trim() || isGenerating) {
       return;
     }
     const requestSessionKey = currentSessionKey;
-    activeStreamSessionRef.current = requestSessionKey;
     setPreviewSidebarCollapsed(true);
-    setGeneratingSessionKey(requestSessionKey);
-    setInterruptHintSessionKey(requestSessionKey);
+    setSessionGenerating(requestSessionKey, true);
+    setSessionInterruptHint(requestSessionKey, true);
 
     const userMessage: Message = {
       id: `${Date.now()}`,
@@ -916,18 +948,12 @@ export function ChatView() {
         userMessage.content,
         requestSessionKey,
         (delta) => {
-          if (activeStreamSessionRef.current !== requestSessionKey) {
-            return;
-          }
           assistantContent += delta;
           if (currentSessionKeyRef.current === requestSessionKey) {
             enqueueTyping(delta);
           }
         },
         (event) => {
-          if (activeStreamSessionRef.current !== requestSessionKey) {
-            return;
-          }
           if (currentSessionKeyRef.current !== requestSessionKey) {
             return;
           }
@@ -943,9 +969,6 @@ export function ChatView() {
 
       if (result.sessionKey && result.sessionKey !== requestSessionKey) {
         dispatch(setCurrentSessionKey(result.sessionKey));
-      }
-      if (activeStreamSessionRef.current !== requestSessionKey) {
-        return;
       }
 
       if (!assistantContent && result.response) {
@@ -973,16 +996,13 @@ export function ChatView() {
           }
         ]);
         setPreviewSidebarCollapsed(true);
+        resetTypingState();
       }
-      resetTypingState();
     } catch (err) {
-      if (activeStreamSessionRef.current !== requestSessionKey) {
-        return;
-      }
       const errorTimeline = streamingTimelineRef.current.length > 0 ? [...streamingTimelineRef.current] : undefined;
       const durationMs = Date.now() - startTime;
-      resetTypingState();
       if (currentSessionKeyRef.current === requestSessionKey) {
+        resetTypingState();
         setMessages((prev) => [
           ...prev,
           {
@@ -997,11 +1017,8 @@ export function ChatView() {
         setPreviewSidebarCollapsed(true);
       }
     } finally {
-      if (activeStreamSessionRef.current === requestSessionKey) {
-        activeStreamSessionRef.current = null;
-      }
-      setGeneratingSessionKey((prev) => (prev === requestSessionKey ? null : prev));
-      setInterruptHintSessionKey((prev) => (prev === requestSessionKey ? null : prev));
+      setSessionGenerating(requestSessionKey, false);
+      setSessionInterruptHint(requestSessionKey, false);
     }
   };
 
@@ -1328,7 +1345,7 @@ export function ChatView() {
             onChange={handleModelChange}
             options={modelOptions}
             placeholder="选择模型..."
-            disabled={modelsLoading || isLoading}
+            disabled={modelsLoading || isGenerating}
             size="sm"
             className="w-[220px] max-w-full"
             triggerClassName="bg-secondary"
@@ -1343,7 +1360,7 @@ export function ChatView() {
               attachedFiles={attachedFiles}
               onFilesUploaded={(files) => setAttachedFiles((prev) => [...prev, ...files])}
               onRemoveFile={(id) => setAttachedFiles((prev) => prev.filter((f) => f.id !== id))}
-              disabled={isLoading}
+              disabled={isGenerating}
             />
             <button
               type="button"
@@ -1438,7 +1455,7 @@ export function ChatView() {
         ) : (
           <button
             type="submit"
-            disabled={!input.trim() || isLoading}
+            disabled={!input.trim() || isGenerating}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <SendIcon className="h-4 w-4" />

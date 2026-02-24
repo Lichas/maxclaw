@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 修复长任务并发时会话列表丢失与新会话发送被锁
+- **变更**：修复聊天页并发会话状态管理，发送按钮不再被其他会话的进行中请求全局锁死；侧栏新增本地草稿会话合并逻辑，避免长任务未落盘前在切换新任务后从列表消失；Agent 在执行前先落盘用户消息，确保进行中会话可被后端会话列表及时看到。
+- **位置**：`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/components/Sidebar.tsx`、`internal/agent/loop.go`。
+- **验证**：`cd electron && npm run build`、`go test ./internal/agent -run 'TestAgentLoopProcessDirectEventStreamEmitsStructuredEvents|TestAgentLoopProcessDirectUsesProvidedSessionKey'`、`make build`。
+
 #### 修复聊天界面会话切换时串流状态与输入框串联
 - **变更**：聊天页将输入草稿按 `sessionKey` 存储；将“生成中/打断提示”状态按会话隔离；并为流式回调增加会话守卫，避免旧会话请求在切换后污染当前会话渲染与打断按钮状态。
 - **位置**：`electron/src/renderer/views/ChatView.tsx`。

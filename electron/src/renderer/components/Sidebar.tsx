@@ -26,6 +26,7 @@ export function Sidebar() {
   const { getSessions, deleteSession, renameSession } = useGateway();
   const isMac = window.electronAPI.platform.isMac;
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
+  const [draftSessions, setDraftSessions] = useState<Record<string, SessionSummary>>({});
   const [channelFilter, setChannelFilter] = useState<string>('desktop');
 
   // Delete/Rename state
@@ -72,9 +73,20 @@ export function Sidebar() {
 
   const confirmDelete = async () => {
     if (!sessionToDelete) return;
+    const isDraftOnly = Boolean(draftSessions[sessionToDelete]) && !sessions.some((s) => s.key === sessionToDelete);
     try {
-      await deleteSession(sessionToDelete);
+      if (!isDraftOnly) {
+        await deleteSession(sessionToDelete);
+      }
       setSessions((prev) => prev.filter((s) => s.key !== sessionToDelete));
+      setDraftSessions((prev) => {
+        if (!prev[sessionToDelete]) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[sessionToDelete];
+        return next;
+      });
       if (currentSessionKey === sessionToDelete) {
         dispatch(setCurrentSessionKey(''));
       }
@@ -97,13 +109,21 @@ export function Sidebar() {
       setEditingSession(null);
       return;
     }
+    const isDraftOnly = Boolean(draftSessions[editingSession]) && !sessions.some((s) => s.key === editingSession);
     try {
-      await renameSession(editingSession, editTitle.trim());
-      setSessions((prev) =>
-        prev.map((s) =>
-          s.key === editingSession ? { ...s, lastMessage: editTitle.trim() } : s
-        )
-      );
+      if (!isDraftOnly) {
+        await renameSession(editingSession, editTitle.trim());
+      }
+      setSessions((prev) => prev.map((s) => (s.key === editingSession ? { ...s, lastMessage: editTitle.trim() } : s)));
+      setDraftSessions((prev) => {
+        if (!prev[editingSession]) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [editingSession]: { ...prev[editingSession], lastMessage: editTitle.trim() }
+        };
+      });
     } catch {
       alert(t('common.error'));
     }
@@ -119,6 +139,20 @@ export function Sidebar() {
         const list = await getSessions();
         if (!cancelled) {
           setSessions(list);
+          setDraftSessions((prev) => {
+            if (Object.keys(prev).length === 0) {
+              return prev;
+            }
+            const next = { ...prev };
+            let changed = false;
+            for (const item of list) {
+              if (next[item.key]) {
+                delete next[item.key];
+                changed = true;
+              }
+            }
+            return changed ? next : prev;
+          });
         }
       } catch {
         if (!cancelled) {
@@ -137,12 +171,25 @@ export function Sidebar() {
   }, [getSessions]);
 
   const mergedSessions = useMemo(() => {
+    const mergedMap = new Map<string, SessionSummary>();
+    Object.values(draftSessions).forEach((session) => {
+      mergedMap.set(session.key, session);
+    });
+    sessions.forEach((session) => {
+      mergedMap.set(session.key, session);
+    });
+
     const currentChannel = extractSessionChannel(currentSessionKey);
-    if (!sessions.some((session) => session.key === currentSessionKey) && currentChannel === 'desktop') {
-      return [buildDraftSession(currentSessionKey), ...sessions];
+    if (!mergedMap.has(currentSessionKey) && currentChannel === 'desktop') {
+      mergedMap.set(currentSessionKey, buildDraftSession(currentSessionKey));
     }
-    return sessions;
-  }, [sessions, currentSessionKey]);
+
+    return Array.from(mergedMap.values()).sort((a, b) => {
+      const ta = a.lastMessageAt ? Date.parse(a.lastMessageAt) : 0;
+      const tb = b.lastMessageAt ? Date.parse(b.lastMessageAt) : 0;
+      return tb - ta;
+    });
+  }, [sessions, draftSessions, currentSessionKey]);
 
   const channelOptions = useMemo(() => {
     const defaultOptions = [...DEFAULT_CHANNEL_ORDER];
@@ -176,7 +223,19 @@ export function Sidebar() {
 
   const handleNewTask = () => {
     const newSessionKey = `desktop:${Date.now()}`;
-    setSessions((prev) => [buildDraftSession(newSessionKey), ...prev.filter((session) => session.key !== newSessionKey)]);
+    setDraftSessions((prev) => {
+      const next = { ...prev };
+      if (
+        currentSessionKey &&
+        extractSessionChannel(currentSessionKey) === 'desktop' &&
+        !sessions.some((session) => session.key === currentSessionKey) &&
+        !next[currentSessionKey]
+      ) {
+        next[currentSessionKey] = buildDraftSession(currentSessionKey);
+      }
+      next[newSessionKey] = buildDraftSession(newSessionKey);
+      return next;
+    });
     setChannelFilter('desktop');
     dispatch(setCurrentSessionKey(newSessionKey));
     dispatch(setActiveTab('chat'));

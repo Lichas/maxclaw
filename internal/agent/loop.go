@@ -256,7 +256,6 @@ func (h *streamHandler) GetToolCalls() []providers.ToolCall {
 	return h.toolCalls
 }
 
-
 func (a *AgentLoop) runtimeSnapshot() (providers.LLMProvider, string) {
 	a.runtimeMu.RLock()
 	defer a.runtimeMu.RUnlock()
@@ -405,6 +404,15 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 			msg.ChatID,
 			"maxclaw commands:\n/new - Start a new conversation\n/help - Show available commands",
 		), nil
+	}
+
+	// Persist user input before long-running model execution so session list
+	// can reflect in-flight conversations immediately.
+	sess.AddMessage("user", msg.Content)
+	if err := a.sessions.Save(sess); err != nil {
+		if lg := logging.Get(); lg != nil && lg.Session != nil {
+			lg.Session.Printf("save user message failed: %v", err)
+		}
 	}
 
 	// 获取历史记录并转换为 providers.Message
@@ -568,7 +576,6 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 	}
 
 	// 保存到会话
-	sess.AddMessage("user", msg.Content)
 	if len(timeline) > 0 {
 		sess.AddMessageWithTimeline("assistant", finalContent, timeline)
 	} else {
