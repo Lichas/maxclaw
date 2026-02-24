@@ -10,7 +10,7 @@ export interface FileReference {
 
 const markdownLinkPattern = /\[[^\]]+]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 const codePathPattern = /`([^`\n]+)`/g;
-const barePathPattern = /(?:^|[\s(])([~./\\\w-][^\s`"'<>|]+?\.[A-Za-z0-9]{1,10})(?=$|[\s),.;])/g;
+const barePathPattern = /(?:^|[\s(])((?:\.{1,2}\/|~\/|\/)?[^\s`"'<>|]+?\.[A-Za-z0-9]{1,10})(?=$|[\s),.;])/g;
 
 const markdownExtensions = new Set(['.md', '.markdown', '.mdown']);
 const textExtensions = new Set([
@@ -130,7 +130,7 @@ function isLocalCandidate(input: string): boolean {
   if (input.includes('/') || input.includes('\\') || input.startsWith('~')) {
     return true;
   }
-  return /^[\w.-]+\.[A-Za-z0-9]{1,10}$/.test(input);
+  return extensionFromPath(input) !== '';
 }
 
 function collect(pattern: RegExp, content: string, out: Set<string>): void {
@@ -183,4 +183,3 @@ export function extractFileReferences(content: string): FileReference[] {
 
   return refs;
 }
-

@@ -460,7 +460,7 @@ export function ChatView() {
     });
 
     refsToCheck.forEach((reference, key) => {
-      if (existingFileRefs[key] !== undefined || pendingFileRefChecksRef.current.has(key)) {
+      if (existingFileRefs[key] === true || pendingFileRefChecksRef.current.has(key)) {
         return;
       }
       pendingFileRefChecksRef.current.add(key);
