@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 修复 browser/web_fetch 缺少 Playwright 依赖时直接崩溃
+- **变更**：为 Node 浏览器脚本执行增加依赖自愈逻辑：检测到 `playwright` 模块缺失时自动在 `webfetcher` 目录执行 `npm ci`（无 lockfile 则 `npm install`）并重试一次；失败时返回可操作错误提示（包含 `make webfetch-install` 建议）。
+- **位置**：`pkg/tools/playwright_deps.go`、`pkg/tools/browser.go`、`pkg/tools/web.go`、`pkg/tools/playwright_deps_test.go`。
+- **验证**：`go test ./pkg/tools -run 'TestIsPlaywrightMissingModuleError|TestPlaywrightInstallArgs|TestBrowserOptionsFromWebFetch|TestNormalizeBrowserToolOptionsDefaults|TestBrowserSessionID'`、`make build`。
+
 #### 修复长任务并发时会话列表丢失与新会话发送被锁
 - **变更**：修复聊天页并发会话状态管理，发送按钮不再被其他会话的进行中请求全局锁死；侧栏新增本地草稿会话合并逻辑，避免长任务未落盘前在切换新任务后从列表消失；Agent 在执行前先落盘用户消息，确保进行中会话可被后端会话列表及时看到。
 - **位置**：`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/components/Sidebar.tsx`、`internal/agent/loop.go`。

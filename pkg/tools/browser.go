@@ -1,12 +1,10 @@
 package tools
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -210,19 +208,9 @@ func (t *BrowserTool) Execute(ctx context.Context, params map[string]interface{}
 		return "", fmt.Errorf("failed to encode browser request: %w", err)
 	}
 
-	cmd := exec.CommandContext(ctx, nodePath, scriptPath)
-	cmd.Stdin = bytes.NewReader(payload)
-	cmd.Env = append(os.Environ(), "PLAYWRIGHT_BROWSERS_PATH=0")
-
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	output, err := cmd.Output()
+	output, err := runNodeScriptWithPlaywrightRetry(ctx, nodePath, scriptPath, payload)
 	if err != nil {
-		out := strings.TrimSpace(stderr.String())
-		if out == "" {
-			out = err.Error()
-		}
-		return "", fmt.Errorf("browser command failed: %s", out)
+		return "", fmt.Errorf("browser command failed: %s", err)
 	}
 
 	var result browserToolResult

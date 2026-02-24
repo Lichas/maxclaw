@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -311,19 +309,9 @@ func (t *WebFetchTool) executeBrowserFetch(ctx context.Context, fetchURL string,
 		return "", fmt.Errorf("failed to encode browser fetch request: %w", err)
 	}
 
-	cmd := exec.CommandContext(ctx, nodePath, scriptPath)
-	cmd.Stdin = bytes.NewReader(payload)
-	cmd.Env = append(os.Environ(), "PLAYWRIGHT_BROWSERS_PATH=0")
-
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	output, err := cmd.Output()
+	output, err := runNodeScriptWithPlaywrightRetry(ctx, nodePath, scriptPath, payload)
 	if err != nil {
-		out := strings.TrimSpace(stderr.String())
-		if out == "" {
-			out = err.Error()
-		}
-		return "", fmt.Errorf("browser fetch failed: %s", out)
+		return "", fmt.Errorf("browser fetch failed: %s", err)
 	}
 
 	var result browserFetchResult
