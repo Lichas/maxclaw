@@ -247,3 +247,75 @@ func CreatePlan(goal string) *Plan {
 func generatePlanID() string {
 	return fmt.Sprintf("plan_%d", time.Now().UnixMilli())
 }
+
+// StepDetector handles detecting when a step is completed
+type StepDetector struct {
+	transitionWords      []string
+	maxIterationsPerStep int
+}
+
+// NewStepDetector creates a new StepDetector with default settings
+func NewStepDetector() *StepDetector {
+	return &StepDetector{
+		transitionWords: []string{
+			"现在", "接下来", "然后", "继续", "开始", "现在让我",
+			"next", "now", "then", "continue", "let me", "proceed",
+		},
+		maxIterationsPerStep: 10,
+	}
+}
+
+// DetectCompletion analyzes LLM output to determine if current step is complete
+func (sd *StepDetector) DetectCompletion(llmOutput string, iterationInStep int) bool {
+	// Strategy 1: Transition word detection (requires at least 2 iterations)
+	if iterationInStep >= 2 {
+		lowerOutput := strings.ToLower(llmOutput)
+		for _, word := range sd.transitionWords {
+			if strings.Contains(lowerOutput, strings.ToLower(word)) {
+				return true
+			}
+		}
+	}
+
+	// Strategy 2: Timeout fallback
+	if iterationInStep >= sd.maxIterationsPerStep {
+		return true
+	}
+
+	return false
+}
+
+// ExtractStepDeclarations extracts new step declarations from LLM output
+func ExtractStepDeclarations(content string) []string {
+	var steps []string
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// Match [Step] description or similar patterns
+		if strings.HasPrefix(line, "[Step]") {
+			desc := strings.TrimSpace(strings.TrimPrefix(line, "[Step]"))
+			if desc != "" {
+				steps = append(steps, desc)
+			}
+		}
+	}
+	return steps
+}
+
+// IsContinueIntent detects if the user wants to continue a paused task
+func IsContinueIntent(content string) bool {
+	content = strings.ToLower(strings.TrimSpace(content))
+
+	continuePatterns := []string{
+		"继续", "continue", "go on", "proceed",
+		"继续执行", "resume", "继续任务",
+	}
+
+	for _, pattern := range continuePatterns {
+		if content == pattern || strings.Contains(content, pattern) {
+			return true
+		}
+	}
+
+	return false
+}

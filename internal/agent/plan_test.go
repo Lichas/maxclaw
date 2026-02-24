@@ -95,3 +95,93 @@ func TestPlanManager_Exists(t *testing.T) {
 		t.Error("expected plan to exist")
 	}
 }
+
+func TestStepDetector_DetectCompletion(t *testing.T) {
+	sd := NewStepDetector()
+
+	tests := []struct {
+		name            string
+		output          string
+		iterationInStep int
+		wantComplete    bool
+	}{
+		{
+			name:            "transition word detected",
+			output:          "现在让我下载文件",
+			iterationInStep: 3,
+			wantComplete:    true,
+		},
+		{
+			name:            "transition word but too early",
+			output:          "现在开始下载",
+			iterationInStep: 1,
+			wantComplete:    false,
+		},
+		{
+			name:            "timeout fallback",
+			output:          "some random output",
+			iterationInStep: 10,
+			wantComplete:    true,
+		},
+		{
+			name:            "no completion",
+			output:          "still working on it",
+			iterationInStep: 3,
+			wantComplete:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := sd.DetectCompletion(tt.output, tt.iterationInStep)
+			if got != tt.wantComplete {
+				t.Errorf("DetectCompletion() = %v, want %v", got, tt.wantComplete)
+			}
+		})
+	}
+}
+
+func TestExtractStepDeclarations(t *testing.T) {
+	content := `
+I'll help you with this task.
+[Step] Download the PDF files
+[Step] Extract financial data
+[Step] Create charts
+Let's start.
+`
+
+	steps := ExtractStepDeclarations(content)
+	if len(steps) != 3 {
+		t.Errorf("expected 3 steps, got %d", len(steps))
+	}
+
+	expected := []string{"Download the PDF files", "Extract financial data", "Create charts"}
+	for i, exp := range expected {
+		if steps[i] != exp {
+			t.Errorf("step %d: expected %q, got %q", i, exp, steps[i])
+		}
+	}
+}
+
+func TestIsContinueIntent(t *testing.T) {
+	tests := []struct {
+		content string
+		want    bool
+	}{
+		{"继续", true},
+		{"continue", true},
+		{"请继续执行", true},
+		{"resume", true},
+		{"好的", false},
+		{"hello", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.content, func(t *testing.T) {
+			got := IsContinueIntent(tt.content)
+			if got != tt.want {
+				t.Errorf("IsContinueIntent(%q) = %v, want %v", tt.content, got, tt.want)
+			}
+		})
+	}
+}
