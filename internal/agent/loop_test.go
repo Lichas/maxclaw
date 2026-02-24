@@ -326,7 +326,7 @@ func TestAgentLoopProcessMessageMaxIterationFallback(t *testing.T) {
 	resp, err := loop.ProcessMessage(context.Background(), msg)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
-	assert.Equal(t, "Reached 2 iterations without completion.", resp.Content)
+	assert.Contains(t, resp.Content, "Reached 2 iterations without completion.")
 }
 
 func TestAgentLoopProcessMessageAutoConsolidatesWhenSessionLarge(t *testing.T) {

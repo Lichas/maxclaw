@@ -374,6 +374,17 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 	// 获取或创建会话
 	sess := a.sessions.GetOrCreate(msg.SessionKey)
 
+	// Load existing plan or check for continue intent
+	plan, _ := a.PlanManager.Load(msg.SessionKey)
+	if plan != nil && plan.Status == PlanStatusPaused && IsContinueIntent(msg.Content) {
+		plan.Status = PlanStatusRunning
+		a.PlanManager.Save(msg.SessionKey, plan)
+
+		// Inject plan summary into user message
+		summary := plan.GenerateProgressSummary()
+		msg.Content = fmt.Sprintf("[恢复任务]\n%s\n\n用户指令: %s", summary, msg.Content)
+	}
+
 	// 检查并处理待处理的补充消息
 	pendingAppends := ic.GetPendingAppends()
 	if len(pendingAppends) > 0 {
@@ -423,7 +434,14 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 
 	// 构建消息
 	selectedSkillRefs := normalizeSkillRefs(msg.SelectedSkills)
-	messages := a.context.BuildMessagesWithSkillRefs(history, msg.Content, selectedSkillRefs, msg.Media, msg.Channel, msg.ChatID)
+
+	// Build messages with plan context if exists
+	var messages []providers.Message
+	if plan != nil && plan.Status == PlanStatusRunning {
+		messages = a.context.BuildMessagesWithPlanAndSkillRefs(history, msg.Content, selectedSkillRefs, msg.Media, msg.Channel, msg.ChatID, plan)
+	} else {
+		messages = a.context.BuildMessagesWithSkillRefs(history, msg.Content, selectedSkillRefs, msg.Media, msg.Channel, msg.ChatID)
+	}
 
 	// Agent 循环
 	var finalContent string
@@ -436,6 +454,9 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 			Message: fmt.Sprintf("Using model: %s", activeModel),
 		})
 	}
+
+	stepDetector := NewStepDetector()
+	iterationsInCurrentStep := 0
 
 	for i := 0; i < a.MaxIterations; i++ {
 		iteration := i + 1
@@ -492,6 +513,15 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 
 		content := handler.GetContent()
 		toolCalls := handler.GetToolCalls()
+
+		// Create plan on first tool call if not exists
+		if plan == nil && len(toolCalls) > 0 && i == 0 {
+			plan = CreatePlan(msg.Content)
+			a.PlanManager.Save(msg.SessionKey, plan)
+
+			// Rebuild messages with plan context
+			messages = a.context.BuildMessagesWithPlanAndSkillRefs(history, msg.Content, selectedSkillRefs, msg.Media, msg.Channel, msg.ChatID, plan)
+		}
 
 		// 处理工具调用
 		if len(toolCalls) > 0 {
@@ -553,10 +583,36 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 
 				messages = a.context.AddToolResult(messages, tc.ID, tc.Function.Name, result)
 			}
+
+			// After tool execution, update plan
+			if plan != nil && plan.Status == PlanStatusRunning {
+				plan.IterationCount++
+
+				// Check for step declarations in LLM output
+				newSteps := ExtractStepDeclarations(content)
+				for _, desc := range newSteps {
+					plan.AddStep(desc)
+				}
+
+				// Check if current step is complete
+				if stepDetector.DetectCompletion(content, iterationsInCurrentStep) {
+					result := summarizeTimeline(timeline)
+					plan.CompleteCurrentStep(result)
+					iterationsInCurrentStep = 0
+				} else {
+					iterationsInCurrentStep++
+				}
+
+				a.PlanManager.Save(msg.SessionKey, plan)
+			}
 		} else {
 			// 没有工具调用，结束循环
 			finalContent = content
 			maxIterationReached = false
+			if plan != nil && plan.Status == PlanStatusRunning {
+				plan.Status = PlanStatusCompleted
+				a.PlanManager.Save(msg.SessionKey, plan)
+			}
 			emitEvent(StreamEvent{
 				Type:      "status",
 				Iteration: iteration,
@@ -569,6 +625,15 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 	if finalContent == "" {
 		if maxIterationReached {
 			finalContent = fmt.Sprintf("Reached %d iterations without completion.", a.MaxIterations)
+
+			// Pause plan if exists
+			if plan != nil && plan.Status == PlanStatusRunning {
+				plan.Status = PlanStatusPaused
+				a.PlanManager.Save(msg.SessionKey, plan)
+
+				summary := plan.GenerateProgressSummary()
+				finalContent += fmt.Sprintf("\n\n%s\n\n输入'继续'以恢复执行。", summary)
+			}
 		} else {
 			finalContent = "I've completed processing but have no response to give."
 		}
@@ -595,6 +660,23 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 	a.sessions.Save(sess)
 
 	return bus.NewOutboundMessage(msg.Channel, msg.ChatID, finalContent), nil
+}
+
+// summarizeTimeline extracts a summary from timeline entries
+func summarizeTimeline(timeline []session.TimelineEntry) string {
+	var summaries []string
+	for _, entry := range timeline {
+		if entry.Kind == "activity" && entry.Activity != nil {
+			if entry.Activity.Type == "tool_result" {
+				summaries = append(summaries, entry.Activity.Summary)
+			}
+		}
+	}
+	// Return last 3 tool results as summary
+	if len(summaries) > 3 {
+		summaries = summaries[len(summaries)-3:]
+	}
+	return strings.Join(summaries, "; ")
 }
 
 // UpdateRuntimeModel updates the active provider/model used by new requests.
