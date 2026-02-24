@@ -636,6 +636,33 @@ func (a *AgentLoop) ProcessDirectWithSkills(
 	return resp.Content, nil
 }
 
+// ExecuteToolWithSession executes one tool call with explicit runtime context.
+func (a *AgentLoop) ExecuteToolWithSession(
+	ctx context.Context,
+	toolName string,
+	params map[string]interface{},
+	sessionKey, channel, chatID string,
+) (string, error) {
+	if strings.TrimSpace(toolName) == "" {
+		return "", fmt.Errorf("tool name is required")
+	}
+	if params == nil {
+		params = map[string]interface{}{}
+	}
+	if strings.TrimSpace(sessionKey) == "" {
+		sessionKey = "webui:default"
+	}
+	if strings.TrimSpace(channel) == "" {
+		channel = "desktop"
+	}
+	if strings.TrimSpace(chatID) == "" {
+		chatID = sessionKey
+	}
+
+	toolCtx := tools.WithRuntimeContextWithSession(ctx, channel, chatID, sessionKey)
+	return a.tools.Execute(toolCtx, toolName, params)
+}
+
 // ProcessDirectStream 直接处理消息并按 delta 回调流式输出。
 func (a *AgentLoop) ProcessDirectStream(
 	ctx context.Context,

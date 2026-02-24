@@ -57,6 +57,7 @@
    - 返回内容会包含 `[ref]` 引用（可点击/可输入元素）
 3. 执行动作
    - 点击：`action="act", act="click", ref=12`
+   - 坐标点击（人机协作）：`action="act", act="click_xy", x=640, y=360`
    - 输入：`action="act", act="type", ref=5, text="OpenAI"`
    - 回车：`action="act", act="press", ref=5, key="Enter"`
 4. 标签页管理（可选）
@@ -65,6 +66,15 @@
 5. 保存截图
    - `action="screenshot"`（自动路径）
    - 或 `action="screenshot", path="/absolute/path/result.png"`
+
+### 4.3 Electron Live Co-Pilot（人工协作）
+
+当任务需要你手动登录或点击验证码时：
+
+1. 在聊天页使用 Browser Co-Pilot 面板点击“打开当前页面”，在真实浏览器完成人工操作
+2. 回到聊天页点击“同步截图/抓取结构快照”同步最新状态
+3. 如需精确接管，可直接在右侧截图预览上点击目标位置（会回传坐标执行 `click_xy` 并自动刷新截图）
+4. 点击“插入继续指令”后发送，让 Agent 从最新页面状态继续
 
 ## 5. 会话与状态机制
 

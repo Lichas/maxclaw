@@ -21,6 +21,12 @@ interface FilePreviewSidebarProps {
   onToggle: () => void;
   onResize: (nextWidth: number) => void;
   onOpenFile: () => void;
+  imageAssist?: {
+    enabled: boolean;
+    busy?: boolean;
+    hint?: string;
+    onImageClick?: (payload: { x: number; y: number }) => void;
+  };
 }
 
 export function FilePreviewSidebar({
@@ -31,7 +37,8 @@ export function FilePreviewSidebar({
   loading,
   onToggle,
   onResize,
-  onOpenFile
+  onOpenFile,
+  imageAssist
 }: FilePreviewSidebarProps) {
   const startResize = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -126,7 +133,7 @@ export function FilePreviewSidebar({
             <div className="inline-flex rounded-full bg-secondary px-2 py-1 text-[11px] uppercase tracking-wide text-foreground/60">
               {preview.kind || selected.kind}
             </div>
-            <FilePreviewBody preview={preview} />
+            <FilePreviewBody preview={preview} imageAssist={imageAssist} />
           </div>
         )}
       </div>
@@ -134,7 +141,13 @@ export function FilePreviewSidebar({
   );
 }
 
-function FilePreviewBody({ preview }: { preview: PreviewPayload }) {
+function FilePreviewBody({
+  preview,
+  imageAssist
+}: {
+  preview: PreviewPayload;
+  imageAssist?: FilePreviewSidebarProps['imageAssist'];
+}) {
   if (preview.kind === 'markdown') {
     return (
       <div className="rounded-xl border border-border/70 bg-card/75 p-3">
@@ -154,7 +167,33 @@ function FilePreviewBody({ preview }: { preview: PreviewPayload }) {
   if (preview.kind === 'image' && preview.fileUrl) {
     return (
       <div className="overflow-hidden rounded-xl border border-border/70 bg-card/80 p-2">
-        <img src={preview.fileUrl} alt="preview" className="max-h-[75vh] w-full rounded-md object-contain" />
+        <img
+          src={preview.fileUrl}
+          alt="preview"
+          className={`max-h-[75vh] w-full rounded-md object-contain ${
+            imageAssist?.enabled ? 'cursor-crosshair ring-1 ring-primary/35' : ''
+          }`}
+          onClick={(event) => {
+            if (!imageAssist?.enabled || !imageAssist.onImageClick || imageAssist.busy) {
+              return;
+            }
+            const imageElement = event.currentTarget;
+            const rect = imageElement.getBoundingClientRect();
+            const naturalWidth = imageElement.naturalWidth || rect.width;
+            const naturalHeight = imageElement.naturalHeight || rect.height;
+            if (!rect.width || !rect.height || !naturalWidth || !naturalHeight) {
+              return;
+            }
+            const x = Math.round(((event.clientX - rect.left) / rect.width) * naturalWidth);
+            const y = Math.round(((event.clientY - rect.top) / rect.height) * naturalHeight);
+            imageAssist.onImageClick({ x, y });
+          }}
+        />
+        {imageAssist?.enabled && (
+          <p className="mt-2 text-[11px] text-foreground/55">
+            {imageAssist.hint || '点击截图可把坐标回传给 browser 工具执行点击。'}
+          </p>
+        )}
       </div>
     );
   }

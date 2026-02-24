@@ -55,6 +55,13 @@ type messageAttachment struct {
 	Path     string `json:"path,omitempty"`
 }
 
+type browserActionPayload struct {
+	SessionKey string                 `json:"sessionKey"`
+	Channel    string                 `json:"channel,omitempty"`
+	ChatID     string                 `json:"chatId,omitempty"`
+	Params     map[string]interface{} `json:"params"`
+}
+
 func NewServer(cfg *config.Config, agentLoop *agent.AgentLoop, cronService *cron.Service, registry *channels.Registry) *Server {
 	s := &Server{
 		cfg:               cfg,
@@ -84,6 +91,7 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	mux.HandleFunc("/api/skills/", s.handleSkillsPath)
 	mux.HandleFunc("/api/skills/install", s.handleSkillsInstall)
 	mux.HandleFunc("/api/message", s.handleMessage)
+	mux.HandleFunc("/api/browser/action", s.handleBrowserAction)
 	mux.HandleFunc("/api/config", s.handleConfig)
 	mux.HandleFunc("/api/gateway/restart", s.handleGatewayRestart)
 	mux.HandleFunc("/api/cron", s.handleCron)
@@ -330,6 +338,71 @@ func (s *Server) handleMessage(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]interface{}{
 		"response":   resp,
 		"sessionKey": payload.SessionKey,
+	})
+}
+
+func (s *Server) handleBrowserAction(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if s.agentLoop == nil {
+		writeError(w, fmt.Errorf("agent loop is not available"))
+		return
+	}
+
+	var payload browserActionPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeError(w, err)
+		return
+	}
+
+	payload.SessionKey = strings.TrimSpace(payload.SessionKey)
+	if payload.SessionKey == "" {
+		payload.SessionKey = "webui:default"
+	}
+	payload.Channel = strings.TrimSpace(payload.Channel)
+	if payload.Channel == "" {
+		payload.Channel = "desktop"
+	}
+	payload.ChatID = strings.TrimSpace(payload.ChatID)
+	if payload.ChatID == "" {
+		payload.ChatID = payload.SessionKey
+	}
+	if payload.Params == nil {
+		payload.Params = map[string]interface{}{}
+	}
+
+	action, _ := payload.Params["action"].(string)
+	if strings.TrimSpace(action) == "" {
+		writeError(w, fmt.Errorf("browser action is required"))
+		return
+	}
+
+	result, err := s.agentLoop.ExecuteToolWithSession(
+		r.Context(),
+		"browser",
+		payload.Params,
+		payload.SessionKey,
+		payload.Channel,
+		payload.ChatID,
+	)
+	if err != nil {
+		writeError(w, err)
+		if lg := logging.Get(); lg != nil && lg.Web != nil {
+			lg.Web.Printf("browser action error session=%s action=%s err=%v", payload.SessionKey, action, err)
+		}
+		return
+	}
+
+	if lg := logging.Get(); lg != nil && lg.Web != nil {
+		lg.Web.Printf("browser action session=%s action=%s", payload.SessionKey, action)
+	}
+
+	writeJSON(w, map[string]interface{}{
+		"ok":         true,
+		"sessionKey": payload.SessionKey,
+		"result":     result,
 	})
 }
 
@@ -1256,11 +1329,11 @@ func (s *Server) handleCronDelete(w http.ResponseWriter, r *http.Request, jobID 
 
 func (s *Server) handleCronUpdate(w http.ResponseWriter, r *http.Request, jobID string) {
 	var req struct {
-		Title string `json:"title"`
-		Prompt string `json:"prompt"`
-		Cron string `json:"cron,omitempty"`
-		Every string `json:"every,omitempty"`
-		At string `json:"at,omitempty"`
+		Title   string `json:"title"`
+		Prompt  string `json:"prompt"`
+		Cron    string `json:"cron,omitempty"`
+		Every   string `json:"every,omitempty"`
+		At      string `json:"at,omitempty"`
 		WorkDir string `json:"workDir,omitempty"`
 	}
 
@@ -1972,7 +2045,9 @@ func (s *Server) handleWhatsAppStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Type assert to WhatsAppChannel to get status
-	if wc, ok := ch.(interface{ Status() channels.WhatsAppStatus }); ok {
+	if wc, ok := ch.(interface {
+		Status() channels.WhatsAppStatus
+	}); ok {
 		status := wc.Status()
 		writeJSON(w, status)
 		return

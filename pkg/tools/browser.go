@@ -58,7 +58,17 @@ func NewBrowserTool(options BrowserToolOptions) *BrowserTool {
 					"act": map[string]interface{}{
 						"type":        "string",
 						"description": "Sub action when action=act",
-						"enum":        []interface{}{"click", "type", "press", "wait"},
+						"enum":        []interface{}{"click", "click_xy", "type", "press", "wait"},
+					},
+					"x": map[string]interface{}{
+						"type":        "integer",
+						"description": "X coordinate for act(click_xy)",
+						"minimum":     0.0,
+					},
+					"y": map[string]interface{}{
+						"type":        "integer",
+						"description": "Y coordinate for act(click_xy)",
+						"minimum":     0.0,
 					},
 					"key": map[string]interface{}{
 						"type":        "string",
@@ -114,6 +124,8 @@ type browserToolRequest struct {
 	Ref       int                   `json:"ref,omitempty"`
 	Text      string                `json:"text,omitempty"`
 	Act       string                `json:"act,omitempty"`
+	X         int                   `json:"x,omitempty"`
+	Y         int                   `json:"y,omitempty"`
 	Key       string                `json:"key,omitempty"`
 	WaitMs    int                   `json:"waitMs,omitempty"`
 	TabAction string                `json:"tabAction,omitempty"`
@@ -154,6 +166,8 @@ func (t *BrowserTool) Execute(ctx context.Context, params map[string]interface{}
 		Selector:  strings.TrimSpace(asString(params["selector"])),
 		Text:      asString(params["text"]),
 		Act:       strings.ToLower(strings.TrimSpace(asString(params["act"]))),
+		X:         -1,
+		Y:         -1,
 		Key:       strings.TrimSpace(asString(params["key"])),
 		TabAction: strings.ToLower(strings.TrimSpace(asString(params["tab_action"]))),
 		Path:      strings.TrimSpace(asString(params["path"])),
@@ -179,6 +193,12 @@ func (t *BrowserTool) Execute(ctx context.Context, params map[string]interface{}
 	}
 	if v, ok := asInt(params["tab_index"]); ok && v >= 0 {
 		req.TabIndex = v
+	}
+	if v, ok := asInt(params["x"]); ok && v >= 0 {
+		req.X = v
+	}
+	if v, ok := asInt(params["y"]); ok && v >= 0 {
+		req.Y = v
 	}
 	if v, ok := asInt(params["max_chars"]); ok && v >= 200 && v <= 50000 {
 		req.MaxChars = v

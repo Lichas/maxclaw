@@ -4,6 +4,12 @@
 
 ### 变更
 
+#### 新增 Browser Live Co-Pilot 协作面板（可人工接管点击并回传）
+- **变更**：聊天页新增 Browser Co-Pilot 面板：可一键同步截图/抓取结构快照、打开当前页面到真实浏览器、插入“人工操作后继续”指令；右侧预览栏对浏览器截图启用交互点击，点击坐标会通过后端 Browser API 回传给 `browser` 工具执行 `act(click_xy)`，并自动刷新截图，实现“人机协作接管”闭环。
+- **后端能力**：新增 `POST /api/browser/action`，在当前 `sessionKey` 运行 `browser` 工具（共享会话上下文）；`AgentLoop` 新增 `ExecuteToolWithSession` 入口。
+- **位置**：`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/components/FilePreviewSidebar.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`internal/webui/server.go`、`internal/agent/loop.go`、`pkg/tools/browser.go`、`webfetcher/browser.mjs`。
+- **验证**：`go test ./pkg/tools -run 'TestBrowserOptionsFromWebFetch|TestNormalizeBrowserToolOptionsDefaults|TestBrowserSessionID|TestResolveBrowserScreenshotPathDefaultsToSessionDirectory|TestResolveBrowserScreenshotPathResolvesRelativePathInSessionDirectory'`、`go test ./internal/agent -run 'TestAgentLoopProcessDirectEventStreamEmitsStructuredEvents|TestAgentLoopProcessDirectUsesProvidedSessionKey|TestBuildWebFetchOptionsIncludesChromeConfig|TestBuildWebFetchOptionsUsesConfigDefaults'`、`go test ./internal/webui -run 'TestEnrichContentWithAttachments|TestEnrichContentWithAttachmentsURLFallbackAndDeduplicate'`、`node --check webfetcher/browser.mjs`、`cd electron && npm run build`、`make build`。
+
 #### 修复真实文件未显示预览入口（Unicode 文件名与校验重试）
 - **变更**：放宽聊天文件引用提取规则以支持 Unicode 文件名（如 `记忆编织者.md`）；并调整存在性校验短路条件为“仅 `true` 才短路”，避免在流式/落盘时序下一次失败后不再重试，导致真实文件缺失“预览/打开目录”按钮。
 - **位置**：`electron/src/renderer/utils/fileReferences.ts`、`electron/src/renderer/views/ChatView.tsx`。

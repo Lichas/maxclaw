@@ -5,6 +5,12 @@ interface SendMessageResult {
   sessionKey: string;
 }
 
+export interface BrowserActionResult {
+  ok: boolean;
+  sessionKey: string;
+  result: string;
+}
+
 interface MessageAttachmentPayload {
   id: string;
   filename: string;
@@ -395,5 +401,40 @@ export function useGateway() {
     }>;
   }, []);
 
-  return { sendMessage, getSessions, getSession, getConfig, getSkills, getModels, updateConfig, deleteSession, renameSession, getWhatsAppStatus, isLoading, error };
+  const runBrowserAction = useCallback(async (
+    sessionKey: string,
+    params: Record<string, unknown>
+  ) => {
+    const response = await fetch('http://localhost:18890/api/browser/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionKey,
+        channel: 'desktop',
+        chatId: sessionKey,
+        params
+      })
+    });
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || 'Failed to execute browser action');
+    }
+    return response.json() as Promise<BrowserActionResult>;
+  }, []);
+
+  return {
+    sendMessage,
+    getSessions,
+    getSession,
+    getConfig,
+    getSkills,
+    getModels,
+    updateConfig,
+    deleteSession,
+    renameSession,
+    getWhatsAppStatus,
+    runBrowserAction,
+    isLoading,
+    error
+  };
 }

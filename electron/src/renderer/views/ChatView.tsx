@@ -140,11 +140,22 @@ function fileReferenceCacheKey(sessionKey: string, pathHint: string): string {
   return `${sessionKey}::${pathHint.trim().toLowerCase()}`;
 }
 
+function isBrowserActivitySummary(summary: string): boolean {
+  const normalized = summary.trim().toLowerCase();
+  return normalized.startsWith('browser ') || normalized.startsWith('browser ->');
+}
+
+function extractFirstURL(text: string): string {
+  const matched = text.match(/https?:\/\/[^\s)>\]'"`]+/i);
+  return matched ? matched[0] : '';
+}
+
 export function ChatView() {
   const dispatch = useDispatch();
   const { currentSessionKey, sidebarCollapsed, terminalVisible } = useSelector((state: RootState) => state.ui);
   const isMac = window.electronAPI.platform.isMac;
-  const { sendMessage, getSession, getSessions, getSkills, getModels, getConfig, updateConfig } = useGateway();
+  const { sendMessage, getSession, getSessions, getSkills, getModels, getConfig, updateConfig, runBrowserAction } =
+    useGateway();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [sessionTitle, setSessionTitle] = useState('New thread');
@@ -165,6 +176,9 @@ export function ChatView() {
   const [previewData, setPreviewData] = useState<PreviewPayload | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [existingFileRefs, setExistingFileRefs] = useState<Record<string, boolean>>({});
+  const [browserCopilotOutputBySession, setBrowserCopilotOutputBySession] = useState<Record<string, string>>({});
+  const [browserCopilotBusyBySession, setBrowserCopilotBusyBySession] = useState<Record<string, boolean>>({});
+  const [browserCopilotErrorBySession, setBrowserCopilotErrorBySession] = useState<Record<string, string>>({});
 
   // File attachments state
   const [attachedFiles, setAttachedFiles] = useState<UploadedFile[]>([]);
@@ -257,6 +271,46 @@ export function ChatView() {
     [availableModels]
   );
 
+  const browserActivityContext = useMemo(() => {
+    const collectTexts: string[] = [];
+    const pushActivity = (activity?: StreamActivity) => {
+      if (!activity || !isBrowserActivitySummary(activity.summary)) {
+        return;
+      }
+      collectTexts.push(activity.summary);
+      if (activity.detail) {
+        collectTexts.push(activity.detail);
+      }
+    };
+
+    messages.forEach((message) => {
+      (message.timeline || []).forEach((entry) => {
+        if (entry.kind === 'activity') {
+          pushActivity(entry.activity);
+        }
+      });
+    });
+    streamingTimeline.forEach((entry) => {
+      if (entry.kind === 'activity') {
+        pushActivity(entry.activity);
+      }
+    });
+
+    let latestURL = '';
+    for (let index = collectTexts.length - 1; index >= 0; index -= 1) {
+      const found = extractFirstURL(collectTexts[index]);
+      if (found) {
+        latestURL = found;
+        break;
+      }
+    }
+
+    return {
+      hasBrowserActivity: collectTexts.length > 0,
+      latestURL
+    };
+  }, [messages, streamingTimeline]);
+
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const skillsPickerRef = useRef<HTMLDivElement>(null);
   const isComposingRef = useRef(false);
@@ -272,8 +326,55 @@ export function ChatView() {
   const input = inputBySession[currentSessionKey] || '';
   const isGenerating = Boolean(generatingSessions[currentSessionKey]);
   const interruptHintVisible = Boolean(interruptHintSessions[currentSessionKey]);
+  const browserCopilotOutput = browserCopilotOutputBySession[currentSessionKey] || '';
+  const browserCopilotBusy = Boolean(browserCopilotBusyBySession[currentSessionKey]);
+  const browserCopilotError = browserCopilotErrorBySession[currentSessionKey] || '';
 
   const isStarterMode = messages.length === 0 && streamingTimeline.length === 0;
+
+  const setBrowserCopilotOutput = (sessionKey: string, value: string) => {
+    setBrowserCopilotOutputBySession((prev) => {
+      if ((prev[sessionKey] || '') === value) {
+        return prev;
+      }
+      return { ...prev, [sessionKey]: value };
+    });
+  };
+
+  const setBrowserCopilotBusy = (sessionKey: string, value: boolean) => {
+    setBrowserCopilotBusyBySession((prev) => {
+      if (value) {
+        if (prev[sessionKey]) {
+          return prev;
+        }
+        return { ...prev, [sessionKey]: true };
+      }
+      if (!prev[sessionKey]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[sessionKey];
+      return next;
+    });
+  };
+
+  const setBrowserCopilotError = (sessionKey: string, value: string) => {
+    const trimmed = value.trim();
+    setBrowserCopilotErrorBySession((prev) => {
+      if (!trimmed) {
+        if (!prev[sessionKey]) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[sessionKey];
+        return next;
+      }
+      if (prev[sessionKey] === trimmed) {
+        return prev;
+      }
+      return { ...prev, [sessionKey]: trimmed };
+    });
+  };
 
   const setInputForSession = (sessionKey: string, value: string) => {
     setInputBySession((prev) => {
@@ -438,6 +539,8 @@ export function ChatView() {
       });
     };
 
+    addReferences(browserCopilotOutput);
+
     messages.forEach((message) => {
       addReferences(message.content);
       (message.timeline || []).forEach((entry) => {
@@ -490,7 +593,7 @@ export function ChatView() {
           pendingFileRefChecksRef.current.delete(key);
         });
     });
-  }, [messages, streamingTimeline, currentSessionKey, workspacePath, existingFileRefs]);
+  }, [messages, streamingTimeline, currentSessionKey, workspacePath, existingFileRefs, browserCopilotOutput]);
 
   useEffect(() => {
     if (!skillsPickerOpen) {
@@ -1285,6 +1388,40 @@ export function ChatView() {
     }
   };
 
+  const handleBrowserCopilotAction = async (params: Record<string, unknown>) => {
+    const requestSessionKey = currentSessionKey;
+    setBrowserCopilotBusy(requestSessionKey, true);
+    setBrowserCopilotError(requestSessionKey, '');
+    try {
+      const result = await runBrowserAction(requestSessionKey, params);
+      const resultText = (result.result || '').trim();
+      setBrowserCopilotOutput(requestSessionKey, resultText);
+
+      const references = extractFileReferences(resultText);
+      if (references.length > 0) {
+        await previewReference(references[0]);
+      }
+    } catch (error) {
+      setBrowserCopilotError(requestSessionKey, error instanceof Error ? error.message : String(error));
+    } finally {
+      setBrowserCopilotBusy(requestSessionKey, false);
+    }
+  };
+
+  const handleBrowserImageClick = async ({ x, y }: { x: number; y: number }) => {
+    await handleBrowserCopilotAction({
+      action: 'act',
+      act: 'click_xy',
+      x,
+      y,
+      wait_ms: 900
+    });
+    await handleBrowserCopilotAction({
+      action: 'screenshot',
+      full_page: false
+    });
+  };
+
   const renderFileActions = (content: string, keyPrefix: string) => {
     const references = extractFileReferences(content).filter(
       (reference) => existingFileRefs[fileReferenceCacheKey(currentSessionKey, reference.pathHint)] === true
@@ -1333,6 +1470,94 @@ export function ChatView() {
       {renderFileActions(content, keyPrefix)}
     </div>
   );
+
+  const browserCopilotURL = browserActivityContext.latestURL || extractFirstURL(browserCopilotOutput);
+  const browserCopilotVisible = Boolean(
+    browserActivityContext.hasBrowserActivity || browserCopilotOutput || browserCopilotError
+  );
+  const browserScreenshotInteractive = Boolean(
+    selectedFileRef &&
+      previewData?.success &&
+      previewData.kind === 'image' &&
+      (((previewData.resolvedPath || '').includes('/screenshots/') ||
+        (previewData.resolvedPath || '').includes('\\screenshots\\')) ||
+        selectedFileRef.displayName.toLowerCase().startsWith('browser-'))
+  );
+
+  const renderBrowserCopilotPanel = () => {
+    if (!browserCopilotVisible) {
+      return null;
+    }
+
+    return (
+      <div className="mb-3 rounded-xl border border-border/70 bg-card/70 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-foreground/55">Browser Co-Pilot</p>
+            <p className="text-sm text-foreground/80">
+              手动在真实浏览器完成登录/点击后，可在这里让 Agent 同步当前页面状态继续执行。
+            </p>
+          </div>
+          {browserCopilotURL && (
+            <button
+              type="button"
+              onClick={() => void window.electronAPI.system.openExternal(browserCopilotURL)}
+              className="rounded-md border border-border/80 bg-background px-2 py-1 text-xs text-foreground/75 transition-colors hover:bg-secondary"
+            >
+              打开当前页面
+            </button>
+          )}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleBrowserCopilotAction({ action: 'screenshot', full_page: false })}
+            disabled={browserCopilotBusy}
+            className="rounded-md border border-border/80 bg-background px-3 py-1.5 text-xs text-foreground/80 transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {browserCopilotBusy ? '同步中...' : '同步截图'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleBrowserCopilotAction({ action: 'snapshot', max_chars: 12000 })}
+            disabled={browserCopilotBusy}
+            className="rounded-md border border-border/80 bg-background px-3 py-1.5 text-xs text-foreground/80 transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            抓取结构快照
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setInputForCurrentSession('我已在真实浏览器完成手动操作，请基于当前页面状态继续执行任务。');
+              inputRef.current?.focus();
+            }}
+            className="rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs text-primary transition-colors hover:bg-primary/15"
+          >
+            插入继续指令
+          </button>
+        </div>
+
+        {browserScreenshotInteractive && (
+          <p className="mt-2 text-[11px] text-foreground/55">
+            当前预览为浏览器截图，可直接在右侧预览图点击位置，系统会把坐标回传给浏览器执行点击并自动刷新截图。
+          </p>
+        )}
+
+        {browserCopilotError && (
+          <p className="mt-2 rounded-md border border-red-300/60 bg-red-50/60 px-2 py-1 text-xs text-red-600">
+            {browserCopilotError}
+          </p>
+        )}
+
+        {browserCopilotOutput && (
+          <div className="mt-2 rounded-lg border border-border/70 bg-background/65 px-2 py-2 text-xs text-foreground/75">
+            {renderMarkdownWithActions(browserCopilotOutput, `${currentSessionKey}-browser-copilot-output`)}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderComposer = (landing: boolean) => (
     <form
@@ -1582,6 +1807,14 @@ export function ChatView() {
       onOpenFile={() => {
         void handleOpenSelectedFile();
       }}
+      imageAssist={{
+        enabled: browserScreenshotInteractive && !browserCopilotBusy,
+        busy: browserCopilotBusy,
+        hint: browserCopilotBusy ? '正在执行 browser 点击...' : '点击截图即可回传坐标到浏览器执行点击。',
+        onImageClick: ({ x, y }) => {
+          void handleBrowserImageClick({ x, y });
+        }
+      }}
     />
   );
 
@@ -1604,6 +1837,7 @@ export function ChatView() {
                 <p className="mt-3 text-base text-foreground/55">7x24 小时帮你干活的全场景个人助理 Agent</p>
               </div>
 
+              {renderBrowserCopilotPanel()}
               {renderComposer(true)}
 
               <section className="mt-10">
@@ -1704,6 +1938,7 @@ export function ChatView() {
           </div>
 
           <div className="p-4 pt-3">
+            {renderBrowserCopilotPanel()}
             {renderComposer(false)}
             {terminalVisible && (
               <Suspense

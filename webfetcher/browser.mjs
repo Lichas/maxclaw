@@ -349,6 +349,8 @@ function normalizeRequest(raw) {
     ref: asInt(raw.ref, 0),
     text: typeof raw.text === 'string' ? raw.text : '',
     act: typeof raw.act === 'string' ? raw.act.trim().toLowerCase() : 'click',
+    x: Math.max(-1, asInt(raw.x, -1)),
+    y: Math.max(-1, asInt(raw.y, -1)),
     key: typeof raw.key === 'string' && raw.key.trim() ? raw.key.trim() : 'Enter',
     waitMs: Math.max(0, asInt(raw.waitMs, 1200)),
     tabAction: typeof raw.tabAction === 'string' ? raw.tabAction.trim().toLowerCase() : 'list',
@@ -642,7 +644,7 @@ async function runAction(req, context, state, warnings) {
       }
     }
 
-    if (sub !== 'wait' && !selector) {
+    if (sub !== 'wait' && sub !== 'click_xy' && !selector) {
       throw new Error('selector or ref is required for act(click/type/press)');
     }
     if (isBlankPageURL(page.url()) && sub !== 'wait') {
@@ -651,6 +653,11 @@ async function runAction(req, context, state, warnings) {
 
     if (sub === 'click') {
       await page.click(selector, { timeout: req.timeoutMs });
+    } else if (sub === 'click_xy') {
+      if (req.x < 0 || req.y < 0) {
+        throw new Error('x and y are required for act(click_xy)');
+      }
+      await page.mouse.click(req.x, req.y);
     } else if (sub === 'type') {
       await page.fill(selector, req.text || '', { timeout: req.timeoutMs });
     } else if (sub === 'press') {
