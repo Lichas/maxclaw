@@ -4,6 +4,11 @@
 
 ### 变更
 
+#### 修复 Browser Co-Pilot“打开当前页面”未复用浏览器工具 Profile
+- **变更**：Browser Co-Pilot 的“打开当前页面”从系统默认浏览器改为调用 `browser` 工具新动作 `action=open`，按当前工具配置复用同一 Chrome Profile（`userDataDir` / `cdpEndpoint` 对应 host profile），并返回实际打开信息。
+- **位置**：`electron/src/renderer/views/ChatView.tsx`、`pkg/tools/browser.go`、`webfetcher/browser.mjs`。
+- **验证**：`node --check webfetcher/browser.mjs`、`cd electron && npm run build`、`make build`。
+
 #### 改进 browser 配置目录被占用时的报错提示
 - **变更**：当 `browser` 工具因 Chrome 配置目录被占用（`ProcessSingleton`/`SingletonLock`）失败时，错误信息会追加明确操作建议：关闭占用该 `userDataDir` 的浏览器实例，或改用 `tools.web.fetch.chrome.cdpEndpoint` 复用已运行浏览器会话。
 - **位置**：`pkg/tools/browser.go`、`pkg/tools/browser_test.go`。

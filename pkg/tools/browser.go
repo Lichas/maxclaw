@@ -37,7 +37,7 @@ func NewBrowserTool(options BrowserToolOptions) *BrowserTool {
 					"action": map[string]interface{}{
 						"type":        "string",
 						"description": "Browser action",
-						"enum":        []interface{}{"navigate", "snapshot", "screenshot", "act", "tabs"},
+						"enum":        []interface{}{"navigate", "snapshot", "screenshot", "act", "tabs", "open"},
 					},
 					"url": map[string]interface{}{
 						"type":        "string",

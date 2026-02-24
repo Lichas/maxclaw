@@ -1501,10 +1501,16 @@ export function ChatView() {
           {browserCopilotURL && (
             <button
               type="button"
-              onClick={() => void window.electronAPI.system.openExternal(browserCopilotURL)}
-              className="rounded-md border border-border/80 bg-background px-2 py-1 text-xs text-foreground/75 transition-colors hover:bg-secondary"
+              onClick={() =>
+                void handleBrowserCopilotAction({
+                  action: 'open',
+                  url: browserCopilotURL
+                })
+              }
+              disabled={browserCopilotBusy}
+              className="rounded-md border border-border/80 bg-background px-2 py-1 text-xs text-foreground/75 transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
             >
-              打开当前页面
+              用当前Profile打开页面
             </button>
           )}
         </div>

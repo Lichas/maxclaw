@@ -148,6 +148,20 @@ function endpointHttpBase(cdpEndpoint) {
   return parsed.toString().replace(/\/$/, '');
 }
 
+function endpointPort(cdpEndpoint) {
+  if (typeof cdpEndpoint !== 'string' || !cdpEndpoint.trim()) {
+    return '';
+  }
+
+  const raw = cdpEndpoint.trim();
+  const withScheme = /^[a-z]+:\/\//i.test(raw) ? raw : `http://${raw}`;
+  const parsed = new URL(withScheme);
+  if (!isLoopbackHost(parsed.hostname)) {
+    return '';
+  }
+  return parsed.port || '9222';
+}
+
 function isLoopbackHost(hostname) {
   const host = String(hostname || '').toLowerCase();
   return host === '127.0.0.1' || host === 'localhost' || host === '::1';
@@ -434,6 +448,67 @@ async function openBrowserContext(req) {
     viewport: { width: 1360, height: 900 },
   });
   return { mode: 'profile', browser: null, context, warnings };
+}
+
+async function launchManagedBrowserWindow(req, state, warnings) {
+  const targetURL = req.url || (typeof state.lastURL === 'string' ? state.lastURL.trim() : '');
+  if (!targetURL) {
+    throw new Error('open requires url, or an existing lastURL in session state');
+  }
+
+  const chrome = req.chrome;
+  const useHostProfile = Boolean(chrome.cdpEndpoint);
+  const userDataDir = useHostProfile
+    ? resolveHostChromeUserDataDir(chrome.hostUserDataDir, chrome.channel)
+    : resolveChromeUserDataDir(chrome.userDataDir, chrome.profileName);
+
+  if (!userDataDir) {
+    throw new Error('cannot resolve Chrome user data directory for open action');
+  }
+
+  await fs.mkdir(userDataDir, { recursive: true });
+
+  const startupArgs = [`--user-data-dir=${userDataDir}`, '--new-window', targetURL];
+  const cdpPort = endpointPort(chrome.cdpEndpoint);
+  if (cdpPort) {
+    startupArgs.unshift(`--remote-debugging-port=${cdpPort}`);
+  }
+
+  if (process.platform === 'darwin') {
+    const appName = resolveChromeAppName(chrome.channel);
+    await launchDetached('open', ['-na', appName, '--args', ...startupArgs]);
+  } else if (process.platform === 'linux') {
+    let launched = false;
+    const candidates = resolveLinuxChromeExecutables(chrome.channel);
+    for (const command of candidates) {
+      try {
+        await launchDetached(command, startupArgs);
+        launched = true;
+        break;
+      } catch {
+        // try next executable candidate
+      }
+    }
+    if (!launched) {
+      throw new Error('failed to launch Chrome/Chromium executable on linux');
+    }
+  } else if (process.platform === 'win32') {
+    const appBinary = String(chrome.channel || '').toLowerCase().startsWith('msedge') ? 'msedge' : 'chrome';
+    await launchDetached('cmd', ['/c', 'start', '', appBinary, ...startupArgs]);
+  } else {
+    throw new Error(`open action not supported on platform: ${process.platform}`);
+  }
+
+  state.lastURL = targetURL;
+  const summary = [
+    `Opened ${targetURL} in managed browser profile`,
+    `Channel: ${chrome.channel || 'chrome'}`,
+    `User data dir: ${userDataDir}`,
+  ].join('\n');
+  return {
+    summary: summaryWithWarnings(summary, warnings),
+    data: { url: targetURL, userDataDir, channel: chrome.channel || 'chrome' },
+  };
 }
 
 function clampTabIndex(index, count) {
@@ -746,6 +821,12 @@ async function main() {
   let opened;
   try {
     const state = await readSessionState(req.sessionId);
+    if (req.action === 'open') {
+      const result = await launchManagedBrowserWindow(req, state, []);
+      await writeSessionState(req.sessionId, state);
+      writeResult({ ok: true, summary: result.summary, data: result.data });
+      return;
+    }
     opened = await openBrowserContext(req);
     const result = await runAction(req, opened.context, state, opened.warnings);
     await writeSessionState(req.sessionId, state);
