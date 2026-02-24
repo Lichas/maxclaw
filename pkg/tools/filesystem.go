@@ -70,6 +70,12 @@ func resolvePath(ctx context.Context, path string) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("invalid session base path: %w", err)
 			}
+			if err := isPathAllowed(absBase); err != nil {
+				return "", err
+			}
+			if err := os.MkdirAll(absBase, 0755); err != nil {
+				return "", fmt.Errorf("failed to prepare session directory: %w", err)
+			}
 
 			absPath, err := filepath.Abs(filepath.Join(absBase, path))
 			if err != nil {

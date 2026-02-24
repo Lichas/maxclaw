@@ -315,6 +315,11 @@ func TestEditFileTool(t *testing.T) {
 func TestListDirTool(t *testing.T) {
 	tmpDir := t.TempDir()
 	SetAllowedDir(tmpDir)
+	SetWorkspaceDir(tmpDir)
+	t.Cleanup(func() {
+		SetAllowedDir("")
+		SetWorkspaceDir("")
+	})
 
 	// 创建测试目录结构
 	os.MkdirAll(filepath.Join(tmpDir, "subdir"), 0755)
@@ -344,6 +349,21 @@ func TestListDirTool(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, result, "[DIR]  subdir/")
 		assert.Contains(t, result, "[FILE] nested.txt")
+	})
+
+	t.Run("list session root when directory missing", func(t *testing.T) {
+		sessionCtx := WithRuntimeContextWithSession(ctx, "desktop", "ignored-chat", "desktop:1771898529636")
+		sessionDir := filepath.Join(tmpDir, ".sessions", "desktop_1771898529636")
+
+		_, statErr := os.Stat(sessionDir)
+		require.True(t, os.IsNotExist(statErr))
+
+		result, err := tool.Execute(sessionCtx, map[string]interface{}{
+			"path": ".",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "", result)
+		assert.DirExists(t, sessionDir)
 	})
 }
 
