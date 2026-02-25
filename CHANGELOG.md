@@ -19,6 +19,11 @@
 
 ### 变更
 
+#### 修复 memory 自动总结在会话压缩后可能不更新
+- **变更**：每日总结补充读取 `memory/HISTORY.md`（会话压缩高亮）并递归扫描 `.sessions` 下 JSON，会话消息被压缩或存放在子目录时也可正常生成 `MEMORY.md` 日总结。
+- **位置**：`internal/memory/daily_summary.go`、`internal/memory/daily_summary_test.go`。
+- **验证**：`go test ./internal/memory ./internal/cli ./internal/webui`、`make build`。
+
 #### 提升默认工具迭代上限并支持 Electron 设置项可配置
 - **变更**：将默认 `maxToolIterations` 从 `20` 提升到 `200`；新增运行时热更新迭代上限能力；Electron 设置页新增“工具迭代上限”输入与保存。
 - **位置**：`internal/config/schema.go`、`internal/config/config_test.go`、`internal/agent/loop.go`、`internal/webui/server.go`、`electron/src/renderer/views/SettingsView.tsx`、`electron/src/renderer/i18n/index.ts`。

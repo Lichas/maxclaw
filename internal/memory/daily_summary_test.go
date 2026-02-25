@@ -76,10 +76,74 @@ func TestSummarizePreviousDayNoMessages(t *testing.T) {
 	assert.False(t, updated)
 }
 
+func TestSummarizePreviousDayUsesHistoryFallback(t *testing.T) {
+	workspace := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(workspace, "memory"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(workspace, "memory", "MEMORY.md"), []byte("# Long-term Memory\n"), 0644))
+
+	history := strings.Join([]string{
+		"# Conversation History",
+		"",
+		"### [2026-02-15 23:10] session: telegram:chat-1",
+		"- Messages consolidated: 8",
+		"- User highlights:",
+		"  - Please summarize market news",
+		"- Assistant highlights:",
+		"  - Sure, here is the market summary.",
+		"",
+	}, "\n")
+	require.NoError(t, os.WriteFile(filepath.Join(workspace, "memory", "HISTORY.md"), []byte(history), 0644))
+
+	now := time.Date(2026, 2, 16, 8, 0, 0, 0, time.UTC)
+	updated, err := SummarizePreviousDay(workspace, now)
+	require.NoError(t, err)
+	assert.True(t, updated)
+
+	body, err := os.ReadFile(filepath.Join(workspace, "memory", "MEMORY.md"))
+	require.NoError(t, err)
+	text := string(body)
+	assert.Contains(t, text, "### 2026-02-15")
+	assert.Contains(t, text, "Sessions active: 1")
+	assert.Contains(t, text, "Message count: 8")
+	assert.Contains(t, text, "Please summarize market news")
+	assert.Contains(t, text, "here is the market summary")
+}
+
+func TestSummarizePreviousDayReadsNestedSessionJSON(t *testing.T) {
+	workspace := t.TempDir()
+	nested := filepath.Join(workspace, ".sessions", "desktop_task-42")
+	require.NoError(t, os.MkdirAll(nested, 0755))
+
+	day := time.Date(2026, 2, 15, 10, 0, 0, 0, time.UTC)
+	writeSessionFileAtPath(t, filepath.Join(nested, "session.json"), session.Session{
+		Key: "desktop:task-42",
+		Messages: []session.Message{
+			{Role: "user", Content: "draft release notes", Timestamp: day.Add(time.Hour)},
+			{Role: "assistant", Content: "done draft", Timestamp: day.Add(2 * time.Hour)},
+		},
+	})
+
+	updated, err := SummarizePreviousDay(workspace, day.AddDate(0, 0, 1))
+	require.NoError(t, err)
+	assert.True(t, updated)
+
+	body, err := os.ReadFile(filepath.Join(workspace, "memory", "MEMORY.md"))
+	require.NoError(t, err)
+	assert.Contains(t, string(body), "### 2026-02-15")
+	assert.Contains(t, string(body), "draft release notes")
+}
+
 func writeSessionFile(t *testing.T, workspace, name string, sess session.Session) {
 	t.Helper()
 	data, err := json.MarshalIndent(sess, "", "  ")
 	require.NoError(t, err)
 	path := filepath.Join(workspace, ".sessions", name+".json")
+	require.NoError(t, os.WriteFile(path, data, 0644))
+}
+
+func writeSessionFileAtPath(t *testing.T, path string, sess session.Session) {
+	t.Helper()
+	data, err := json.MarshalIndent(sess, "", "  ")
+	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(path, data, 0644))
 }

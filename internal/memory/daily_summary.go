@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -21,6 +22,13 @@ const (
 type DailySummaryService struct {
 	workspace string
 	interval  time.Duration
+}
+
+type summaryData struct {
+	sessionKeys map[string]struct{}
+	userMsgs    []string
+	assistMsgs  []string
+	totalMsgs   int
 }
 
 func NewDailySummaryService(workspace string, interval time.Duration) *DailySummaryService {
@@ -145,64 +153,16 @@ func alreadySummarized(memoryBody, dayKey string) bool {
 }
 
 func buildSummaryForDay(workspace string, day time.Time) (string, error) {
-	sessionsDir := filepath.Join(workspace, ".sessions")
-	entries, err := os.ReadDir(sessionsDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return "", nil
-		}
-		return "", fmt.Errorf("read sessions dir: %w", err)
-	}
-
-	type summaryData struct {
-		sessionKeys map[string]struct{}
-		userMsgs    []string
-		assistMsgs  []string
-		totalMsgs   int
-	}
-
 	data := summaryData{
 		sessionKeys: map[string]struct{}{},
 	}
 	dayKey := day.In(day.Location()).Format("2006-01-02")
 
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
-			continue
-		}
-		path := filepath.Join(sessionsDir, entry.Name())
-		content, err := os.ReadFile(path)
-		if err != nil {
-			continue
-		}
-
-		var sess session.Session
-		if err := json.Unmarshal(content, &sess); err != nil {
-			continue
-		}
-
-		for _, msg := range sess.Messages {
-			if msg.Timestamp.IsZero() {
-				continue
-			}
-			if msg.Timestamp.In(day.Location()).Format("2006-01-02") != dayKey {
-				continue
-			}
-
-			data.sessionKeys[sess.Key] = struct{}{}
-			data.totalMsgs++
-
-			clean := cleanMessage(msg.Content)
-			if clean == "" {
-				continue
-			}
-			switch msg.Role {
-			case "user":
-				data.userMsgs = append(data.userMsgs, clean)
-			case "assistant":
-				data.assistMsgs = append(data.assistMsgs, clean)
-			}
-		}
+	if err := collectSummaryFromSessionFiles(workspace, day, &data); err != nil {
+		return "", err
+	}
+	if err := collectSummaryFromHistory(workspace, dayKey, &data); err != nil {
+		return "", err
 	}
 
 	if data.totalMsgs == 0 {
@@ -232,6 +192,153 @@ func buildSummaryForDay(workspace string, day time.Time) (string, error) {
 	}
 
 	return strings.TrimRight(sb.String(), "\n"), nil
+}
+
+func collectSummaryFromSessionFiles(workspace string, day time.Time, data *summaryData) error {
+	sessionsDir := filepath.Join(workspace, ".sessions")
+	err := filepath.WalkDir(sessionsDir, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return nil
+		}
+		if d.IsDir() || !strings.HasSuffix(d.Name(), ".json") {
+			return nil
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+
+		var sess session.Session
+		if err := json.Unmarshal(content, &sess); err != nil {
+			return nil
+		}
+
+		dayKey := day.In(day.Location()).Format("2006-01-02")
+		for _, msg := range sess.Messages {
+			if msg.Timestamp.IsZero() {
+				continue
+			}
+			if msg.Timestamp.In(day.Location()).Format("2006-01-02") != dayKey {
+				continue
+			}
+
+			data.sessionKeys[sess.Key] = struct{}{}
+			data.totalMsgs++
+
+			clean := cleanMessage(msg.Content)
+			if clean == "" {
+				continue
+			}
+			switch msg.Role {
+			case "user":
+				data.userMsgs = append(data.userMsgs, clean)
+			case "assistant":
+				data.assistMsgs = append(data.assistMsgs, clean)
+			}
+		}
+
+		return nil
+	})
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("walk sessions dir: %w", err)
+	}
+	return nil
+}
+
+func collectSummaryFromHistory(workspace, dayKey string, data *summaryData) error {
+	historyPath := filepath.Join(workspace, "memory", "HISTORY.md")
+	file, err := os.Open(historyPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("open history file: %w", err)
+	}
+	defer file.Close()
+
+	var inTargetDayEntry bool
+	var inUserHighlights bool
+	var inAssistantHighlights bool
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		raw := scanner.Text()
+		line := strings.TrimSpace(raw)
+
+		if strings.HasPrefix(line, "### [") {
+			inTargetDayEntry = false
+			inUserHighlights = false
+			inAssistantHighlights = false
+
+			if !strings.Contains(line, "["+dayKey+" ") {
+				continue
+			}
+			inTargetDayEntry = true
+
+			if sessionKey := extractHistorySessionKey(line); sessionKey != "" {
+				data.sessionKeys[sessionKey] = struct{}{}
+			}
+			continue
+		}
+
+		if !inTargetDayEntry {
+			continue
+		}
+
+		if strings.HasPrefix(line, "- Messages consolidated:") {
+			var n int
+			if _, err := fmt.Sscanf(line, "- Messages consolidated: %d", &n); err == nil && n > 0 {
+				data.totalMsgs += n
+			}
+			continue
+		}
+		if line == "- User highlights:" {
+			inUserHighlights = true
+			inAssistantHighlights = false
+			continue
+		}
+		if line == "- Assistant highlights:" {
+			inUserHighlights = false
+			inAssistantHighlights = true
+			continue
+		}
+		if strings.HasPrefix(line, "- ") && !strings.HasPrefix(raw, "  - ") {
+			inUserHighlights = false
+			inAssistantHighlights = false
+			continue
+		}
+
+		if !strings.HasPrefix(raw, "  - ") {
+			continue
+		}
+
+		item := strings.TrimSpace(strings.TrimPrefix(raw, "  - "))
+		if item == "" {
+			continue
+		}
+
+		if inUserHighlights {
+			data.userMsgs = append(data.userMsgs, item)
+			continue
+		}
+		if inAssistantHighlights {
+			data.assistMsgs = append(data.assistMsgs, item)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("scan history file: %w", err)
+	}
+	return nil
+}
+
+func extractHistorySessionKey(heading string) string {
+	const marker = "] session: "
+	idx := strings.Index(heading, marker)
+	if idx < 0 {
+		return ""
+	}
+	return strings.TrimSpace(heading[idx+len(marker):])
 }
 
 func cleanMessage(s string) string {
