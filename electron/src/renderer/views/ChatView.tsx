@@ -1881,6 +1881,12 @@ export function ChatView() {
             void previewReference(fileRef);
           }}
           selectedPath={selectedFileRef?.pathHint}
+          onOpenDirectory={(dirPath) => {
+            void window.electronAPI.system.openInFolder(dirPath, {
+              workspace: workspacePath,
+              sessionKey: currentSessionKey
+            });
+          }}
         />
       )}
       onModeChange={(mode) => {

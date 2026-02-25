@@ -19,6 +19,7 @@ interface FileTreeSidebarProps {
   workspacePath: string;
   onSelectFile: (path: string) => void;
   selectedPath?: string;
+  onOpenDirectory?: (path: string) => void;
 }
 
 declare global {
@@ -44,7 +45,8 @@ export function FileTreeSidebar({
   sessionKey,
   workspacePath,
   onSelectFile,
-  selectedPath
+  selectedPath,
+  onOpenDirectory
 }: FileTreeSidebarProps) {
   const [treeData, setTreeData] = useState<FileTreeNode[]>([]);
   const [loading, setLoading] = useState(false);
@@ -253,14 +255,25 @@ export function FileTreeSidebar({
         <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground/50">
           {sessionKey}
         </span>
-        <button
-          onClick={refresh}
-          disabled={loading}
-          className="rounded-md p-1.5 text-foreground/50 transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
-          title="刷新"
-        >
-          <RefreshIcon className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-1">
+          {onOpenDirectory && (
+            <button
+              onClick={() => onOpenDirectory(sessionDir)}
+              className="rounded-md p-1.5 text-foreground/50 transition-colors hover:bg-secondary hover:text-foreground"
+              title="打开目录"
+            >
+              <OpenFolderIcon className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            onClick={refresh}
+            disabled={loading}
+            className="rounded-md p-1.5 text-foreground/50 transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
+            title="刷新"
+          >
+            <RefreshIcon className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Tree */}
@@ -318,7 +331,7 @@ function TreeNodeList({
         return (
           <div key={`${node.path}-${index}`}>
             <div
-              className={`flex cursor-pointer items-center gap-1.5 rounded-md py-1.5 pr-2 transition-colors ${
+              className={`group flex cursor-pointer items-center gap-1.5 rounded-md py-1.5 pr-2 transition-colors ${
                 isSelected
                   ? 'bg-primary/10 text-primary'
                   : 'hover:bg-secondary/60'
@@ -367,6 +380,20 @@ function TreeNodeList({
               >
                 {node.name}
               </span>
+
+              {/* Preview button for files */}
+              {node.type === 'file' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelect(node);
+                  }}
+                  className="rounded border border-border/60 bg-background px-1.5 py-0.5 text-[10px] text-foreground/60 opacity-0 transition-opacity hover:bg-secondary hover:text-foreground group-hover:opacity-100"
+                  title="预览"
+                >
+                  预览
+                </button>
+              )}
             </div>
 
             {/* Children */}
@@ -438,6 +465,25 @@ function FolderOpenIcon({ className }: { className?: string }) {
         strokeLinejoin="round"
         strokeWidth={1.8}
         d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"
+      />
+    </svg>
+  );
+}
+
+function OpenFolderIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 11v6m3-3l-3 3-3-3"
       />
     </svg>
   );
