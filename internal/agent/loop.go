@@ -53,7 +53,7 @@ type AgentLoop struct {
 	currentIC      *InterruptibleContext
 	icMu           sync.RWMutex
 
-	PlanManager         *PlanManager  // Task plan manager for multi-step execution
+	PlanManager *PlanManager // Task plan manager for multi-step execution
 }
 
 // StreamEvent is a structured event for UI streaming consumers.
@@ -87,7 +87,7 @@ func NewAgentLoop(
 	enableGlobalSkills bool,
 ) *AgentLoop {
 	if maxIterations <= 0 {
-		maxIterations = 20
+		maxIterations = 200
 	}
 
 	// 设置工具允许的目录
@@ -259,10 +259,10 @@ func (h *streamHandler) GetToolCalls() []providers.ToolCall {
 	return h.toolCalls
 }
 
-func (a *AgentLoop) runtimeSnapshot() (providers.LLMProvider, string) {
+func (a *AgentLoop) runtimeSnapshot() (providers.LLMProvider, string, int) {
 	a.runtimeMu.RLock()
 	defer a.runtimeMu.RUnlock()
-	return a.Provider, a.Model
+	return a.Provider, a.Model, a.MaxIterations
 }
 
 // HandleInterruption 处理插话请求
@@ -447,7 +447,7 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 	var finalContent string
 	maxIterationReached := true
 	toolDefs := a.tools.GetDefinitions()
-	_, activeModel := a.runtimeSnapshot()
+	_, activeModel, maxIterations := a.runtimeSnapshot()
 	if activeModel != "" {
 		emitEvent(StreamEvent{
 			Type:    "status",
@@ -458,7 +458,7 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 	stepDetector := NewStepDetector()
 	iterationsInCurrentStep := 0
 
-	for i := 0; i < a.MaxIterations; i++ {
+	for i := 0; i < maxIterations; i++ {
 		iteration := i + 1
 
 		// 检查是否被取消
@@ -493,7 +493,7 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 
 		// 流式调用 LLM
 		handler := newStreamHandler(msg.Channel, msg.ChatID, a.Bus, streamCallback)
-		provider, model := a.runtimeSnapshot()
+		provider, model, _ := a.runtimeSnapshot()
 		if provider == nil {
 			return nil, fmt.Errorf("LLM provider is not configured")
 		}
@@ -650,7 +650,7 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 
 	if finalContent == "" {
 		if maxIterationReached {
-			finalContent = fmt.Sprintf("Reached %d iterations without completion.", a.MaxIterations)
+			finalContent = fmt.Sprintf("Reached %d iterations without completion.", maxIterations)
 
 			// Pause plan if exists
 			if plan != nil && plan.Status == PlanStatusRunning {
@@ -715,6 +715,16 @@ func (a *AgentLoop) UpdateRuntimeModel(provider providers.LLMProvider, model str
 	if model != "" {
 		a.Model = model
 	}
+}
+
+// UpdateRuntimeMaxIterations updates the max iteration limit used by new requests.
+func (a *AgentLoop) UpdateRuntimeMaxIterations(maxIterations int) {
+	if maxIterations <= 0 {
+		maxIterations = 200
+	}
+	a.runtimeMu.Lock()
+	defer a.runtimeMu.Unlock()
+	a.MaxIterations = maxIterations
 }
 
 // ProcessDirect 直接处理消息（用于 CLI）

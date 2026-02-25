@@ -17,7 +17,7 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Equal(t, "anthropic/claude-opus-4-5", cfg.Agents.Defaults.Model)
 	assert.Equal(t, 8192, cfg.Agents.Defaults.MaxTokens)
 	assert.Equal(t, 0.7, cfg.Agents.Defaults.Temperature)
-	assert.Equal(t, 20, cfg.Agents.Defaults.MaxToolIterations)
+	assert.Equal(t, 200, cfg.Agents.Defaults.MaxToolIterations)
 
 	assert.Equal(t, "0.0.0.0", cfg.Gateway.Host)
 	assert.Equal(t, 18890, cfg.Gateway.Port)

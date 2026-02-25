@@ -39,6 +39,8 @@ export function SettingsView() {
     notificationsEnabled: true
   });
   const [gatewayConfig, setGatewayConfig] = useState<any>(null);
+  const [maxToolIterationsInput, setMaxToolIterationsInput] = useState('200');
+  const [savingMaxToolIterations, setSavingMaxToolIterations] = useState(false);
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [editingProvider, setEditingProvider] = useState<ProviderConfig | null>(null);
   const [showAddProvider, setShowAddProvider] = useState(false);
@@ -87,6 +89,10 @@ export function SettingsView() {
       .then(res => res.json())
       .then(config => {
         setGatewayConfig(config);
+        const configuredMaxIterations = config.agents?.defaults?.maxToolIterations;
+        if (typeof configuredMaxIterations === 'number' && configuredMaxIterations > 0) {
+          setMaxToolIterationsInput(String(configuredMaxIterations));
+        }
         // Convert gateway providers format to our format
         if (config.providers) {
           const loadedProviders: ProviderConfig[] = [];
@@ -168,6 +174,46 @@ export function SettingsView() {
 
   const handleRestartGateway = async () => {
     await window.electronAPI.gateway.restart();
+  };
+
+  const handleSaveMaxToolIterations = async () => {
+    const parsed = Number.parseInt(maxToolIterationsInput.trim(), 10);
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      alert(t('settings.gateway.maxToolIterations.invalid'));
+      return;
+    }
+    if (!gatewayConfig?.agents?.defaults) {
+      alert(t('settings.gateway.notConfigured'));
+      return;
+    }
+
+    setSavingMaxToolIterations(true);
+    try {
+      const updatedAgents = {
+        ...gatewayConfig.agents,
+        defaults: {
+          ...gatewayConfig.agents.defaults,
+          maxToolIterations: parsed,
+        },
+      };
+
+      const response = await fetch('http://localhost:18890/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agents: updatedAgents }),
+      });
+      if (!response.ok) {
+        throw new Error(`save failed: ${response.status}`);
+      }
+      const updatedConfig = await response.json();
+      setGatewayConfig(updatedConfig);
+      setMaxToolIterationsInput(String(updatedConfig.agents?.defaults?.maxToolIterations ?? parsed));
+    } catch (error) {
+      console.error('Failed to save max tool iterations:', error);
+      alert(t('settings.gateway.maxToolIterations.saveError'));
+    } finally {
+      setSavingMaxToolIterations(false);
+    }
   };
 
   const handleExport = async () => {
@@ -758,6 +804,28 @@ export function SettingsView() {
                       <code className="block rounded bg-background px-2 py-1 text-xs">
                         {gatewayConfig.agents?.defaults?.workspace || t('settings.gateway.notConfigured')}
                       </code>
+
+                      <div className="mt-4">
+                        <h4 className="mb-2 text-sm font-medium">{t('settings.gateway.maxToolIterations')}</h4>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={maxToolIterationsInput}
+                            onChange={(e) => setMaxToolIterationsInput(e.target.value)}
+                            className="w-36 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                          />
+                          <button
+                            onClick={handleSaveMaxToolIterations}
+                            disabled={savingMaxToolIterations}
+                            className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {savingMaxToolIterations ? t('settings.gateway.maxToolIterations.saving') : t('common.save')}
+                          </button>
+                        </div>
+                        <p className="mt-2 text-xs text-foreground/60">{t('settings.gateway.maxToolIterations.hint')}</p>
+                      </div>
                     </div>
                   )}
                 </div>

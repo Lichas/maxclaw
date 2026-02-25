@@ -19,6 +19,11 @@
 
 ### 变更
 
+#### 提升默认工具迭代上限并支持 Electron 设置项可配置
+- **变更**：将默认 `maxToolIterations` 从 `20` 提升到 `200`；新增运行时热更新迭代上限能力；Electron 设置页新增“工具迭代上限”输入与保存。
+- **位置**：`internal/config/schema.go`、`internal/config/config_test.go`、`internal/agent/loop.go`、`internal/webui/server.go`、`electron/src/renderer/views/SettingsView.tsx`、`electron/src/renderer/i18n/index.ts`。
+- **验证**：`go test ./internal/config ./internal/agent ./internal/webui`、`cd electron && npm run build`、`make build`。
+
 #### 修复切换渠道时会话列表未正确隔离的问题
 - **问题**：在 Sidebar 中切换渠道（如从桌面切换到 Telegram）时，会话列表虽然过滤，但当前选中的会话 `currentSessionKey` 没有同步更新，导致右侧聊天视图仍显示之前渠道的会话。
 - **修复**：添加 `useEffect` 监听 `channelFilter` 变化，自动选择目标渠道的最新会话；如果该渠道没有会话，自动创建一个新的草稿会话。

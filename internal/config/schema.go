@@ -263,7 +263,7 @@ func DefaultConfig() *Config {
 				Model:              "anthropic/claude-opus-4-5",
 				MaxTokens:          8192,
 				Temperature:        0.7,
-				MaxToolIterations:  20,
+				MaxToolIterations:  200,
 				EnableGlobalSkills: true, // 默认启用 ~/.agents/skills/
 			},
 		},

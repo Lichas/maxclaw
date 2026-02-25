@@ -1086,6 +1086,7 @@ func (s *Server) applyRuntimeModelConfig(cfg *config.Config) error {
 	if s.agentLoop == nil || cfg == nil {
 		return nil
 	}
+	s.agentLoop.UpdateRuntimeMaxIterations(cfg.Agents.Defaults.MaxToolIterations)
 
 	model := cfg.Agents.Defaults.Model
 	if model == "" {
