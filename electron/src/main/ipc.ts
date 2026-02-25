@@ -303,6 +303,10 @@ function trimPathToken(raw: string): string {
   let value = (raw || '').trim();
   value = value.replace(/^`+|`+$/g, '');
   value = value.replace(/^['"]+|['"]+$/g, '');
+  // 特殊处理：如果原始值是 "." 或 ".."，保留它们
+  if (value === '.' || value === '..') {
+    return value;
+  }
   value = value.replace(/[),.;]+$/g, '');
   return value.trim();
 }
