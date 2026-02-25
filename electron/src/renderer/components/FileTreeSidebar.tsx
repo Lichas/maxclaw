@@ -72,17 +72,6 @@ export function FileTreeSidebar({
     }));
   }, [workspacePath, sessionKey]);
 
-  const checkSessionDir = useCallback(async () => {
-    if (!sessionDir) return;
-
-    const result = await window.electronAPI.system.fileExists('.', {
-      workspace: workspacePath,
-      sessionKey
-    });
-
-    setSessionDirExists(result.exists && result.isFile === false);
-  }, [sessionDir, workspacePath, sessionKey]);
-
   useEffect(() => {
     const init = async () => {
       if (!sessionDir) {
@@ -94,18 +83,25 @@ export function FileTreeSidebar({
       setError(null);
 
       try {
-        await checkSessionDir();
         const entries = await loadDirectory('.');
         setTreeData(entries);
+        setSessionDirExists(true);
       } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+        const errMsg = err instanceof Error ? err.message : String(err);
+        // 如果目录不存在，显示空状态而不是错误
+        if (errMsg.includes('ENOENT') || errMsg.includes('no such file') || errMsg.includes('not found')) {
+          setSessionDirExists(false);
+          setError(null);
+        } else {
+          setError(errMsg);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     void init();
-  }, [sessionDir, loadDirectory, checkSessionDir]);
+  }, [sessionDir, loadDirectory]);
 
   const toggleDirectory = async (node: FileTreeNode, indexPath: number[]) => {
     if (node.type !== 'directory') return;
@@ -187,9 +183,16 @@ export function FileTreeSidebar({
     try {
       const entries = await loadDirectory('.');
       setTreeData(entries);
+      setSessionDirExists(true);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const errMsg = err instanceof Error ? err.message : String(err);
+      if (errMsg.includes('ENOENT') || errMsg.includes('no such file') || errMsg.includes('not found')) {
+        setSessionDirExists(false);
+        setError(null);
+      } else {
+        setError(errMsg);
+      }
     } finally {
       setLoading(false);
     }
