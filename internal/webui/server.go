@@ -561,7 +561,10 @@ func (s *Server) handleSkills(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entries, err := workspaceSkills.Discover(filepath.Join(s.cfg.Agents.Defaults.Workspace, "skills"))
+	entries, err := workspaceSkills.DiscoverAll(
+		filepath.Join(s.cfg.Agents.Defaults.Workspace, "skills"),
+		s.cfg.Agents.Defaults.EnableGlobalSkills,
+	)
 	if err != nil {
 		writeError(w, err)
 		return
@@ -572,6 +575,7 @@ func (s *Server) handleSkills(w http.ResponseWriter, r *http.Request) {
 		DisplayName string `json:"displayName"`
 		Description string `json:"description,omitempty"`
 		Enabled     bool   `json:"enabled"`
+		Source      string `json:"source,omitempty"`
 	}
 
 	results := make([]skillSummary, 0, len(entries))
@@ -585,6 +589,7 @@ func (s *Server) handleSkills(w http.ResponseWriter, r *http.Request) {
 			DisplayName: entry.DisplayName,
 			Description: desc,
 			Enabled:     s.skillsStateMgr.IsEnabled(entry.Name),
+			Source:      entry.Source,
 		})
 	}
 

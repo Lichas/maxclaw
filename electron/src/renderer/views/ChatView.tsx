@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, setCurrentSessionKey } from '../store';
 import { GatewayStreamEvent, SkillSummary, useGateway } from '../hooks/useGateway';
@@ -299,6 +299,26 @@ export function ChatView() {
     [availableModels]
   );
 
+  const loadSkills = useCallback(
+    async (cancelledRef?: { current: boolean }) => {
+      try {
+        const skills = await getSkills();
+        if (cancelledRef?.current) {
+          return;
+        }
+        setAvailableSkills(skills.filter((skill) => skill.enabled !== false));
+        setSkillsLoadError(null);
+      } catch (err) {
+        if (cancelledRef?.current) {
+          return;
+        }
+        setAvailableSkills([]);
+        setSkillsLoadError(err instanceof Error ? err.message : '加载技能失败');
+      }
+    },
+    [getSkills]
+  );
+
   const browserActivityContext = useMemo(() => {
     const collectTexts: string[] = [];
     const pushActivity = (activity?: StreamActivity) => {
@@ -483,30 +503,22 @@ export function ChatView() {
   }, [messages, streamingTimeline]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    const loadSkills = async () => {
-      try {
-        const skills = await getSkills();
-        if (cancelled) {
-          return;
-        }
-        setAvailableSkills(skills);
-        setSkillsLoadError(null);
-      } catch (err) {
-        if (cancelled) {
-          return;
-        }
-        setAvailableSkills([]);
-        setSkillsLoadError(err instanceof Error ? err.message : '加载技能失败');
-      }
-    };
-
-    void loadSkills();
+    const cancelledRef = { current: false };
+    void loadSkills(cancelledRef);
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
-  }, [getSkills]);
+  }, [loadSkills]);
+
+  useEffect(() => {
+    if (!skillsPickerOpen) {
+      return;
+    }
+    if (availableSkills.length > 0 && !skillsLoadError) {
+      return;
+    }
+    void loadSkills();
+  }, [skillsPickerOpen, availableSkills.length, skillsLoadError, loadSkills]);
 
   useEffect(() => {
     let cancelled = false;

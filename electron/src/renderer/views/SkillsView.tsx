@@ -60,6 +60,7 @@ export function SkillsView() {
   const [installUrl, setInstallUrl] = useState('');
   const [selectedRecommend, setSelectedRecommend] = useState<string>('');
   const [useCustomUrl, setUseCustomUrl] = useState(false);
+  const [nameFilter, setNameFilter] = useState('');
 
   const fetchSkills = useCallback(async () => {
     try {
@@ -152,6 +153,17 @@ export function SkillsView() {
       default: return '';
     }
   };
+
+  const filteredSkills = skills.filter((skill) => {
+    const query = nameFilter.trim().toLowerCase();
+    if (!query) {
+      return true;
+    }
+    return [skill.name, skill.displayName]
+      .join(' ')
+      .toLowerCase()
+      .includes(query);
+  });
 
   return (
     <div className="h-full overflow-y-auto bg-background p-6">
@@ -289,6 +301,16 @@ export function SkillsView() {
           </div>
         )}
 
+        <div className="mb-4">
+          <input
+            type="text"
+            value={nameFilter}
+            onChange={(event) => setNameFilter(event.target.value)}
+            placeholder="按名称过滤已安装技能"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+          />
+        </div>
+
         {loading && skills.length === 0 ? (
           <div className="py-12 text-center text-foreground/50">{t('common.loading')}</div>
         ) : skills.length === 0 ? (
@@ -296,9 +318,11 @@ export function SkillsView() {
             <p className="text-foreground/50">{t('skills.empty')}</p>
             <p className="mt-1 text-sm text-foreground/40">{t('skills.empty.hint')}</p>
           </div>
+        ) : filteredSkills.length === 0 ? (
+          <div className="py-12 text-center text-foreground/50">没有匹配的已安装技能</div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {skills.map((skill) => (
+            {filteredSkills.map((skill) => (
               <div
                 key={skill.name}
                 className={`rounded-xl border bg-background p-5 shadow-sm transition-all ${

@@ -23,6 +23,8 @@ export interface SkillSummary {
   name: string;
   displayName: string;
   description?: string;
+  enabled?: boolean;
+  source?: string;
 }
 
 export interface GatewayStreamEvent {

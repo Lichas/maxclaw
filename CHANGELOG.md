@@ -19,6 +19,11 @@
 
 ### 变更
 
+#### Skills 市场支持按名称过滤，聊天下拉补齐全局技能并增强重试加载
+- **变更**：Skills 市场新增“按名称过滤已安装技能”；`/api/skills` 改为返回“工作区 + 全局（~/.agents/skills）”技能并回传来源；聊天页技能下拉改为仅展示启用技能，并在打开下拉且为空/失败时自动重试加载，减少重启后首轮加载失败导致列表为空。
+- **位置**：`electron/src/renderer/views/SkillsView.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`internal/webui/server.go`。
+- **验证**：`go test ./internal/webui ./internal/agent ./internal/skills`、`cd electron && npm run build`、`make build`。
+
 #### 修复 memory 自动总结在会话压缩后可能不更新
 - **变更**：每日总结补充读取 `memory/HISTORY.md`（会话压缩高亮）并递归扫描 `.sessions` 下 JSON，会话消息被压缩或存放在子目录时也可正常生成 `MEMORY.md` 日总结。
 - **位置**：`internal/memory/daily_summary.go`、`internal/memory/daily_summary_test.go`。
