@@ -397,9 +397,9 @@ function TreeNodeList({
             </div>
 
             {/* Children */}
-            {node.type === 'directory' && node.expanded && node.children && (
+            {node.type === 'directory' && node.expanded && (
               <TreeNodeList
-                nodes={node.children}
+                nodes={node.children || []}
                 level={level + 1}
                 indexPath={currentIndexPath}
                 selectedPath={selectedPath}
