@@ -9,6 +9,7 @@
 **Channel**: {{CHANNEL}}
 **ChatID**: {{CHAT_ID}}
 **Workspace**: {{WORKSPACE}}
+**Execution Mode**: {{EXECUTION_MODE}}
 **Skills Directory**: {{SKILLS_DIR}}
 **Maxclaw Source Marker File**: {{MAXCLAW_SOURCE_MARKER_FILE}}
 **Maxclaw Source Marker Path**: {{MAXCLAW_SOURCE_MARKER_PATH}}

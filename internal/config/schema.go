@@ -115,6 +115,7 @@ type AgentDefaults struct {
 	MaxTokens          int      `json:"maxTokens" mapstructure:"maxTokens"`
 	Temperature        float64  `json:"temperature" mapstructure:"temperature"`
 	MaxToolIterations  int      `json:"maxToolIterations" mapstructure:"maxToolIterations"`
+	ExecutionMode      string   `json:"executionMode,omitempty" mapstructure:"executionMode"`
 	EnableGlobalSkills bool     `json:"enableGlobalSkills" mapstructure:"enableGlobalSkills"`
 	GlobalSkillsPaths  []string `json:"globalSkillsPaths,omitempty" mapstructure:"globalSkillsPaths"`
 }
@@ -264,6 +265,7 @@ func DefaultConfig() *Config {
 				MaxTokens:          8192,
 				Temperature:        0.7,
 				MaxToolIterations:  200,
+				ExecutionMode:      ExecutionModeAsk,
 				EnableGlobalSkills: true, // 默认启用 ~/.agents/skills/
 			},
 		},

@@ -144,6 +144,7 @@ var agentCmd = &cobra.Command{
 			cfg.Tools.MCPServers,
 			cfg.Agents.Defaults.EnableGlobalSkills,
 		)
+		agentLoop.UpdateRuntimeExecutionMode(cfg.Agents.Defaults.ExecutionMode)
 		defer agentLoop.Close()
 
 		if messageFlag != "" {

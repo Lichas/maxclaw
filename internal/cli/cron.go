@@ -338,6 +338,7 @@ func executeCronJob(cfg *config.Config, apiKey, apiBase string, cronService *cro
 		cfg.Tools.MCPServers,
 		cfg.Agents.Defaults.EnableGlobalSkills,
 	)
+	agentLoop.UpdateRuntimeExecutionMode(cfg.Agents.Defaults.ExecutionMode)
 	defer agentLoop.Close()
 
 	// 执行单次任务

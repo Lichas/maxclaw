@@ -19,6 +19,11 @@
 
 ### 变更
 
+#### 新增执行模式（safe/ask/auto）并支持全自动无审批续跑
+- **变更**：新增 `agents.defaults.executionMode` 配置（`safe`/`ask`/`auto`）；`auto` 模式下计划任务不再提示人工输入“继续”，并自动扩大单次迭代预算；达到上限时自动停止。Gateway 设置页新增“执行模式”下拉并支持热更新。
+- **位置**：`internal/config/execution_mode.go`、`internal/config/schema.go`、`internal/config/loader.go`、`internal/agent/loop.go`、`internal/agent/context.go`、`internal/webui/server.go`、`internal/cli/status.go`、`internal/cli/gateway.go`、`internal/cli/agent.go`、`internal/cli/cron.go`、`electron/src/renderer/views/SettingsView.tsx`、`electron/src/renderer/i18n/index.ts`、`README.md`、`docs/planning.md`。
+- **验证**：`go test ./internal/config ./internal/agent ./internal/webui`、`cd electron && npm run build`、`make build`。
+
 #### Skills 市场支持按名称过滤，聊天下拉补齐全局技能并增强重试加载
 - **变更**：Skills 市场新增“按名称过滤已安装技能”；`/api/skills` 改为返回“工作区 + 全局（~/.agents/skills）”技能并回传来源；聊天页技能下拉改为仅展示启用技能，并在打开下拉且为空/失败时自动重试加载，减少重启后首轮加载失败导致列表为空。
 - **位置**：`electron/src/renderer/views/SkillsView.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`internal/webui/server.go`。

@@ -150,6 +150,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	status := map[string]interface{}{
 		"workspace":           s.cfg.Agents.Defaults.Workspace,
 		"model":               s.cfg.Agents.Defaults.Model,
+		"executionMode":       s.cfg.Agents.Defaults.ExecutionMode,
 		"restrictToWorkspace": s.cfg.Tools.RestrictToWorkspace,
 	}
 
@@ -1092,6 +1093,7 @@ func (s *Server) applyRuntimeModelConfig(cfg *config.Config) error {
 		return nil
 	}
 	s.agentLoop.UpdateRuntimeMaxIterations(cfg.Agents.Defaults.MaxToolIterations)
+	s.agentLoop.UpdateRuntimeExecutionMode(cfg.Agents.Defaults.ExecutionMode)
 
 	model := cfg.Agents.Defaults.Model
 	if model == "" {

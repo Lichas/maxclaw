@@ -33,6 +33,7 @@ var errMaxclawSourceMarkerFound = errors.New("maxclaw source marker found")
 type ContextBuilder struct {
 	workspace          string
 	enableGlobalSkills bool
+	executionMode      string
 
 	sourceOnce        sync.Once
 	sourceDir         string
@@ -42,7 +43,7 @@ type ContextBuilder struct {
 
 // NewContextBuilder 创建上下文构建器
 func NewContextBuilder(workspace string) *ContextBuilder {
-	return &ContextBuilder{workspace: workspace}
+	return &ContextBuilder{workspace: workspace, executionMode: "ask"}
 }
 
 // NewContextBuilderWithConfig 创建带配置的上下文构建器
@@ -50,6 +51,17 @@ func NewContextBuilderWithConfig(workspace string, enableGlobalSkills bool) *Con
 	return &ContextBuilder{
 		workspace:          workspace,
 		enableGlobalSkills: enableGlobalSkills,
+		executionMode:      "ask",
+	}
+}
+
+// SetExecutionMode sets the execution mode injected into prompt environment context.
+func (b *ContextBuilder) SetExecutionMode(mode string) {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "safe", "auto":
+		b.executionMode = strings.ToLower(strings.TrimSpace(mode))
+	default:
+		b.executionMode = "ask"
 	}
 }
 
@@ -205,6 +217,7 @@ func (b *ContextBuilder) buildEnvironmentSection(channel, chatID string) string 
 	result = strings.ReplaceAll(result, "{{CHANNEL}}", channel)
 	result = strings.ReplaceAll(result, "{{CHAT_ID}}", chatID)
 	result = strings.ReplaceAll(result, "{{WORKSPACE}}", b.workspace)
+	result = strings.ReplaceAll(result, "{{EXECUTION_MODE}}", b.executionMode)
 	result = strings.ReplaceAll(result, "{{SKILLS_DIR}}", filepath.Join(b.workspace, "skills"))
 	result = strings.ReplaceAll(result, "{{MAXCLAW_SOURCE_MARKER_FILE}}", maxclawSourceMarkerFile)
 	result = strings.ReplaceAll(result, "{{MAXCLAW_SOURCE_MARKER_PATH}}", markerPath)

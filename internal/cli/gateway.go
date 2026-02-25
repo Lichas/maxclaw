@@ -88,6 +88,7 @@ var gatewayCmd = &cobra.Command{
 			cfg.Tools.MCPServers,
 			cfg.Agents.Defaults.EnableGlobalSkills,
 		)
+		agentLoop.UpdateRuntimeExecutionMode(cfg.Agents.Defaults.ExecutionMode)
 		defer agentLoop.Close()
 
 		// 创建频道注册表

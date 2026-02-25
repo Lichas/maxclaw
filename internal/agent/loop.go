@@ -24,6 +24,7 @@ const (
 	sessionContextWindow         = 500
 	sessionConsolidateThreshold  = 120
 	sessionConsolidateKeepRecent = 40
+	autoModeIterationMultiplier  = 5
 )
 
 // AgentLoop Agent 循环
@@ -47,6 +48,7 @@ type AgentLoop struct {
 	mcpConnector   *tools.MCPConnector
 	mcpConnectOnce sync.Once
 	runtimeMu      sync.RWMutex
+	executionMode  string
 
 	// 中断处理相关
 	intentAnalyzer *IntentAnalyzer
@@ -113,7 +115,9 @@ func NewAgentLoop(
 		tools:               tools.NewRegistry(),
 		intentAnalyzer:      NewIntentAnalyzer(),
 		PlanManager:         NewPlanManager(workspace),
+		executionMode:       config.ExecutionModeAsk,
 	}
+	loop.context.SetExecutionMode(loop.executionMode)
 
 	if len(loop.MCPServers) > 0 {
 		loop.mcpConnector = tools.NewMCPConnector(convertMCPServers(loop.MCPServers))
@@ -265,6 +269,12 @@ func (a *AgentLoop) runtimeSnapshot() (providers.LLMProvider, string, int) {
 	return a.Provider, a.Model, a.MaxIterations
 }
 
+func (a *AgentLoop) executionModeSnapshot() string {
+	a.runtimeMu.RLock()
+	defer a.runtimeMu.RUnlock()
+	return config.NormalizeExecutionMode(a.executionMode)
+}
+
 // HandleInterruption 处理插话请求
 func (a *AgentLoop) HandleInterruption(msg *bus.InboundMessage) InterruptMode {
 	a.icMu.RLock()
@@ -376,13 +386,18 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 
 	// Load existing plan or check for continue intent
 	plan, _ := a.PlanManager.Load(msg.SessionKey)
-	if plan != nil && plan.Status == PlanStatusPaused && IsContinueIntent(msg.Content) {
+	executionMode := a.executionModeSnapshot()
+	if plan != nil && plan.Status == PlanStatusPaused && (executionMode == config.ExecutionModeAuto || IsContinueIntent(msg.Content)) {
 		plan.Status = PlanStatusRunning
 		a.PlanManager.Save(msg.SessionKey, plan)
 
 		// Inject plan summary into user message
 		summary := plan.GenerateProgressSummary()
-		msg.Content = fmt.Sprintf("[恢复任务]\n%s\n\n用户指令: %s", summary, msg.Content)
+		if executionMode == config.ExecutionModeAuto {
+			msg.Content = fmt.Sprintf("[自动恢复任务]\n%s\n\n用户指令: %s", summary, msg.Content)
+		} else {
+			msg.Content = fmt.Sprintf("[恢复任务]\n%s\n\n用户指令: %s", summary, msg.Content)
+		}
 	}
 
 	// 检查并处理待处理的补充消息
@@ -448,6 +463,10 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 	maxIterationReached := true
 	toolDefs := a.tools.GetDefinitions()
 	_, activeModel, maxIterations := a.runtimeSnapshot()
+	effectiveMaxIterations := maxIterations
+	if executionMode == config.ExecutionModeAuto {
+		effectiveMaxIterations = maxIterations * autoModeIterationMultiplier
+	}
 	if activeModel != "" {
 		emitEvent(StreamEvent{
 			Type:    "status",
@@ -458,7 +477,7 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 	stepDetector := NewStepDetector()
 	iterationsInCurrentStep := 0
 
-	for i := 0; i < maxIterations; i++ {
+	for i := 0; i < effectiveMaxIterations; i++ {
 		iteration := i + 1
 
 		// 检查是否被取消
@@ -650,15 +669,20 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 
 	if finalContent == "" {
 		if maxIterationReached {
-			finalContent = fmt.Sprintf("Reached %d iterations without completion.", maxIterations)
+			finalContent = fmt.Sprintf("Reached %d iterations without completion.", effectiveMaxIterations)
 
 			// Pause plan if exists
 			if plan != nil && plan.Status == PlanStatusRunning {
-				plan.Status = PlanStatusPaused
-				a.PlanManager.Save(msg.SessionKey, plan)
-
 				summary := plan.GenerateProgressSummary()
-				finalContent += fmt.Sprintf("\n\n%s\n\n输入'继续'以恢复执行。", summary)
+				if executionMode == config.ExecutionModeAuto {
+					plan.Status = PlanStatusFailed
+					a.PlanManager.Save(msg.SessionKey, plan)
+					finalContent += fmt.Sprintf("\n\n%s\n\n自动模式已达到执行上限并停止。可调高 agents.defaults.maxToolIterations 后重试。", summary)
+				} else {
+					plan.Status = PlanStatusPaused
+					a.PlanManager.Save(msg.SessionKey, plan)
+					finalContent += fmt.Sprintf("\n\n%s\n\n输入'继续'以恢复执行。", summary)
+				}
 			}
 		} else {
 			finalContent = "I've completed processing but have no response to give."
@@ -725,6 +749,14 @@ func (a *AgentLoop) UpdateRuntimeMaxIterations(maxIterations int) {
 	a.runtimeMu.Lock()
 	defer a.runtimeMu.Unlock()
 	a.MaxIterations = maxIterations
+}
+
+// UpdateRuntimeExecutionMode updates execution mode for new requests.
+func (a *AgentLoop) UpdateRuntimeExecutionMode(mode string) {
+	a.runtimeMu.Lock()
+	defer a.runtimeMu.Unlock()
+	a.executionMode = config.NormalizeExecutionMode(mode)
+	a.context.SetExecutionMode(a.executionMode)
 }
 
 // ProcessDirect 直接处理消息（用于 CLI）

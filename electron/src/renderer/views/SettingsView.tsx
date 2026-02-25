@@ -41,6 +41,8 @@ export function SettingsView() {
   const [gatewayConfig, setGatewayConfig] = useState<any>(null);
   const [maxToolIterationsInput, setMaxToolIterationsInput] = useState('200');
   const [savingMaxToolIterations, setSavingMaxToolIterations] = useState(false);
+  const [executionModeInput, setExecutionModeInput] = useState<'safe' | 'ask' | 'auto'>('ask');
+  const [savingExecutionMode, setSavingExecutionMode] = useState(false);
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
   const [editingProvider, setEditingProvider] = useState<ProviderConfig | null>(null);
   const [showAddProvider, setShowAddProvider] = useState(false);
@@ -92,6 +94,10 @@ export function SettingsView() {
         const configuredMaxIterations = config.agents?.defaults?.maxToolIterations;
         if (typeof configuredMaxIterations === 'number' && configuredMaxIterations > 0) {
           setMaxToolIterationsInput(String(configuredMaxIterations));
+        }
+        const configuredExecutionMode = config.agents?.defaults?.executionMode;
+        if (configuredExecutionMode === 'safe' || configuredExecutionMode === 'ask' || configuredExecutionMode === 'auto') {
+          setExecutionModeInput(configuredExecutionMode);
         }
         // Convert gateway providers format to our format
         if (config.providers) {
@@ -213,6 +219,44 @@ export function SettingsView() {
       alert(t('settings.gateway.maxToolIterations.saveError'));
     } finally {
       setSavingMaxToolIterations(false);
+    }
+  };
+
+  const handleSaveExecutionMode = async () => {
+    if (!gatewayConfig?.agents?.defaults) {
+      alert(t('settings.gateway.notConfigured'));
+      return;
+    }
+
+    setSavingExecutionMode(true);
+    try {
+      const updatedAgents = {
+        ...gatewayConfig.agents,
+        defaults: {
+          ...gatewayConfig.agents.defaults,
+          executionMode: executionModeInput,
+        },
+      };
+
+      const response = await fetch('http://localhost:18890/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agents: updatedAgents }),
+      });
+      if (!response.ok) {
+        throw new Error(`save failed: ${response.status}`);
+      }
+      const updatedConfig = await response.json();
+      setGatewayConfig(updatedConfig);
+      const mode = updatedConfig.agents?.defaults?.executionMode;
+      if (mode === 'safe' || mode === 'ask' || mode === 'auto') {
+        setExecutionModeInput(mode);
+      }
+    } catch (error) {
+      console.error('Failed to save execution mode:', error);
+      alert(t('settings.gateway.executionMode.saveError'));
+    } finally {
+      setSavingExecutionMode(false);
     }
   };
 
@@ -804,6 +848,32 @@ export function SettingsView() {
                       <code className="block rounded bg-background px-2 py-1 text-xs">
                         {gatewayConfig.agents?.defaults?.workspace || t('settings.gateway.notConfigured')}
                       </code>
+
+                      <div className="mt-4">
+                        <h4 className="mb-2 text-sm font-medium">{t('settings.gateway.executionMode')}</h4>
+                        <div className="flex items-center gap-3">
+                          <CustomSelect
+                            value={executionModeInput}
+                            onChange={(value) => setExecutionModeInput(value as 'safe' | 'ask' | 'auto')}
+                            options={[
+                              { value: 'safe', label: t('settings.gateway.executionMode.safe') },
+                              { value: 'ask', label: t('settings.gateway.executionMode.ask') },
+                              { value: 'auto', label: t('settings.gateway.executionMode.auto') }
+                            ]}
+                            size="md"
+                            className="min-w-[180px]"
+                            triggerClassName="bg-background"
+                          />
+                          <button
+                            onClick={handleSaveExecutionMode}
+                            disabled={savingExecutionMode}
+                            className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {savingExecutionMode ? t('settings.gateway.executionMode.saving') : t('common.save')}
+                          </button>
+                        </div>
+                        <p className="mt-2 text-xs text-foreground/60">{t('settings.gateway.executionMode.hint')}</p>
+                      </div>
 
                       <div className="mt-4">
                         <h4 className="mb-2 text-sm font-medium">{t('settings.gateway.maxToolIterations')}</h4>

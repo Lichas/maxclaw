@@ -38,6 +38,7 @@ var statusCmd = &cobra.Command{
 
 		// 模型配置
 		fmt.Printf("Model: %s\n", cfg.Agents.Defaults.Model)
+		fmt.Printf("Execution Mode: %s\n", cfg.Agents.Defaults.ExecutionMode)
 
 		// API Key 状态
 		fmt.Printf("OpenRouter API: ")

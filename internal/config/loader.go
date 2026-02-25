@@ -99,6 +99,7 @@ func LoadConfig() (*Config, error) {
 
 	// Expand workspace path (supports ~ and $HOME)
 	config.Agents.Defaults.Workspace = expandPath(config.Agents.Defaults.Workspace)
+	config.Agents.Defaults.ExecutionMode = NormalizeExecutionMode(config.Agents.Defaults.ExecutionMode)
 
 	return config, nil
 }

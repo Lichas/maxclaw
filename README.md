@@ -210,6 +210,25 @@ Linux 默认会安装并启动：
 }
 ```
 
+### 执行模式（safe / ask / auto）
+你可以通过 `agents.defaults.executionMode` 控制任务执行策略：
+- `safe`：保守探索模式（更偏只读）
+- `ask`：默认模式
+- `auto`：全自动模式，不需要人工输入“继续”来恢复计划执行
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "executionMode": "auto",
+      "maxToolIterations": 200
+    }
+  }
+}
+```
+
+说明：`auto` 模式会放大单次执行预算；若仍达到上限会自动停止，不会等待人工审批。
+
 ### Heartbeat（短周期状态）
 受 OpenClaw 的 `heartbeat.md` 思路启发，maxclaw 会在每轮对话自动加载：
 - `<workspace>/memory/heartbeat.md`（优先）
@@ -588,6 +607,25 @@ Restrict tools to workspace only:
   }
 }
 ```
+
+### Execution Mode (safe / ask / auto)
+Set `agents.defaults.executionMode` to control runtime behavior:
+- `safe`: conservative exploration mode
+- `ask`: default mode
+- `auto`: fully autonomous mode (no manual "continue" approval for paused plans)
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "executionMode": "auto",
+      "maxToolIterations": 200
+    }
+  }
+}
+```
+
+Note: in `auto` mode, max iteration budget per run is expanded. If it still hits the limit, execution stops automatically.
 
 ### Heartbeat (Short-Cycle Status)
 Inspired by OpenClaw's `heartbeat.md`, maxclaw auto-loads heartbeat context on each turn:

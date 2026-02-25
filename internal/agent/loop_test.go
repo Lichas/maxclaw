@@ -330,6 +330,76 @@ func TestAgentLoopProcessMessageMaxIterationFallback(t *testing.T) {
 	assert.Contains(t, resp.Content, "Reached 2 iterations without completion.")
 }
 
+func TestAgentLoopProcessMessageMaxIterationAutoModeUsesExpandedBudget(t *testing.T) {
+	workspace := t.TempDir()
+	messageBus := bus.NewMessageBus(10)
+	provider := &endlessToolProvider{}
+	cronSvc := cron.NewService(filepath.Join(workspace, ".cron", "jobs.json"))
+
+	loop := NewAgentLoop(
+		messageBus,
+		provider,
+		workspace,
+		"test-model",
+		2,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		cronSvc,
+		nil,
+		false,
+	)
+	loop.UpdateRuntimeExecutionMode(config.ExecutionModeAuto)
+
+	msg := bus.NewInboundMessage("telegram", "user-1", "chat-42", "hello")
+	resp, err := loop.ProcessMessage(context.Background(), msg)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Contains(t, resp.Content, "Reached 10 iterations without completion.")
+	assert.NotContains(t, resp.Content, "输入'继续'以恢复执行")
+}
+
+func TestAgentLoopAutoModeResumesPausedPlanWithoutContinue(t *testing.T) {
+	workspace := t.TempDir()
+	messageBus := bus.NewMessageBus(10)
+	provider := &staticProvider{}
+	cronSvc := cron.NewService(filepath.Join(workspace, ".cron", "jobs.json"))
+
+	loop := NewAgentLoop(
+		messageBus,
+		provider,
+		workspace,
+		"test-model",
+		2,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		cronSvc,
+		nil,
+		false,
+	)
+	loop.UpdateRuntimeExecutionMode(config.ExecutionModeAuto)
+
+	plan := CreatePlan("auto resume test")
+	plan.AddStep("step 1")
+	plan.Steps[0].Status = StepStatusRunning
+	plan.Status = PlanStatusPaused
+	require.NoError(t, loop.PlanManager.Save("telegram:chat-42", plan))
+
+	msg := bus.NewInboundMessage("telegram", "user-1", "chat-42", "继续处理")
+	resp, err := loop.ProcessMessage(context.Background(), msg)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "ok", resp.Content)
+
+	updatedPlan, err := loop.PlanManager.Load("telegram:chat-42")
+	require.NoError(t, err)
+	require.NotNil(t, updatedPlan)
+	assert.Equal(t, PlanStatusCompleted, updatedPlan.Status)
+}
+
 func TestAgentLoopProcessMessageAutoConsolidatesWhenSessionLarge(t *testing.T) {
 	workspace := t.TempDir()
 	messageBus := bus.NewMessageBus(10)

@@ -69,3 +69,22 @@ You can inspect this file to see the current plan state.
 - `paused` - Task exceeded iteration limit, waiting for "continue"
 - `completed` - All steps finished successfully
 - `failed` - Task encountered an error
+
+## Auto Mode (No Manual Approval)
+
+If you want fully autonomous execution without typing "continue", set:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "executionMode": "auto"
+    }
+  }
+}
+```
+
+Behavior in `auto` mode:
+- Paused plans are resumed automatically on the next turn
+- Per-run iteration budget is expanded automatically
+- If the expanded budget is still exhausted, the plan stops automatically (no manual approval prompt)

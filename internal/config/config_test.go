@@ -18,6 +18,7 @@ func TestDefaultConfig(t *testing.T) {
 	assert.Equal(t, 8192, cfg.Agents.Defaults.MaxTokens)
 	assert.Equal(t, 0.7, cfg.Agents.Defaults.Temperature)
 	assert.Equal(t, 200, cfg.Agents.Defaults.MaxToolIterations)
+	assert.Equal(t, ExecutionModeAsk, cfg.Agents.Defaults.ExecutionMode)
 
 	assert.Equal(t, "0.0.0.0", cfg.Gateway.Host)
 	assert.Equal(t, 18890, cfg.Gateway.Port)
@@ -203,6 +204,29 @@ func TestLoadConfigExpandsWorkspace(t *testing.T) {
 			assert.Equal(t, tt.want, loaded.Agents.Defaults.Workspace)
 		})
 	}
+}
+
+func TestLoadConfigNormalizesExecutionMode(t *testing.T) {
+	tmpDir := t.TempDir()
+	origHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", origHome)
+
+	configDir := GetConfigDir()
+	require.NoError(t, os.MkdirAll(configDir, 0755))
+
+	raw := `{"agents":{"defaults":{"executionMode":"AUTO"}}}`
+	require.NoError(t, os.WriteFile(GetConfigPath(), []byte(raw), 0600))
+
+	loaded, err := LoadConfig()
+	require.NoError(t, err)
+	assert.Equal(t, ExecutionModeAuto, loaded.Agents.Defaults.ExecutionMode)
+
+	raw = `{"agents":{"defaults":{"executionMode":"unknown"}}}`
+	require.NoError(t, os.WriteFile(GetConfigPath(), []byte(raw), 0600))
+	loaded, err = LoadConfig()
+	require.NoError(t, err)
+	assert.Equal(t, ExecutionModeAsk, loaded.Agents.Defaults.ExecutionMode)
 }
 
 func TestLoadConfigMCPServersCompatibility(t *testing.T) {
