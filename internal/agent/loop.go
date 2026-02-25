@@ -149,9 +149,8 @@ func (a *AgentLoop) registerDefaultTools() {
 	}))
 
 	// 子代理工具
-	spawnTool := tools.NewSpawnTool(func(task string) error {
-		fmt.Printf("[Spawn] %s\n", task)
-		return nil
+	spawnTool := tools.NewSpawnTool(func(ctx context.Context, request tools.SpawnRequest) (tools.SpawnResult, error) {
+		return a.executeSpawnRequest(ctx, request)
 	})
 	a.tools.Register(spawnTool)
 
@@ -334,7 +333,7 @@ func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage)
 	go a.checkIncomingMessages(ic, msg, stopCheck)
 	defer close(stopCheck)
 
-	return a.processMessageWithIC(ic, msg, nil, nil)
+	return a.processMessageWithIC(ic, msg, nil, nil, "")
 }
 
 // checkIncomingMessages 定期检查是否有同一会话的新消息
@@ -357,7 +356,7 @@ func (a *AgentLoop) checkIncomingMessages(ic *InterruptibleContext, currentMsg *
 	}
 }
 
-func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.InboundMessage, onDelta func(string), onEvent func(StreamEvent)) (*bus.OutboundMessage, error) {
+func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.InboundMessage, onDelta func(string), onEvent func(StreamEvent), modelOverride string) (*bus.OutboundMessage, error) {
 	// 使用 InterruptibleContext 的底层 context
 	ctx := ic.Context()
 	a.ensureMCPConnected(ctx)
@@ -463,6 +462,9 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 	maxIterationReached := true
 	toolDefs := a.tools.GetDefinitions()
 	_, activeModel, maxIterations := a.runtimeSnapshot()
+	if strings.TrimSpace(modelOverride) != "" {
+		activeModel = strings.TrimSpace(modelOverride)
+	}
 	effectiveMaxIterations := maxIterations
 	if executionMode == config.ExecutionModeAuto {
 		effectiveMaxIterations = maxIterations * autoModeIterationMultiplier
@@ -789,6 +791,125 @@ func (a *AgentLoop) ProcessDirectWithSkills(
 	return resp.Content, nil
 }
 
+// ProcessDirectWithOptions runs a direct request with optional model override.
+// Used by spawned sub-sessions to keep model/context independent from the parent run.
+func (a *AgentLoop) ProcessDirectWithOptions(
+	ctx context.Context,
+	content, sessionKey, channel, chatID string,
+	selectedSkills []string,
+	modelOverride string,
+) (string, error) {
+	msg := bus.NewInboundMessage(channel, "user", chatID, content)
+	if sessionKey != "" {
+		msg.SessionKey = sessionKey
+	}
+	msg.SelectedSkills = normalizeSkillRefs(selectedSkills)
+
+	ic := NewInterruptibleContext(ctx, a.Bus)
+	resp, err := a.processMessageWithIC(ic, msg, nil, nil, modelOverride)
+	if err != nil {
+		return "", err
+	}
+	if resp == nil {
+		return "", nil
+	}
+	return resp.Content, nil
+}
+
+func (a *AgentLoop) executeSpawnRequest(ctx context.Context, request tools.SpawnRequest) (tools.SpawnResult, error) {
+	parentSessionKey := strings.TrimSpace(request.ParentSessionKey)
+	channel := strings.TrimSpace(request.Channel)
+	chatID := strings.TrimSpace(request.ChatID)
+
+	if channel == "" {
+		channel = "spawn"
+	}
+	if chatID == "" {
+		chatID = parentSessionKey
+	}
+
+	childSessionKey := strings.TrimSpace(request.SessionKey)
+	if childSessionKey == "" {
+		base := strings.TrimSpace(parentSessionKey)
+		if base == "" {
+			base = "spawn"
+		}
+		childSessionKey = fmt.Sprintf("%s:spawn:%d", base, time.Now().UnixMilli())
+	}
+
+	taskPrompt := strings.TrimSpace(request.Task)
+	if len(request.EnabledSources) > 0 {
+		taskPrompt = fmt.Sprintf(
+			"[Spawn Context]\nPreferred sources: %s\n\n%s",
+			strings.Join(request.EnabledSources, ", "),
+			taskPrompt,
+		)
+	}
+
+	if request.NotifyParent && a.Bus != nil && channel != "" && chatID != "" {
+		_ = a.Bus.PublishOutbound(bus.NewOutboundMessage(
+			channel,
+			chatID,
+			fmt.Sprintf(
+				"[Spawn] Started `%s` in sub-session `%s`.",
+				defaultSpawnLabel(request.Label, request.Task),
+				childSessionKey,
+			),
+		))
+	}
+
+	runCtx := context.Background()
+	resultText, err := a.ProcessDirectWithOptions(
+		runCtx,
+		taskPrompt,
+		childSessionKey,
+		channel,
+		chatID,
+		request.SelectedSkills,
+		request.Model,
+	)
+	if err != nil {
+		if request.NotifyParent && a.Bus != nil && channel != "" && chatID != "" {
+			_ = a.Bus.PublishOutbound(bus.NewOutboundMessage(
+				channel,
+				chatID,
+				fmt.Sprintf("[Spawn] Failed `%s`: %v", defaultSpawnLabel(request.Label, request.Task), err),
+			))
+		}
+		return tools.SpawnResult{SessionKey: childSessionKey}, err
+	}
+
+	if request.NotifyParent && a.Bus != nil && channel != "" && chatID != "" {
+		preview := truncateEventText(strings.TrimSpace(resultText), 220)
+		_ = a.Bus.PublishOutbound(bus.NewOutboundMessage(
+			channel,
+			chatID,
+			fmt.Sprintf("[Spawn] Completed `%s` in `%s`.\n%s", defaultSpawnLabel(request.Label, request.Task), childSessionKey, preview),
+		))
+	}
+
+	return tools.SpawnResult{
+		SessionKey: childSessionKey,
+		Message:    resultText,
+	}, nil
+}
+
+func defaultSpawnLabel(label, task string) string {
+	label = strings.TrimSpace(label)
+	if label != "" {
+		return label
+	}
+	task = strings.TrimSpace(task)
+	if task == "" {
+		return "spawn-task"
+	}
+	runes := []rune(task)
+	if len(runes) > 40 {
+		return string(runes[:40]) + "..."
+	}
+	return task
+}
+
 // ExecuteToolWithSession executes one tool call with explicit runtime context.
 func (a *AgentLoop) ExecuteToolWithSession(
 	ctx context.Context,
@@ -838,7 +959,7 @@ func (a *AgentLoop) ProcessDirectStream(
 		a.icMu.Unlock()
 	}()
 
-	resp, err := a.processMessageWithIC(ic, msg, onDelta, nil)
+	resp, err := a.processMessageWithIC(ic, msg, onDelta, nil, "")
 	if err != nil {
 		return "", err
 	}
@@ -880,7 +1001,7 @@ func (a *AgentLoop) ProcessDirectEventStreamWithSkills(
 		a.icMu.Unlock()
 	}()
 
-	resp, err := a.processMessageWithIC(ic, msg, nil, onEvent)
+	resp, err := a.processMessageWithIC(ic, msg, nil, onEvent, "")
 	if err != nil {
 		return "", err
 	}

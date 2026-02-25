@@ -134,6 +134,28 @@ func TestContextBuilderSystemPromptMentionsSelfImproveCommands(t *testing.T) {
 	assert.Contains(t, systemPrompt, maxclawSourceMarkerFile)
 }
 
+func TestContextBuilderDiscoversProjectContextFilesRecursively(t *testing.T) {
+	sourceRoot := t.TempDir()
+	workspace := filepath.Join(sourceRoot, "apps", "desktop")
+	require.NoError(t, os.MkdirAll(workspace, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(sourceRoot, maxclawSourceMarkerFile), []byte("marker"), 0644))
+
+	require.NoError(t, os.WriteFile(filepath.Join(sourceRoot, "AGENTS.md"), []byte("# Root Agents"), 0644))
+	require.NoError(t, os.MkdirAll(filepath.Join(sourceRoot, "packages", "api"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(sourceRoot, "packages", "api", "CLAUDE.md"), []byte("# API Context"), 0644))
+
+	builder := NewContextBuilder(workspace)
+	messages := builder.BuildMessages(nil, "hello", nil, "telegram", "123")
+	require.NotEmpty(t, messages)
+
+	systemPrompt := messages[0].Content
+	assert.Contains(t, systemPrompt, "## Project Context Files")
+	assert.Contains(t, systemPrompt, "AGENTS.md (root)")
+	assert.Contains(t, systemPrompt, filepath.Join("packages", "api", "CLAUDE.md"))
+	assert.Contains(t, systemPrompt, "### AGENTS.md")
+	assert.Contains(t, systemPrompt, "# Root Agents")
+}
+
 func TestContextBuilderIncludesTwoLayerMemoryHints(t *testing.T) {
 	workspace := t.TempDir()
 	builder := NewContextBuilder(workspace)

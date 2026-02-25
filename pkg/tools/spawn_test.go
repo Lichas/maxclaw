@@ -12,9 +12,9 @@ import (
 
 func TestSpawnTool(t *testing.T) {
 	var receivedTask string
-	callback := func(task string) error {
-		receivedTask = task
-		return nil
+	callback := func(ctx context.Context, req SpawnRequest) (SpawnResult, error) {
+		receivedTask = req.Task
+		return SpawnResult{SessionKey: "spawn:test"}, nil
 	}
 	_ = receivedTask // 避免未使用错误
 
@@ -39,6 +39,20 @@ func TestSpawnTool(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, result, "Spawned subagent")
 		assert.Contains(t, result, "Data Analysis")
+	})
+
+	t.Run("spawn with model and sources", func(t *testing.T) {
+		result, err := tool.Execute(ctx, map[string]interface{}{
+			"task":            "collect sprint summary",
+			"model":           "gpt-4o-mini",
+			"selected_skills": []interface{}{"summary", "planner"},
+			"enabled_sources": []interface{}{"jira", "slack"},
+			"session_key":     "desktop:spawn:sprint",
+			"notify_parent":   false,
+		})
+		require.NoError(t, err)
+		assert.Contains(t, result, "gpt-4o-mini")
+		assert.Contains(t, result, "desktop:spawn:sprint")
 	})
 
 	t.Run("missing task", func(t *testing.T) {

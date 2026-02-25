@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -26,8 +27,11 @@ const legacySourceMarkerFile = ".nanobot-source-root"
 const maxclawSourceSearchRootsEnv = "MAXCLAW_SOURCE_SEARCH_ROOTS"
 const legacySourceSearchRootsEnv = "NANOBOT_SOURCE_SEARCH_ROOTS"
 const maxclawSourceSearchMaxDepth = 5
+const maxProjectContextFiles = 30
+const maxProjectContextPreviewBytes = 10 * 1024
 
 var errMaxclawSourceMarkerFound = errors.New("maxclaw source marker found")
+var errMaxProjectContextLimit = errors.New("project context file limit reached")
 
 // ContextBuilder 上下文构建器
 type ContextBuilder struct {
@@ -133,10 +137,9 @@ func (b *ContextBuilder) buildSystemPrompt(channel, chatID, currentMessage strin
 	// 1. 嵌入的基础系统提示
 	parts = append(parts, systemPromptTemplate)
 
-	// 2. 读取 AGENTS.md
-	agentsPath := filepath.Join(b.workspace, "AGENTS.md")
-	if content, err := os.ReadFile(agentsPath); err == nil {
-		parts = append(parts, "## Agent Instructions\n"+string(content))
+	// 2. 读取项目上下文文件（递归发现 AGENTS/CLAUDE，支持 monorepo）
+	if projectContext := b.buildProjectContextSection(); projectContext != "" {
+		parts = append(parts, projectContext)
 	}
 
 	// 3. 读取 SOUL.md
@@ -195,6 +198,120 @@ func (b *ContextBuilder) loadHeartbeat() string {
 		}
 	}
 	return ""
+}
+
+func (b *ContextBuilder) buildProjectContextSection() string {
+	sourceDir, _, _ := b.resolveMaxclawSource()
+	if strings.TrimSpace(sourceDir) == "" {
+		sourceDir = b.workspace
+	}
+	if sourceDir == "" {
+		return ""
+	}
+
+	contextFiles := discoverProjectContextFiles(sourceDir)
+	if len(contextFiles) == 0 {
+		return ""
+	}
+
+	lines := make([]string, 0, len(contextFiles)+8)
+	lines = append(lines, "## Project Context Files")
+	lines = append(lines, fmt.Sprintf("Project root: `%s`", sourceDir))
+	lines = append(lines, "Auto-discovered files (monorepo aware):")
+	for _, relPath := range contextFiles {
+		rootMark := ""
+		if !strings.Contains(relPath, string(filepath.Separator)) {
+			rootMark = " (root)"
+		}
+		lines = append(lines, fmt.Sprintf("- %s%s", relPath, rootMark))
+	}
+	lines = append(lines, "When modifying a submodule/package, read its nearest AGENTS.md/CLAUDE.md first.")
+
+	if rootContext := loadRootProjectContextFiles(sourceDir); rootContext != "" {
+		lines = append(lines, rootContext)
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+func discoverProjectContextFiles(root string) []string {
+	root = filepath.Clean(root)
+	entries := make([]string, 0, maxProjectContextFiles)
+
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			if d != nil && d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() {
+			if path != root && sourceSearchSkipDir(d.Name()) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		nameLower := strings.ToLower(d.Name())
+		if nameLower != "agents.md" && nameLower != "claude.md" {
+			return nil
+		}
+
+		rel, relErr := filepath.Rel(root, path)
+		if relErr != nil || rel == "" || rel == "." {
+			return nil
+		}
+		entries = append(entries, rel)
+		if len(entries) >= maxProjectContextFiles {
+			return errMaxProjectContextLimit
+		}
+		return nil
+	})
+	if err != nil && !errors.Is(err, errMaxProjectContextLimit) {
+		return nil
+	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		depthI := strings.Count(entries[i], string(filepath.Separator))
+		depthJ := strings.Count(entries[j], string(filepath.Separator))
+		if depthI != depthJ {
+			return depthI < depthJ
+		}
+		return entries[i] < entries[j]
+	})
+	return entries
+}
+
+func loadRootProjectContextFiles(root string) string {
+	files, err := os.ReadDir(root)
+	if err != nil {
+		return ""
+	}
+
+	sections := make([]string, 0, 2)
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		nameLower := strings.ToLower(file.Name())
+		if nameLower != "agents.md" && nameLower != "claude.md" {
+			continue
+		}
+		path := filepath.Join(root, file.Name())
+		content, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		if len(content) > maxProjectContextPreviewBytes {
+			content = append(content[:maxProjectContextPreviewBytes], []byte("\n\n... (truncated)")...)
+		}
+		sections = append(sections, fmt.Sprintf("### %s\n%s", file.Name(), strings.TrimSpace(string(content))))
+	}
+
+	if len(sections) == 0 {
+		return ""
+	}
+	return strings.Join(sections, "\n\n")
 }
 
 // buildEnvironmentSection 构建环境信息部分

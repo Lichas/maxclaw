@@ -24,6 +24,16 @@
 - **位置**：`internal/config/execution_mode.go`、`internal/config/schema.go`、`internal/config/loader.go`、`internal/agent/loop.go`、`internal/agent/context.go`、`internal/webui/server.go`、`internal/cli/status.go`、`internal/cli/gateway.go`、`internal/cli/agent.go`、`internal/cli/cron.go`、`electron/src/renderer/views/SettingsView.tsx`、`electron/src/renderer/i18n/index.ts`、`README.md`、`docs/planning.md`。
 - **验证**：`go test ./internal/config ./internal/agent ./internal/webui`、`cd electron && npm run build`、`make build`。
 
+#### 升级 spawn 为真实子会话执行并增加状态回传
+- **变更**：`spawn` 工具从占位模拟升级为后台真实子会话执行；支持可选 `model`、`selected_skills`、`enabled_sources`、`session_key` 参数；子会话完成后回传父会话状态消息，并记录子会话 key 与执行结果元信息。
+- **位置**：`pkg/tools/spawn.go`、`pkg/tools/spawn_test.go`、`internal/agent/loop.go`。
+- **验证**：`go test ./pkg/tools ./internal/agent`、`make build`。
+
+#### 新增项目上下文文件递归发现（AGENTS/CLAUDE）支持 monorepo
+- **变更**：系统提示不再只读 workspace 根 `AGENTS.md`；改为从项目根递归发现 `AGENTS.md`/`CLAUDE.md`，按层级注入文件清单，并附带根级上下文预览，提升多包仓库任务的上下文命中率。
+- **位置**：`internal/agent/context.go`、`internal/agent/context_test.go`。
+- **验证**：`go test ./internal/agent`、`make build`。
+
 #### Skills 市场支持按名称过滤，聊天下拉补齐全局技能并增强重试加载
 - **变更**：Skills 市场新增“按名称过滤已安装技能”；`/api/skills` 改为返回“工作区 + 全局（~/.agents/skills）”技能并回传来源；聊天页技能下拉改为仅展示启用技能，并在打开下拉且为空/失败时自动重试加载，减少重启后首轮加载失败导致列表为空。
 - **位置**：`electron/src/renderer/views/SkillsView.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`internal/webui/server.go`。
