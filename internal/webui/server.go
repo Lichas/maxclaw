@@ -94,6 +94,7 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	mux.HandleFunc("/api/message", s.handleMessage)
 	mux.HandleFunc("/api/browser/action", s.handleBrowserAction)
 	mux.HandleFunc("/api/config", s.handleConfig)
+	mux.HandleFunc("/api/soul", s.handleSoul)
 	mux.HandleFunc("/api/gateway/restart", s.handleGatewayRestart)
 	mux.HandleFunc("/api/cron", s.handleCron)
 	mux.HandleFunc("/api/cron/", s.handleCronByID)
@@ -1088,6 +1089,87 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleSoul 处理 USER_SOUL.md 文件的读写
+func (s *Server) handleSoul(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		content, err := s.readUserSoul()
+		if err != nil {
+			if os.IsNotExist(err) {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, map[string]string{"content": content})
+
+	case http.MethodPut:
+		var req struct {
+			Content string `json:"content"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			writeError(w, err)
+			return
+		}
+		if err := s.writeUserSoul(req.Content); err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, map[string]bool{"ok": true})
+
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+// readUserSoul 读取 USER_SOUL.md 文件内容
+func (s *Server) readUserSoul() (string, error) {
+	workspace := s.cfg.Agents.Defaults.Workspace
+	if workspace == "" {
+		workspace = "~/.maxclaw/workspace"
+	}
+	// Expand home directory
+	if strings.HasPrefix(workspace, "~") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		workspace = filepath.Join(home, workspace[1:])
+	}
+
+	soulPath := filepath.Join(workspace, "USER_SOUL.md")
+	data, err := os.ReadFile(soulPath)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+// writeUserSoul 写入 USER_SOUL.md 文件
+func (s *Server) writeUserSoul(content string) error {
+	workspace := s.cfg.Agents.Defaults.Workspace
+	if workspace == "" {
+		workspace = "~/.maxclaw/workspace"
+	}
+	// Expand home directory
+	if strings.HasPrefix(workspace, "~") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		workspace = filepath.Join(home, workspace[1:])
+	}
+
+	// Create workspace if not exists
+	if err := os.MkdirAll(workspace, 0755); err != nil {
+		return err
+	}
+
+	soulPath := filepath.Join(workspace, "USER_SOUL.md")
+	return os.WriteFile(soulPath, []byte(content), 0644)
+}
+
 func (s *Server) applyRuntimeModelConfig(cfg *config.Config) error {
 	if s.agentLoop == nil || cfg == nil {
 		return nil
@@ -1154,26 +1236,28 @@ func (s *Server) handleGatewayRestart(w http.ResponseWriter, r *http.Request) {
 
 // cronRequest 创建定时任务的请求格式（与前端对齐）
 type cronRequest struct {
-	Title   string `json:"title"`
-	Prompt  string `json:"prompt"`
-	Cron    string `json:"cron,omitempty"`  // cron 表达式
-	Every   string `json:"every,omitempty"` // 毫秒间隔
-	At      string `json:"at,omitempty"`    // ISO8601 时间
-	WorkDir string `json:"workDir,omitempty"`
+	Title         string `json:"title"`
+	Prompt        string `json:"prompt"`
+	Cron          string `json:"cron,omitempty"`  // cron 表达式
+	Every         string `json:"every,omitempty"` // 毫秒间隔
+	At            string `json:"at,omitempty"`    // ISO8601 时间
+	WorkDir       string `json:"workDir,omitempty"`
+	ExecutionMode string `json:"executionMode,omitempty"` // safe, ask, auto
 }
 
 // cronJobResponse 定时任务响应格式（与前端对齐）
 type cronJobResponse struct {
-	ID           string `json:"id"`
-	Title        string `json:"title"`
-	Prompt       string `json:"prompt"`
-	Schedule     string `json:"schedule"`
-	ScheduleType string `json:"scheduleType"`
-	WorkDir      string `json:"workDir,omitempty"`
-	Enabled      bool   `json:"enabled"`
-	CreatedAt    string `json:"createdAt"`
-	LastRun      string `json:"lastRun,omitempty"`
-	NextRun      string `json:"nextRun,omitempty"`
+	ID            string `json:"id"`
+	Title         string `json:"title"`
+	Prompt        string `json:"prompt"`
+	Schedule      string `json:"schedule"`
+	ScheduleType  string `json:"scheduleType"`
+	WorkDir       string `json:"workDir,omitempty"`
+	Enabled       bool   `json:"enabled"`
+	CreatedAt     string `json:"createdAt"`
+	LastRun       string `json:"lastRun,omitempty"`
+	NextRun       string `json:"nextRun,omitempty"`
+	ExecutionMode string `json:"executionMode,omitempty"`
 }
 
 func (s *Server) handleCron(w http.ResponseWriter, r *http.Request) {
@@ -1264,7 +1348,7 @@ func (s *Server) handleCronCreate(w http.ResponseWriter, r *http.Request) {
 		Channel: "desktop",
 	}
 
-	job, err := s.cronService.AddJob(req.Title, schedule, payload)
+	job, err := s.cronService.AddJobWithOptions(req.Title, schedule, payload, req.ExecutionMode)
 	if err != nil {
 		writeError(w, err)
 		return
@@ -1340,12 +1424,13 @@ func (s *Server) handleCronDelete(w http.ResponseWriter, r *http.Request, jobID 
 
 func (s *Server) handleCronUpdate(w http.ResponseWriter, r *http.Request, jobID string) {
 	var req struct {
-		Title   string `json:"title"`
-		Prompt  string `json:"prompt"`
-		Cron    string `json:"cron,omitempty"`
-		Every   string `json:"every,omitempty"`
-		At      string `json:"at,omitempty"`
-		WorkDir string `json:"workDir,omitempty"`
+		Title         string `json:"title"`
+		Prompt        string `json:"prompt"`
+		Cron          string `json:"cron,omitempty"`
+		Every         string `json:"every,omitempty"`
+		At            string `json:"at,omitempty"`
+		WorkDir       string `json:"workDir,omitempty"`
+		ExecutionMode string `json:"executionMode,omitempty"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -1395,7 +1480,7 @@ func (s *Server) handleCronUpdate(w http.ResponseWriter, r *http.Request, jobID 
 		Channel: "desktop",
 	}
 
-	job, ok := s.cronService.UpdateJob(jobID, req.Title, schedule, payload)
+	job, ok := s.cronService.UpdateJobWithOptions(jobID, req.Title, schedule, payload, req.ExecutionMode)
 	if !ok {
 		writeError(w, fmt.Errorf("job not found"))
 		return
@@ -1449,11 +1534,12 @@ func (s *Server) handleGetCronHistoryDetail(w http.ResponseWriter, r *http.Reque
 // toCronJobResponse 将内部 Job 转换为前端期望的格式
 func (s *Server) toCronJobResponse(job *cron.Job) cronJobResponse {
 	resp := cronJobResponse{
-		ID:        job.ID,
-		Title:     job.Name,
-		Prompt:    job.Payload.Message,
-		Enabled:   job.Enabled,
-		CreatedAt: time.UnixMilli(job.Created).Format(time.RFC3339),
+		ID:            job.ID,
+		Title:         job.Name,
+		Prompt:        job.Payload.Message,
+		Enabled:       job.Enabled,
+		CreatedAt:     time.UnixMilli(job.Created).Format(time.RFC3339),
+		ExecutionMode: job.ExecutionMode,
 	}
 
 	switch job.Schedule.Type {

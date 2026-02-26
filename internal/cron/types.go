@@ -47,14 +47,30 @@ type Payload struct {
 	Deliver bool   `json:"deliver"`           // 是否发送结果到频道
 }
 
+// ExecutionMode 任务执行模式
+const (
+	ExecutionModeSafe = "safe" // 只读探索模式
+	ExecutionModeAsk  = "ask"  // 需要用户确认（默认）
+	ExecutionModeAuto = "auto" // 全自动执行
+)
+
 // Job 定时任务
 type Job struct {
-	ID       string   `json:"id"`
-	Name     string   `json:"name"`
-	Schedule Schedule `json:"schedule"`
-	Payload  Payload  `json:"payload"`
-	Enabled  bool     `json:"enabled"`
-	Created  int64    `json:"created"`
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Schedule      Schedule `json:"schedule"`
+	Payload       Payload  `json:"payload"`
+	Enabled       bool     `json:"enabled"`
+	Created       int64    `json:"created"`
+	ExecutionMode string   `json:"executionMode,omitempty"` // safe, ask, auto
+}
+
+// GetExecutionMode 获取任务的执行模式，默认为 ask
+func (j *Job) GetExecutionMode() string {
+	if j.ExecutionMode == "" {
+		return ExecutionModeAsk
+	}
+	return j.ExecutionMode
 }
 
 // NewJob 创建新任务

@@ -23,7 +23,7 @@ interface ShortcutsState {
   newChat: string;
 }
 
-type SettingsCategory = 'general' | 'providers' | 'channels' | 'gateway';
+type SettingsCategory = 'general' | 'providers' | 'channels' | 'gateway' | 'advanced';
 
 export function SettingsView() {
   const dispatch = useDispatch();
@@ -486,6 +486,12 @@ export function SettingsView() {
       label: t('settings.category.gateway'),
       description: t('settings.category.gateway.desc'),
       icon: GatewayIcon
+    },
+    {
+      id: 'advanced',
+      label: t('settings.category.advanced'),
+      description: t('settings.category.advanced.desc'),
+      icon: AdvancedIcon
     }
   ];
 
@@ -901,6 +907,14 @@ export function SettingsView() {
                 </div>
               </section>
             )}
+
+            {activeCategory === 'advanced' && (
+              <AdvancedSettings
+                gatewayConfig={gatewayConfig}
+                t={t}
+                language={language}
+              />
+            )}
           </main>
         </div>
       </div>
@@ -940,4 +954,318 @@ function GatewayIcon({ className }: { className?: string }) {
       <circle cx="12" cy="12" r="3" strokeWidth={2} />
     </svg>
   );
+}
+
+function AdvancedIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+
+// Advanced Settings Component
+function AdvancedSettings({ gatewayConfig, t, language }: { gatewayConfig: any; t: (key: string) => string; language: string }) {
+  const [configJson, setConfigJson] = useState<string>('');
+  const [soulMd, setSoulMd] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<'config' | 'soul' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'config' | 'soul'>('config');
+
+  // Derived values for simple editors
+  const [simpleConfig, setSimpleConfig] = useState({
+    model: '',
+    workspace: '',
+    maxIterations: 200,
+    executionMode: 'ask' as 'safe' | 'ask' | 'auto'
+  });
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Load config.json
+        const configRes = await fetch('http://localhost:18890/api/config');
+        if (configRes.ok) {
+          const config = await configRes.json();
+          setConfigJson(JSON.stringify(config, null, 2));
+          setSimpleConfig({
+            model: config.agents?.defaults?.model || '',
+            workspace: config.agents?.defaults?.workspace || '',
+            maxIterations: config.agents?.defaults?.maxToolIterations || 200,
+            executionMode: config.agents?.defaults?.executionMode || 'ask'
+          });
+        }
+
+        // Load USER_SOUL.md
+        const soulRes = await fetch('http://localhost:18890/api/soul');
+        if (soulRes.ok) {
+          const soul = await soulRes.json();
+          setSoulMd(soul.content || '');
+        } else if (soulRes.status === 404) {
+          setSoulMd('# User Soul\n\n在此定义 AI 助手的行为准则和个性化设置...');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '加载失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadData();
+  }, []);
+
+  const handleSaveConfig = async () => {
+    setSaving('config');
+    setError(null);
+    setSuccess(null);
+    try {
+      let config: any;
+      try {
+        config = JSON.parse(configJson);
+      } catch (e) {
+        setError('JSON 格式错误: ' + (e instanceof Error ? e.message : 'Invalid JSON'));
+        return;
+      }
+
+      const res = await fetch('http://localhost:18890/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      });
+
+      if (!res.ok) throw new Error('保存失败');
+      setSuccess(t('common.save') + '成功');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存失败');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleSaveSoul = async () => {
+    setSaving('soul');
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch('http://localhost:18890/api/soul', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: soulMd })
+      });
+
+      if (!res.ok) throw new Error('保存失败');
+      setSuccess(t('common.save') + '成功');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '保存失败');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleSimpleConfigChange = (key: keyof typeof simpleConfig, value: string | number) => {
+    setSimpleConfig(prev => ({ ...prev, [key]: value }));
+    // Update JSON accordingly
+    try {
+      const config = JSON.parse(configJson);
+      if (!config.agents) config.agents = {};
+      if (!config.agents.defaults) config.agents.defaults = {};
+      if (key === 'model') config.agents.defaults.model = value;
+      if (key === 'workspace') config.agents.defaults.workspace = value;
+      if (key === 'maxIterations') config.agents.defaults.maxToolIterations = value;
+      if (key === 'executionMode') config.agents.defaults.executionMode = value;
+      setConfigJson(JSON.stringify(config, null, 2));
+    } catch {
+      // Ignore JSON parse errors during typing
+    }
+  };
+
+  if (loading) {
+    return <div className="py-12 text-center text-foreground/50">{t('common.loading')}</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          {success}
+        </div>
+      )}
+
+      {/* Tab Navigation */}
+      <div className="flex gap-2 border-b border-border">
+        <button
+          onClick={() => setActiveTab('config')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'config'
+              ? 'border-b-2 border-primary text-primary'
+              : 'text-foreground/60 hover:text-foreground'
+          }`}
+        >
+          config.json
+        </button>
+        <button
+          onClick={() => setActiveTab('soul')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'soul'
+              ? 'border-b-2 border-primary text-primary'
+              : 'text-foreground/60 hover:text-foreground'
+          }`}
+        >
+          USER_SOUL.md
+        </button>
+      </div>
+
+      {activeTab === 'config' ? (
+        <div className="space-y-6">
+          {/* Simple Editor */}
+          <section className="rounded-xl border border-border bg-card p-5">
+            <h3 className="mb-4 text-lg font-semibold">
+              {language === 'zh' ? '快速配置' : 'Quick Config'}
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  {t('settings.gateway.currentModel')}
+                </label>
+                <input
+                  type="text"
+                  value={simpleConfig.model}
+                  onChange={(e) => handleSimpleConfigChange('model', e.target.value)}
+                  placeholder="anthropic/claude-opus-4-5"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  {t('settings.gateway.workspace')}
+                </label>
+                <input
+                  type="text"
+                  value={simpleConfig.workspace}
+                  onChange={(e) => handleSimpleConfigChange('workspace', e.target.value)}
+                  placeholder="~/.maxclaw/workspace"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  {t('settings.gateway.maxToolIterations')}
+                </label>
+                <input
+                  type="number"
+                  value={simpleConfig.maxIterations}
+                  onChange={(e) => handleSimpleConfigChange('maxIterations', parseInt(e.target.value) || 200)}
+                  min={1}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  {t('settings.gateway.executionMode')}
+                </label>
+                <select
+                  value={simpleConfig.executionMode}
+                  onChange={(e) => handleSimpleConfigChange('executionMode', e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                >
+                  <option value="safe">Safe (只读探索)</option>
+                  <option value="ask">Ask (需要确认)</option>
+                  <option value="auto">Auto (全自动)</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* JSON Editor */}
+          <section className="rounded-xl border border-border bg-card p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">config.json</h3>
+              <button
+                onClick={handleSaveConfig}
+                disabled={saving === 'config'}
+                className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+              >
+                {saving === 'config' ? t('common.loading') : t('common.save')}
+              </button>
+            </div>
+            <textarea
+              value={configJson}
+              onChange={(e) => setConfigJson(e.target.value)}
+              rows={20}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs text-foreground focus:border-primary/40 focus:outline-none"
+              spellCheck={false}
+            />
+          </section>
+        </div>
+      ) : (
+        <section className="rounded-xl border border-border bg-card p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold">USER_SOUL.md</h3>
+            <button
+              onClick={handleSaveSoul}
+              disabled={saving === 'soul'}
+              className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+            >
+              {saving === 'soul' ? t('common.loading') : t('common.save')}
+            </button>
+          </div>
+          <p className="mb-4 text-sm text-foreground/60">
+            {language === 'zh'
+              ? '在此定义 AI 助手的行为准则、个性特征和偏好设置。这些指令将影响 AI 的回复风格和行为方式。'
+              : 'Define the AI assistant\'s behavior guidelines, personality traits, and preferences here. These instructions will affect how the AI responds and behaves.'}
+          </p>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-foreground/70">Markdown</label>
+              <textarea
+                value={soulMd}
+                onChange={(e) => setSoulMd(e.target.value)}
+                rows={25}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary/40 focus:outline-none"
+                placeholder="# User Soul"
+                spellCheck={false}
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-foreground/70">
+                {language === 'zh' ? '预览' : 'Preview'}
+              </label>
+              <div className="h-full max-h-[600px] overflow-y-auto rounded-lg border border-border bg-background px-4 py-3 text-sm">
+                <SoulMarkdownPreview content={soulMd} />
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+// Simple markdown preview component
+function SoulMarkdownPreview({ content }: { content: string }) {
+  // Simple markdown-to-HTML conversion for preview
+  const html = content
+    .replace(/^# (.*$)/gim, '<h1 class="text-xl font-bold mb-2">$1</h1>')
+    .replace(/^## (.*$)/gim, '<h2 class="text-lg font-semibold mb-2 mt-3">$1</h2>')
+    .replace(/^### (.*$)/gim, '<h3 class="text-base font-semibold mb-1 mt-2">$1</h3>')
+    .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+    .replace(/\*(.*)\*/gim, '<em>$1</em>')
+    .replace(/`([^`]+)`/gim, '<code class="bg-secondary px-1 rounded text-xs">$1</code>')
+    .replace(/```[\s\S]*?```/gim, '<pre class="bg-secondary p-2 rounded text-xs overflow-x-auto my-2"><code>$&</code></pre>')
+    .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
+    .replace(/\n/gim, '<br />');
+
+  return <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: html }} />;
 }

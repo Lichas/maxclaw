@@ -1,5 +1,21 @@
 import { configureStore, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
+// Detect system language: 'zh' for Chinese, 'en' for others
+const detectSystemLanguage = (): 'zh' | 'en' => {
+  const systemLang = navigator.language || 'en';
+  return systemLang.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+};
+
+// Load saved language from localStorage or detect from system
+const getInitialLanguage = (): 'zh' | 'en' => {
+  if (typeof window === 'undefined') return 'zh';
+  const savedLang = localStorage.getItem('nanobot_lang');
+  if (savedLang === 'zh' || savedLang === 'en') {
+    return savedLang;
+  }
+  return detectSystemLanguage();
+};
+
 interface GatewayState {
   status: 'running' | 'stopped' | 'error' | 'starting';
   port: number;
@@ -32,7 +48,7 @@ const uiSlice = createSlice({
   name: 'ui',
   initialState: {
     theme: 'system',
-    language: 'zh',
+    language: getInitialLanguage(),
     sidebarCollapsed: false,
     terminalVisible: false,
     activeTab: 'chat',

@@ -12,6 +12,19 @@ import {
   normalizeChannelKey
 } from '../utils/sessionChannels';
 
+// Interface for cron execution record
+interface ExecutionRecord {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  startedAt: string;
+  endedAt?: string;
+  status: 'running' | 'success' | 'failed';
+  output: string;
+  error?: string;
+  durationMs: number;
+}
+
 const menuItems = [
   { id: 'sessions', labelKey: 'nav.sessions', icon: SearchIcon },
   { id: 'scheduled', labelKey: 'nav.scheduled', icon: ClockIcon },
@@ -29,6 +42,7 @@ export function Sidebar() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [draftSessions, setDraftSessions] = useState<Record<string, SessionSummary>>({});
   const [channelFilter, setChannelFilter] = useState<string>('desktop');
+  const [hasFailedCronJobs, setHasFailedCronJobs] = useState(false);
 
   // Delete/Rename state
   const [editingSession, setEditingSession] = useState<string | null>(null);
@@ -45,6 +59,51 @@ export function Sidebar() {
     lastMessage: t('sidebar.newTask'),
     lastMessageAt: new Date().toISOString()
   });
+
+  // Check for failed cron jobs
+  useEffect(() => {
+    const checkFailedJobs = async () => {
+      try {
+        // Fetch recent execution history
+        const response = await fetch('http://localhost:18890/api/cron/history?limit=100');
+        if (!response.ok) return;
+        const data = await response.json();
+        const records: ExecutionRecord[] = data.records || [];
+
+        // Get all job IDs
+        const jobsResponse = await fetch('http://localhost:18890/api/cron');
+        if (!jobsResponse.ok) return;
+        const jobsData = await jobsResponse.json();
+        const jobIds: string[] = (jobsData.jobs || []).map((j: { id: string }) => j.id);
+
+        // Find the latest execution record for each job
+        const latestExecutions = new Map<string, ExecutionRecord>();
+        for (const record of records) {
+          if (!jobIds.includes(record.jobId)) continue;
+          const existing = latestExecutions.get(record.jobId);
+          if (!existing || new Date(record.startedAt) > new Date(existing.startedAt)) {
+            latestExecutions.set(record.jobId, record);
+          }
+        }
+
+        // Check if any job's latest execution failed
+        let hasFailed = false;
+        for (const record of latestExecutions.values()) {
+          if (record.status === 'failed') {
+            hasFailed = true;
+            break;
+          }
+        }
+        setHasFailedCronJobs(hasFailed);
+      } catch {
+        // Silently ignore errors (gateway might be down)
+      }
+    };
+
+    void checkFailedJobs();
+    const timer = setInterval(() => void checkFailedJobs(), 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -291,6 +350,7 @@ export function Sidebar() {
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
+          const showFailedBadge = item.id === 'scheduled' && hasFailedCronJobs && !isActive;
 
           return (
             <button
@@ -318,7 +378,16 @@ export function Sidebar() {
                 }
               }}
             >
-              <Icon className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
+              <div className="relative">
+                <Icon className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                {showFailedBadge && (
+                  <span
+                    className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2"
+                    style={{ borderColor: isActive ? 'var(--active)' : 'var(--secondary)' }}
+                    title={language === 'zh' ? '有任务执行失败' : 'Some tasks have failed'}
+                  />
+                )}
+              </div>
               <span>{t(item.labelKey)}</span>
             </button>
           );

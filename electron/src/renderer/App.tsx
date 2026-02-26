@@ -29,9 +29,11 @@ function App() {
       if (config.theme) {
         dispatch(setTheme(config.theme));
       }
+      // Only override system-detected language if user has explicitly set it
       if (config.language) {
         dispatch(setLanguage(config.language));
       }
+      // Note: if config.language is not set, the system-detected language from store/index.ts is used
     });
 
     // Initialize Gateway status

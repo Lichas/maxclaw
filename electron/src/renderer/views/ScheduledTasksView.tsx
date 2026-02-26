@@ -15,6 +15,7 @@ interface CronJob {
   createdAt: string;
   lastRun?: string;
   nextRun?: string;
+  executionMode?: 'safe' | 'ask' | 'auto';
 }
 
 interface JobFormData {
@@ -23,6 +24,7 @@ interface JobFormData {
   scheduleType: 'once' | 'every' | 'cron';
   scheduleValue: string;
   workDir: string;
+  executionMode: 'safe' | 'ask' | 'auto';
 }
 
 export function ScheduledTasksView() {
@@ -37,7 +39,8 @@ export function ScheduledTasksView() {
     prompt: '',
     scheduleType: 'cron',
     scheduleValue: '0 9 * * *',
-    workDir: ''
+    workDir: '',
+    executionMode: 'ask'
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
@@ -71,7 +74,8 @@ export function ScheduledTasksView() {
         title: formData.title,
         prompt: formData.prompt,
         [formData.scheduleType === 'every' ? 'every' : formData.scheduleType === 'once' ? 'at' : 'cron']: formData.scheduleValue,
-        workDir: formData.workDir || undefined
+        workDir: formData.workDir || undefined,
+        executionMode: formData.executionMode
       };
 
       const url = editingJob
@@ -92,7 +96,8 @@ export function ScheduledTasksView() {
         prompt: '',
         scheduleType: 'cron',
         scheduleValue: '0 9 * * *',
-        workDir: ''
+        workDir: '',
+        executionMode: 'ask'
       });
       void fetchJobs();
     } catch (err) {
@@ -107,7 +112,8 @@ export function ScheduledTasksView() {
       prompt: job.prompt,
       scheduleType: job.scheduleType,
       scheduleValue: job.schedule,
-      workDir: job.workDir || ''
+      workDir: job.workDir || '',
+      executionMode: job.executionMode || 'ask'
     });
     setShowForm(true);
   };
@@ -120,7 +126,8 @@ export function ScheduledTasksView() {
       prompt: '',
       scheduleType: 'cron',
       scheduleValue: '0 9 * * *',
-      workDir: ''
+      workDir: '',
+      executionMode: 'ask'
     });
   };
 
@@ -292,6 +299,25 @@ export function ScheduledTasksView() {
                 />
               </div>
 
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">执行模式</label>
+                <CustomSelect
+                  value={formData.executionMode}
+                  onChange={(value) => setFormData({ ...formData, executionMode: value as 'safe' | 'ask' | 'auto' })}
+                  options={[
+                    { value: 'safe', label: 'Safe (只读探索)' },
+                    { value: 'ask', label: 'Ask (需要确认)' },
+                    { value: 'auto', label: 'Auto (全自动)' }
+                  ]}
+                  size="md"
+                />
+                <p className="mt-1 text-xs text-foreground/50">
+                  {formData.executionMode === 'safe' && 'Safe 模式：只读探索，不执行任何修改操作'}
+                  {formData.executionMode === 'ask' && 'Ask 模式：需要用户确认后继续（默认）'}
+                  {formData.executionMode === 'auto' && 'Auto 模式：全自动执行，无需人工介入'}
+                </p>
+              </div>
+
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
@@ -353,6 +379,15 @@ export function ScheduledTasksView() {
                           {job.workDir}
                         </span>
                       )}
+                      <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${
+                        job.executionMode === 'auto'
+                          ? 'bg-purple-100 text-purple-700'
+                          : job.executionMode === 'safe'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {job.executionMode === 'auto' ? 'Auto' : job.executionMode === 'safe' ? 'Safe' : 'Ask'}
+                      </span>
                       {job.lastRun && (
                         <span>上次执行: {new Date(job.lastRun).toLocaleString()}</span>
                       )}

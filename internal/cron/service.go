@@ -60,7 +60,16 @@ func (s *Service) SetNotificationHandler(handler NotificationFunc) {
 
 // AddJob 添加任务
 func (s *Service) AddJob(name string, schedule Schedule, payload Payload) (*Job, error) {
+	return s.AddJobWithOptions(name, schedule, payload, "")
+}
+
+// AddJobWithOptions 添加任务（带执行模式选项）
+func (s *Service) AddJobWithOptions(name string, schedule Schedule, payload Payload, executionMode string) (*Job, error) {
 	job := NewJob(name, schedule, payload)
+	// 设置执行模式（如果有效）
+	if executionMode == ExecutionModeSafe || executionMode == ExecutionModeAsk || executionMode == ExecutionModeAuto {
+		job.ExecutionMode = executionMode
+	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -104,6 +113,11 @@ func (s *Service) RemoveJob(id string) bool {
 
 // UpdateJob 更新任务
 func (s *Service) UpdateJob(id string, name string, schedule Schedule, payload Payload) (*Job, bool) {
+	return s.UpdateJobWithOptions(id, name, schedule, payload, "")
+}
+
+// UpdateJobWithOptions 更新任务（带执行模式选项）
+func (s *Service) UpdateJobWithOptions(id string, name string, schedule Schedule, payload Payload, executionMode string) (*Job, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -116,6 +130,11 @@ func (s *Service) UpdateJob(id string, name string, schedule Schedule, payload P
 	job.Name = name
 	job.Schedule = schedule
 	job.Payload = payload
+
+	// 更新执行模式（如果有效）
+	if executionMode == ExecutionModeSafe || executionMode == ExecutionModeAsk || executionMode == ExecutionModeAuto {
+		job.ExecutionMode = executionMode
+	}
 
 	// 如果服务正在运行，需要重新调度
 	if s.running {
