@@ -3,6 +3,30 @@
 ## [Unreleased]
 
 ### Added
+
+#### UI/UX 增强四合一功能
+- **语言自动检测**：首次启动时根据系统语言自动设置界面语言（中文环境→中文，其他→英文），优先使用用户已保存的语言偏好
+  - `electron/src/renderer/store/index.ts`、`electron/src/renderer/App.tsx`
+  - 验证：`make build`
+
+- **定时任务失败红点提示**：侧边栏"定时任务"导航项在有任务失败时显示红色圆点徽章，每30秒自动检查执行历史
+  - `electron/src/renderer/components/Sidebar.tsx`
+  - 验证：`cd electron && npm run build`
+
+- **定时任务执行模式**：每个定时任务可独立设置执行模式（safe/ask/auto），覆盖全局设置
+  - 后端：`internal/cron/types.go`（Job 结构体添加 ExecutionMode）、`internal/cron/service.go`（AddJobWithOptions/UpdateJobWithOptions）、`internal/webui/server.go`（API支持）
+  - 前端：`electron/src/renderer/views/ScheduledTasksView.tsx`（表单添加执行模式选择器）
+  - 验证：`go test ./internal/cron -v`
+
+- **可视化配置编辑器**：设置面板新增"高级配置"分类，包含
+  - config.json 可视化编辑器（表单+JSON编辑器双模式）
+  - USER_SOUL.md Markdown编辑器（编辑+实时预览双栏）
+  - 后端 API `/api/soul` 支持文件读写
+  - `internal/webui/server.go`、`electron/src/renderer/views/SettingsView.tsx`、`electron/src/renderer/i18n/index.ts`
+  - 文档：`docs/features/ui-improvements-2025-02-26.md`
+  - 验证：`make build && go test ./internal/webui`
+
+### Added
 - File tree sidebar in Electron app
   - New "File Tree" tab in right sidebar alongside "File Preview" and "Browser Co-Pilot"
   - Displays session directory structure at `~/.maxclaw/workspace/.sessions/{session}/`
