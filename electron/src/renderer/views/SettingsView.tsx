@@ -965,6 +965,12 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
   const [userContent, setUserContent] = useState<string>('');
   const [soulContent, setSoulContent] = useState<string>('');
   const [configJson, setConfigJson] = useState<string>('');
+  const [configForm, setConfigForm] = useState({
+    model: '',
+    workspace: '',
+    maxIterations: 200,
+    executionMode: 'ask' as 'safe' | 'ask' | 'auto'
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -991,6 +997,13 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
         if (configRes.ok) {
           const data = await configRes.json();
           setConfigJson(JSON.stringify(data, null, 2));
+          // Parse config for quick edit form
+          setConfigForm({
+            model: data.agents?.defaults?.model || '',
+            workspace: data.agents?.defaults?.workspace || '',
+            maxIterations: data.agents?.defaults?.maxToolIterations || 200,
+            executionMode: data.agents?.defaults?.executionMode || 'ask'
+          });
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : '加载失败');
@@ -1051,19 +1064,38 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
     );
   }
 
-  const getCurrentContent = () => {
-    switch (activeTab) {
-      case 'USER': return userContent;
-      case 'SOUL': return soulContent;
-      case 'CONFIG': return configJson;
+
+  const handleConfigFormChange = (key: keyof typeof configForm, value: string | number) => {
+    const newForm = { ...configForm, [key]: value };
+    setConfigForm(newForm);
+    // Sync to JSON
+    try {
+      const config = JSON.parse(configJson);
+      if (!config.agents) config.agents = {};
+      if (!config.agents.defaults) config.agents.defaults = {};
+      if (key === 'model') config.agents.defaults.model = value;
+      if (key === 'workspace') config.agents.defaults.workspace = value;
+      if (key === 'maxIterations') config.agents.defaults.maxToolIterations = value;
+      if (key === 'executionMode') config.agents.defaults.executionMode = value;
+      setConfigJson(JSON.stringify(config, null, 2));
+    } catch {
+      // Ignore parse errors
     }
   };
 
-  const getCurrentSetter = (value: string) => {
-    switch (activeTab) {
-      case 'USER': setUserContent(value); break;
-      case 'SOUL': setSoulContent(value); break;
-      case 'CONFIG': setConfigJson(value); break;
+  const handleConfigJsonChange = (value: string) => {
+    setConfigJson(value);
+    // Try to sync form from JSON
+    try {
+      const config = JSON.parse(value);
+      setConfigForm({
+        model: config.agents?.defaults?.model || '',
+        workspace: config.agents?.defaults?.workspace || '',
+        maxIterations: config.agents?.defaults?.maxToolIterations || 200,
+        executionMode: config.agents?.defaults?.executionMode || 'ask'
+      });
+    } catch {
+      // Ignore parse errors during typing
     }
   };
 
@@ -1072,16 +1104,6 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
       case 'USER': return 'USER.md';
       case 'SOUL': return 'SOUL.md';
       case 'CONFIG': return 'config.json';
-    }
-  };
-
-  const getFilePath = () => {
-    switch (activeTab) {
-      case 'USER':
-      case 'SOUL':
-        return `~/.maxclaw/workspace/${getFileName()}`;
-      case 'CONFIG':
-        return `~/.maxclaw/${getFileName()}`;
     }
   };
 
@@ -1099,14 +1121,6 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
         return language === 'zh'
           ? '编辑应用配置文件。包含模型设置、渠道配置、工具选项等核心配置。'
           : 'Edit the application configuration file. Contains core settings for models, channels, tools, etc.';
-    }
-  };
-
-  const getPlaceholder = () => {
-    switch (activeTab) {
-      case 'USER': return '# User\n\nYour information here...';
-      case 'SOUL': return '# SOUL\n\nAI personality here...';
-      case 'CONFIG': return '{\n  "agents": {\n    ...\n  }\n}';
     }
   };
 
@@ -1167,29 +1181,102 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
       {error && <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
       {success && <div className="mb-3 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700">{success}</div>}
 
-      <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
-        <div className="flex items-center gap-2 border-b border-border bg-secondary/50 px-4 py-2 text-xs text-foreground/60">
-          <FolderIcon className="h-3.5 w-3.5" />
-          <span>{getFilePath()}</span>
-          <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
-            {language === 'zh' ? '就地编辑' : 'Live Edit'}
-          </span>
+      {activeTab === 'CONFIG' ? (
+        <div className="flex flex-1 flex-col gap-4 overflow-hidden">
+          {/* Quick Edit Form */}
+          <div className="rounded-xl border border-border bg-card p-4">
+            <h3 className="mb-3 text-sm font-semibold">{language === 'zh' ? '快速配置' : 'Quick Config'}</h3>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground/70">{t('settings.gateway.currentModel')}</label>
+                <input
+                  type="text"
+                  value={configForm.model}
+                  onChange={(e) => handleConfigFormChange('model', e.target.value)}
+                  placeholder="anthropic/claude-opus-4-5"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground/70">{t('settings.gateway.workspace')}</label>
+                <input
+                  type="text"
+                  value={configForm.workspace}
+                  onChange={(e) => handleConfigFormChange('workspace', e.target.value)}
+                  placeholder="~/.maxclaw/workspace"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground/70">{t('settings.gateway.maxToolIterations')}</label>
+                <input
+                  type="number"
+                  value={configForm.maxIterations}
+                  onChange={(e) => handleConfigFormChange('maxIterations', parseInt(e.target.value) || 200)}
+                  min={1}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground/70">{t('settings.gateway.executionMode')}</label>
+                <select
+                  value={configForm.executionMode}
+                  onChange={(e) => handleConfigFormChange('executionMode', e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+                >
+                  <option value="safe">Safe (只读)</option>
+                  <option value="ask">Ask (确认)</option>
+                  <option value="auto">Auto (自动)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          {/* JSON Editor */}
+          <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
+            <div className="flex items-center justify-between border-b border-border bg-secondary/50 px-4 py-2">
+              <div className="flex items-center gap-2 text-xs text-foreground/60">
+                <FolderIcon className="h-3.5 w-3.5" />
+                <span>~/.maxclaw/config.json</span>
+              </div>
+            </div>
+            <textarea
+              value={configJson}
+              onChange={(e) => handleConfigJsonChange(e.target.value)}
+              className="flex-1 resize-none bg-background px-4 py-3 font-mono text-sm leading-relaxed text-foreground focus:outline-none"
+              placeholder={'{\n  "agents": {\n    ...\n  }\n}'}
+              spellCheck={false}
+            />
+            <div className="flex items-center justify-between border-t border-border bg-secondary/30 px-4 py-2 text-xs text-foreground/50">
+              <span>{configJson.length} {language === 'zh' ? '字符' : 'chars'}</span>
+              <span>JSON</span>
+            </div>
+          </div>
         </div>
-        <div className="border-b border-border bg-secondary/30 px-4 py-2 text-xs text-foreground/60">
-          {getDescription()}
+      ) : (
+        <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
+          <div className="flex items-center gap-2 border-b border-border bg-secondary/50 px-4 py-2 text-xs text-foreground/60">
+            <FolderIcon className="h-3.5 w-3.5" />
+            <span>~/.maxclaw/workspace/{getFileName()}</span>
+            <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+              {language === 'zh' ? '就地编辑' : 'Live Edit'}
+            </span>
+          </div>
+          <div className="border-b border-border bg-secondary/30 px-4 py-2 text-xs text-foreground/60">
+            {getDescription()}
+          </div>
+          <textarea
+            value={activeTab === 'USER' ? userContent : soulContent}
+            onChange={(e) => activeTab === 'USER' ? setUserContent(e.target.value) : setSoulContent(e.target.value)}
+            className="flex-1 resize-none bg-background px-4 py-3 font-mono text-sm leading-relaxed text-foreground placeholder:text-foreground/30 focus:outline-none"
+            placeholder={activeTab === 'USER' ? '# User\n\nYour information here...' : '# SOUL\n\nAI personality here...'}
+            spellCheck={false}
+          />
+          <div className="flex items-center justify-between border-t border-border bg-secondary/30 px-4 py-2 text-xs text-foreground/50">
+            <span>{(activeTab === 'USER' ? userContent : soulContent).length} {language === 'zh' ? '字符' : 'chars'}</span>
+            <span>Markdown</span>
+          </div>
         </div>
-        <textarea
-          value={getCurrentContent()}
-          onChange={(e) => getCurrentSetter(e.target.value)}
-          className="flex-1 resize-none bg-background px-4 py-3 font-mono text-sm leading-relaxed text-foreground placeholder:text-foreground/30 focus:outline-none"
-          placeholder={getPlaceholder()}
-          spellCheck={false}
-        />
-        <div className="flex items-center justify-between border-t border-border bg-secondary/30 px-4 py-2 text-xs text-foreground/50">
-          <span>{getCurrentContent().length} {language === 'zh' ? '字符' : 'chars'}</span>
-          <span>{activeTab === 'CONFIG' ? 'JSON' : 'Markdown'} {language === 'zh' ? '支持' : 'supported'}</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
