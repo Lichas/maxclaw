@@ -39,6 +39,11 @@
 - **位置**：`e2e_test/auto_spawn_ui_regression.sh`、`e2e_test/README.md`。
 - **验证**：`./e2e_test/auto_spawn_ui_regression.sh --setup-only --port 18901`、`go test ./pkg/tools ./internal/agent ./internal/config ./internal/webui`、`make build`。
 
+#### README SEO 优化：突出 Go/省内存/完全本地/UI/开箱即用卖点
+- **变更**：重写 README 首屏标题与引导文案，前置核心关键词与搜索短语；新增“为什么适合长期生产使用”卖点段，强化 `auto` 模式、`spawn` 子会话、monorepo 上下文发现等差异化能力；同步更新中文“亮点”列表，提升检索命中与转化表达。
+- **位置**：`README.md`。
+- **验证**：`make build`。
+
 #### Skills 市场支持按名称过滤，聊天下拉补齐全局技能并增强重试加载
 - **变更**：Skills 市场新增“按名称过滤已安装技能”；`/api/skills` 改为返回“工作区 + 全局（~/.agents/skills）”技能并回传来源；聊天页技能下拉改为仅展示启用技能，并在打开下拉且为空/失败时自动重试加载，减少重启后首轮加载失败导致列表为空。
 - **位置**：`electron/src/renderer/views/SkillsView.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`internal/webui/server.go`。

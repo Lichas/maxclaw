@@ -1,21 +1,29 @@
-# maxclaw
+# maxclaw - Go 语言本地 AI Agent（省内存、完全本地、可视化 UI、开箱即用）
 
-> **7×24 小时 AI 本地办公助理** —— 在您的设备上本地运行，数据永不离开电脑。
+> **7×24 小时 AI 本地办公助理**：Go 语言实现，网关与会话全本地运行，带桌面 UI，安装后可立即上手。
 
 [![Go Version](https://img.shields.io/badge/Go-1.21%2B-blue)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)]()
 
-**maxclaw** 是一款专为高效办公打造的 AI 助手。与其他云端 AI 不同，它在您的设备上**本地运行**，保护隐私的同时提供极速响应。无论是代码审查、文档处理、定时任务还是多步骤网页自动化，maxclaw 都能 7×24 小时随时为您服务。
+**maxclaw** 是一款面向个人与团队的 **Go 语言本地 AI Agent**。  
+核心卖点是：**省内存**、**完全本地**、**UI 化可视操作**、**开箱即用**。
+
+- **Go 语言后端，资源占用更可控**：单二进制网关 + 工具编排，长期运行更稳。
+- **完全本地工作流**：会话、记忆、工具执行、日志都在本机目录可追溯。
+- **桌面 UI + Web UI**：可视化配置、实时对话、文件预览、终端联动。
+- **开箱即用**：支持一键安装、默认工作区模板、可直接启动使用。
+
+> 适合搜索关键词：`Go AI Agent`、`本地 AI 助手`、`离线办公 AI`、`私有化 AI Agent`、`桌面 AI 工具`、`低内存 AI`。
 
 ---
 
 ## ✨ 核心亮点
 
 ### 🏠 本地优先，隐私至上
-- **完全本地化** —— 所有数据处理在您的设备上完成，无需联网也能使用
-- **数据永不离开** —— 敏感信息绝对安全，适合处理机密文档和代码
-- **0ms 本地响应** —— 无需等待云端，即刻获得 AI 回答
+- **完全本地化** —— 会话、记忆、日志、工具调用在本机执行与保存
+- **数据永不离开** —— 默认不依赖第三方托管工作流，适合机密文档和代码
+- **私有可控** —— 支持私有模型网关或云模型，架构层保持本地自治
 
 ### 💻 精美的桌面应用
 - **现代化 UI 设计** —— 优雅的圆角卡片、流畅动画、浅色/深色主题
@@ -40,19 +48,28 @@
 - **MCP 协议支持** —— 接入外部 MCP 服务器扩展能力
 - **一键安装** —— `curl | bash` 即装即用，systemd/launchd 自动托管
 
+## 🚀 为什么它适合长期生产使用
+
+- **全自动执行模式**：`executionMode=auto` 可连续推进复杂任务，无需人工“继续”审批
+- **子任务并发能力**：`spawn` 子会话可独立上下文/模型/source 执行并回传状态
+- **Monorepo 友好**：递归发现 `AGENTS.md` / `CLAUDE.md`，更容易命中子项目规则
+- **可审计可追踪**：完整日志、会话文件和执行结果都落盘，方便回溯与复盘
+
 ---
 
 <details open>
 <summary>中文</summary>
 
 ## 亮点
-- Go 原生实现的 Agent Loop 与工具系统
+- Go 原生实现，单二进制网关，资源占用更可控
+- 完全本地工作流：会话/记忆/日志/工具执行本机落盘
+- 桌面 UI + Web UI + API（同一端口，打包后静态托管）
+- 开箱即用：`onboard` 初始化模板，一键安装快速启动
+- 全自动模式（`executionMode=auto`）适合长流程任务
+- 子会话 `spawn` 支持独立上下文、模型和状态回传
+- Monorepo 上下文发现：递归 `AGENTS.md` / `CLAUDE.md`
 - 多渠道接入：Telegram、WhatsApp（Bridge）、Discord、WebSocket
-- Web UI + API（同一端口，打包后静态托管）
-- 定时任务（Cron/Once/Every）
-- Heartbeat 上下文（`memory/heartbeat.md`）
-- 每日 Memory 汇总（自动写入 `memory/MEMORY.md`）
-- 可选浏览器抓取（Node + Playwright）
+- 定时任务（Cron/Once/Every）+ 每日 Memory 汇总
 - 完整日志：`~/.maxclaw/logs`
 
 ## 快速开始
