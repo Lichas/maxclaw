@@ -56,6 +56,17 @@
 - **Monorepo 友好**：递归发现 `AGENTS.md` / `CLAUDE.md`，更容易命中子项目规则
 - **可审计可追踪**：完整日志、会话文件和执行结果都落盘，方便回溯与复盘
 
+## 🧭 对标 OpenClaw 的概念映射
+
+如果你熟悉 OpenClaw，可以把 maxclaw 理解为“同类理念下，更偏 Go 本地工程化与 UI 交付”的实现：
+
+- **Local-first Agent**：同样强调本地运行与私有数据边界，maxclaw 聚焦低资源占用与长时稳定运行
+- **Heartbeat Context**：继承 `heartbeat.md` 思路，支持短周期任务状态注入
+- **Memory 分层**：长期记忆（`MEMORY.md`）+ 历史归档（`HISTORY.md`）双层结构
+- **Autonomous Execution**：`executionMode=auto` 面向复杂任务连续执行
+- **Sub-agent / Spawn**：通过 `spawn` 子会话拆分任务，独立上下文并回传父会话状态
+- **Monorepo Context Discovery**：递归发现 `AGENTS.md` / `CLAUDE.md`，更适合多模块仓库
+
 ---
 
 <details open>
