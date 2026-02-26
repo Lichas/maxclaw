@@ -114,3 +114,19 @@ export OPENROUTER_API_KEY="your-key"
 # 运行 E2E 测试
 ./e2e_test/interrupt_test.sh
 ```
+
+## executionMode=auto + spawn + monorepo context 回归
+
+```bash
+# 准备并启动隔离回归环境（默认 18890）
+./e2e_test/auto_spawn_ui_regression.sh
+
+# 无 API key 时，仅准备环境与连通性检查
+./e2e_test/auto_spawn_ui_regression.sh --setup-only
+```
+
+脚本会自动：
+- 生成 `executionMode: "auto"` 的测试配置
+- 构造包含根/子模块 `AGENTS.md`、`CLAUDE.md` 的 monorepo 样本
+- 启动 gateway 并校验 `/api/status` 返回 `executionMode=auto`
+- 输出可直接粘贴到 UI 的回归 Prompt（含 `spawn` 参数示例）

@@ -34,6 +34,11 @@
 - **位置**：`internal/agent/context.go`、`internal/agent/context_test.go`。
 - **验证**：`go test ./internal/agent`、`make build`。
 
+#### 新增 UI 手工回归脚本（auto 模式 + spawn 参数 + monorepo context）
+- **变更**：新增一键环境准备脚本，自动生成 `executionMode: "auto"` 配置、构造递归 `AGENTS.md`/`CLAUDE.md` 样本、启动 gateway 并输出可直接在 UI 粘贴的回归 Prompt（含 `spawn` 参数示例与验收命令）；同时补充 `e2e_test` 文档说明。
+- **位置**：`e2e_test/auto_spawn_ui_regression.sh`、`e2e_test/README.md`。
+- **验证**：`./e2e_test/auto_spawn_ui_regression.sh --setup-only --port 18901`、`go test ./pkg/tools ./internal/agent ./internal/config ./internal/webui`、`make build`。
+
 #### Skills 市场支持按名称过滤，聊天下拉补齐全局技能并增强重试加载
 - **变更**：Skills 市场新增“按名称过滤已安装技能”；`/api/skills` 改为返回“工作区 + 全局（~/.agents/skills）”技能并回传来源；聊天页技能下拉改为仅展示启用技能，并在打开下拉且为空/失败时自动重试加载，减少重启后首轮加载失败导致列表为空。
 - **位置**：`electron/src/renderer/views/SkillsView.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`internal/webui/server.go`。
