@@ -6,6 +6,8 @@
 [![License](https://img.shields.io/badge/License-Apache--2.0-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)]()
 
+Language: **中文** | [English](README.en.md)
+
 **maxclaw** 是一款面向个人与团队的 **Go 语言本地 AI Agent**。  
 核心卖点是：**省内存**、**完全本地**、**UI 化可视操作**、**开箱即用**。
 

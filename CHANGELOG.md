@@ -59,6 +59,11 @@
 - **位置**：`README.md`、`screenshot/app_ui.png`。
 - **验证**：`make build`。
 
+#### 新增英文 README 并支持中英文互跳切换
+- **变更**：新增 `README.en.md` 英文版文档（包含卖点、快速开始、配置与对标 OpenClaw 概念）；在中文 README 顶部新增 `中文/English` 语言切换入口，实现中英文互相点击跳转。
+- **位置**：`README.md`、`README.en.md`。
+- **验证**：`make build`。
+
 #### Skills 市场支持按名称过滤，聊天下拉补齐全局技能并增强重试加载
 - **变更**：Skills 市场新增“按名称过滤已安装技能”；`/api/skills` 改为返回“工作区 + 全局（~/.agents/skills）”技能并回传来源；聊天页技能下拉改为仅展示启用技能，并在打开下拉且为空/失败时自动重试加载，减少重启后首轮加载失败导致列表为空。
 - **位置**：`electron/src/renderer/views/SkillsView.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`internal/webui/server.go`。
