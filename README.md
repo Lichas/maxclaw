@@ -1,4 +1,4 @@
-# maxclaw - Go 语言本地 AI Agent App（省内存、完全本地、可视化 UI、开箱即用）
+# maxclaw - 本地 AI Agent App（Go开发省内存、完全本地、可视化 UI、开箱即用）
 
 > **7×24 小时 AI 本地OpenClaw办公助理**：Go 语言实现，对标OpenClaw，网关与会话全本地运行，带桌面 UI，安装后可立即上手。
 
@@ -16,7 +16,7 @@ Language: **中文** | [English](README.en.md)
 - **桌面 UI + Web UI**：可视化配置、实时对话、文件预览、终端联动。
 - **开箱即用**：支持一键安装、默认工作区模板、可直接启动使用。
 
-> 适合搜索关键词：`Go AI Agent`、`本地 AI 助手`、`离线办公 AI`、`私有化 AI Agent`、`桌面 AI 工具`、`低内存 AI`。
+> 适合搜索关键词：`Go AI Agent`、`本地 AI 助手`、`离线办公 AI`、`私有化 AI Agent`、`桌面 AI 工具`、`低内存 AI`、`OpenClaw`。
 
 ---
 

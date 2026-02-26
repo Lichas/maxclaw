@@ -64,6 +64,11 @@
 - **位置**：`README.md`、`README.en.md`。
 - **验证**：`make build`。
 
+#### README 标题与关键词补充 OpenClaw 相关检索词
+- **变更**：微调中文 README 主标题措辞，并在首屏关键词中补充 `OpenClaw`，增强对标检索覆盖。
+- **位置**：`README.md`。
+- **验证**：`make build`。
+
 #### Skills 市场支持按名称过滤，聊天下拉补齐全局技能并增强重试加载
 - **变更**：Skills 市场新增“按名称过滤已安装技能”；`/api/skills` 改为返回“工作区 + 全局（~/.agents/skills）”技能并回传来源；聊天页技能下拉改为仅展示启用技能，并在打开下拉且为空/失败时自动重试加载，减少重启后首轮加载失败导致列表为空。
 - **位置**：`electron/src/renderer/views/SkillsView.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`internal/webui/server.go`。
