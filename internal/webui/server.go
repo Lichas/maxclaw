@@ -94,7 +94,7 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	mux.HandleFunc("/api/message", s.handleMessage)
 	mux.HandleFunc("/api/browser/action", s.handleBrowserAction)
 	mux.HandleFunc("/api/config", s.handleConfig)
-	mux.HandleFunc("/api/soul", s.handleSoul)
+	mux.HandleFunc("/api/workspace-file/", s.handleWorkspaceFile)
 	mux.HandleFunc("/api/gateway/restart", s.handleGatewayRestart)
 	mux.HandleFunc("/api/cron", s.handleCron)
 	mux.HandleFunc("/api/cron/", s.handleCronByID)
@@ -1089,14 +1089,30 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleSoul 处理 USER_SOUL.md 文件的读写
-func (s *Server) handleSoul(w http.ResponseWriter, r *http.Request) {
+// handleWorkspaceFile 处理 workspace 文件读写 (USER.md, SOUL.md)
+func (s *Server) handleWorkspaceFile(w http.ResponseWriter, r *http.Request) {
+	// 路径格式: /api/workspace-file/{filename}
+	path := strings.TrimPrefix(r.URL.Path, "/api/workspace-file/")
+	parts := strings.Split(path, "/")
+	if len(parts) < 1 || parts[0] == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	filename := parts[0]
+	// 只允许访问特定文件
+	if filename != "USER.md" && filename != "SOUL.md" {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	switch r.Method {
 	case http.MethodGet:
-		content, err := s.readUserSoul()
+		content, err := s.readWorkspaceFile(filename)
 		if err != nil {
 			if os.IsNotExist(err) {
-				w.WriteHeader(http.StatusNotFound)
+				// 如果文件不存在，返回空内容而不是404
+				writeJSON(w, map[string]string{"content": ""})
 				return
 			}
 			writeError(w, err)
@@ -1112,7 +1128,7 @@ func (s *Server) handleSoul(w http.ResponseWriter, r *http.Request) {
 			writeError(w, err)
 			return
 		}
-		if err := s.writeUserSoul(req.Content); err != nil {
+		if err := s.writeWorkspaceFile(filename, req.Content); err != nil {
 			writeError(w, err)
 			return
 		}
@@ -1123,8 +1139,8 @@ func (s *Server) handleSoul(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// readUserSoul 读取 USER_SOUL.md 文件内容
-func (s *Server) readUserSoul() (string, error) {
+// readWorkspaceFile 读取 workspace 文件内容
+func (s *Server) readWorkspaceFile(filename string) (string, error) {
 	workspace := s.cfg.Agents.Defaults.Workspace
 	if workspace == "" {
 		workspace = "~/.maxclaw/workspace"
@@ -1138,16 +1154,16 @@ func (s *Server) readUserSoul() (string, error) {
 		workspace = filepath.Join(home, workspace[1:])
 	}
 
-	soulPath := filepath.Join(workspace, "USER_SOUL.md")
-	data, err := os.ReadFile(soulPath)
+	filePath := filepath.Join(workspace, filename)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", err
 	}
 	return string(data), nil
 }
 
-// writeUserSoul 写入 USER_SOUL.md 文件
-func (s *Server) writeUserSoul(content string) error {
+// writeWorkspaceFile 写入 workspace 文件
+func (s *Server) writeWorkspaceFile(filename string, content string) error {
 	workspace := s.cfg.Agents.Defaults.Workspace
 	if workspace == "" {
 		workspace = "~/.maxclaw/workspace"
@@ -1166,8 +1182,8 @@ func (s *Server) writeUserSoul(content string) error {
 		return err
 	}
 
-	soulPath := filepath.Join(workspace, "USER_SOUL.md")
-	return os.WriteFile(soulPath, []byte(content), 0644)
+	filePath := filepath.Join(workspace, filename)
+	return os.WriteFile(filePath, []byte(content), 0644)
 }
 
 func (s *Server) applyRuntimeModelConfig(cfg *config.Config) error {

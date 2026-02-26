@@ -269,16 +269,63 @@ export function SkillsView() {
                 </div>
               )}
 
-              {installType !== 'github' && (
-                <div>
-                  <input
-                    type="text"
-                    value={installUrl}
-                    onChange={(e) => setInstallUrl(e.target.value)}
-                    placeholder={getInstallPlaceholder()}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
-                    required
-                  />
+              {installType === 'zip' && (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={installUrl}
+                      onChange={(e) => setInstallUrl(e.target.value)}
+                      placeholder={getInstallPlaceholder()}
+                      className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const result = await window.electronAPI.system.selectFile([
+                          { name: 'ZIP files', extensions: ['zip'] }
+                        ]);
+                        if (result) setInstallUrl(result);
+                      }}
+                      className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary"
+                    >
+                      <FolderOpenIcon className="h-4 w-4" />
+                      {t('common.browse') || '浏览'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-foreground/50">
+                    {t('skills.install.zip.help') || '选择 .zip 技能包文件，或输入完整路径'}
+                  </p>
+                </div>
+              )}
+
+              {installType === 'folder' && (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={installUrl}
+                      onChange={(e) => setInstallUrl(e.target.value)}
+                      placeholder={getInstallPlaceholder()}
+                      className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const result = await window.electronAPI.system.selectFolder();
+                        if (result) setInstallUrl(result);
+                      }}
+                      className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary"
+                    >
+                      <FolderOpenIcon className="h-4 w-4" />
+                      {t('common.browse') || '浏览'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-foreground/50">
+                    {t('skills.install.folder.help') || '选择技能文件夹，或输入完整路径'}
+                  </p>
                 </div>
               )}
 
@@ -373,5 +420,14 @@ export function SkillsView() {
         )}
       </div>
     </div>
+  );
+}
+
+// Icon component for file/folder picker
+function FolderOpenIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
+    </svg>
   );
 }

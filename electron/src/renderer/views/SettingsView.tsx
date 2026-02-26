@@ -908,13 +908,7 @@ export function SettingsView() {
               </section>
             )}
 
-            {activeCategory === 'advanced' && (
-              <AdvancedSettings
-                gatewayConfig={gatewayConfig}
-                t={t}
-                language={language}
-              />
-            )}
+            {activeCategory === 'advanced' && <AdvancedSettings t={t} language={language} />}
           </main>
         </div>
       </div>
@@ -965,49 +959,32 @@ function AdvancedIcon({ className }: { className?: string }) {
   );
 }
 
-// Advanced Settings Component
-function AdvancedSettings({ gatewayConfig, t, language }: { gatewayConfig: any; t: (key: string) => string; language: string }) {
-  const [configJson, setConfigJson] = useState<string>('');
-  const [soulMd, setSoulMd] = useState<string>('');
+// Workspace File Editor Component - Edit real USER.md and SOUL.md files
+function AdvancedSettings({ t, language }: { t: (key: string) => string; language: string }) {
+  const [activeTab, setActiveTab] = useState<'USER' | 'SOUL'>('USER');
+  const [userContent, setUserContent] = useState<string>('');
+  const [soulContent, setSoulContent] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<'config' | 'soul' | null>(null);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'config' | 'soul'>('config');
-
-  // Derived values for simple editors
-  const [simpleConfig, setSimpleConfig] = useState({
-    model: '',
-    workspace: '',
-    maxIterations: 200,
-    executionMode: 'ask' as 'safe' | 'ask' | 'auto'
-  });
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadFiles = async () => {
       setLoading(true);
       setError(null);
       try {
-        // Load config.json
-        const configRes = await fetch('http://localhost:18890/api/config');
-        if (configRes.ok) {
-          const config = await configRes.json();
-          setConfigJson(JSON.stringify(config, null, 2));
-          setSimpleConfig({
-            model: config.agents?.defaults?.model || '',
-            workspace: config.agents?.defaults?.workspace || '',
-            maxIterations: config.agents?.defaults?.maxToolIterations || 200,
-            executionMode: config.agents?.defaults?.executionMode || 'ask'
-          });
+        const [userRes, soulRes] = await Promise.all([
+          fetch('http://localhost:18890/api/workspace-file/USER.md'),
+          fetch('http://localhost:18890/api/workspace-file/SOUL.md')
+        ]);
+        if (userRes.ok) {
+          const data = await userRes.json();
+          setUserContent(data.content || '');
         }
-
-        // Load USER_SOUL.md
-        const soulRes = await fetch('http://localhost:18890/api/soul');
         if (soulRes.ok) {
-          const soul = await soulRes.json();
-          setSoulMd(soul.content || '');
-        } else if (soulRes.status === 404) {
-          setSoulMd('# User Soul\n\n在此定义 AI 助手的行为准则和个性化设置...');
+          const data = await soulRes.json();
+          setSoulContent(data.content || '');
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : '加载失败');
@@ -1015,257 +992,149 @@ function AdvancedSettings({ gatewayConfig, t, language }: { gatewayConfig: any; 
         setLoading(false);
       }
     };
-
-    void loadData();
+    void loadFiles();
   }, []);
 
-  const handleSaveConfig = async () => {
-    setSaving('config');
+  const handleSave = async () => {
+    setSaving(true);
     setError(null);
     setSuccess(null);
+    const filename = activeTab === 'USER' ? 'USER.md' : 'SOUL.md';
+    const content = activeTab === 'USER' ? userContent : soulContent;
     try {
-      let config: any;
-      try {
-        config = JSON.parse(configJson);
-      } catch (e) {
-        setError('JSON 格式错误: ' + (e instanceof Error ? e.message : 'Invalid JSON'));
-        return;
-      }
-
-      const res = await fetch('http://localhost:18890/api/config', {
+      const res = await fetch(`http://localhost:18890/api/workspace-file/${filename}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
+        body: JSON.stringify({ content })
       });
-
       if (!res.ok) throw new Error('保存失败');
-      setSuccess(t('common.save') + '成功');
+      setSuccess(`${filename} 保存成功`);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : '保存失败');
     } finally {
-      setSaving(null);
-    }
-  };
-
-  const handleSaveSoul = async () => {
-    setSaving('soul');
-    setError(null);
-    setSuccess(null);
-    try {
-      const res = await fetch('http://localhost:18890/api/soul', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: soulMd })
-      });
-
-      if (!res.ok) throw new Error('保存失败');
-      setSuccess(t('common.save') + '成功');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '保存失败');
-    } finally {
-      setSaving(null);
-    }
-  };
-
-  const handleSimpleConfigChange = (key: keyof typeof simpleConfig, value: string | number) => {
-    setSimpleConfig(prev => ({ ...prev, [key]: value }));
-    // Update JSON accordingly
-    try {
-      const config = JSON.parse(configJson);
-      if (!config.agents) config.agents = {};
-      if (!config.agents.defaults) config.agents.defaults = {};
-      if (key === 'model') config.agents.defaults.model = value;
-      if (key === 'workspace') config.agents.defaults.workspace = value;
-      if (key === 'maxIterations') config.agents.defaults.maxToolIterations = value;
-      if (key === 'executionMode') config.agents.defaults.executionMode = value;
-      setConfigJson(JSON.stringify(config, null, 2));
-    } catch {
-      // Ignore JSON parse errors during typing
+      setSaving(false);
     }
   };
 
   if (loading) {
-    return <div className="py-12 text-center text-foreground/50">{t('common.loading')}</div>;
+    return (
+      <div className="flex h-64 items-center justify-center text-foreground/50">
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          {t('common.loading')}
+        </div>
+      </div>
+    );
   }
 
-  return (
-    <div className="space-y-6">
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          {success}
-        </div>
-      )}
+  const currentContent = activeTab === 'USER' ? userContent : soulContent;
+  const setCurrentContent = activeTab === 'USER' ? setUserContent : setSoulContent;
 
-      {/* Tab Navigation */}
-      <div className="flex gap-2 border-b border-border">
+  return (
+    <div className="flex h-[calc(100vh-200px)] flex-col">
+      <div className="mb-4 flex items-center justify-between border-b border-border">
+        <div className="flex gap-1">
+          <button
+            onClick={() => setActiveTab('USER')}
+            className={`relative px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'USER' ? 'text-primary' : 'text-foreground/60 hover:text-foreground'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <FileIcon className="h-4 w-4" />
+              USER.md
+            </span>
+            {activeTab === 'USER' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+          </button>
+          <button
+            onClick={() => setActiveTab('SOUL')}
+            className={`relative px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'SOUL' ? 'text-primary' : 'text-foreground/60 hover:text-foreground'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <SparklesIcon className="h-4 w-4" />
+              SOUL.md
+            </span>
+            {activeTab === 'SOUL' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+          </button>
+        </div>
         <button
-          onClick={() => setActiveTab('config')}
-          className={`px-4 py-2 text-sm font-medium transition-colors ${
-            activeTab === 'config'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-foreground/60 hover:text-foreground'
-          }`}
+          onClick={handleSave}
+          disabled={saving}
+          className="mb-2 flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
         >
-          config.json
-        </button>
-        <button
-          onClick={() => setActiveTab('soul')}
-          className={`px-4 py-2 text-sm font-medium transition-colors ${
-            activeTab === 'soul'
-              ? 'border-b-2 border-primary text-primary'
-              : 'text-foreground/60 hover:text-foreground'
-          }`}
-        >
-          USER_SOUL.md
+          {saving ? (
+            <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />{t('common.loading')}</>
+          ) : (
+            <><SaveIcon className="h-4 w-4" />{t('common.save')}</>
+          )}
         </button>
       </div>
 
-      {activeTab === 'config' ? (
-        <div className="space-y-6">
-          {/* Simple Editor */}
-          <section className="rounded-xl border border-border bg-card p-5">
-            <h3 className="mb-4 text-lg font-semibold">
-              {language === 'zh' ? '快速配置' : 'Quick Config'}
-            </h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">
-                  {t('settings.gateway.currentModel')}
-                </label>
-                <input
-                  type="text"
-                  value={simpleConfig.model}
-                  onChange={(e) => handleSimpleConfigChange('model', e.target.value)}
-                  placeholder="anthropic/claude-opus-4-5"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">
-                  {t('settings.gateway.workspace')}
-                </label>
-                <input
-                  type="text"
-                  value={simpleConfig.workspace}
-                  onChange={(e) => handleSimpleConfigChange('workspace', e.target.value)}
-                  placeholder="~/.maxclaw/workspace"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">
-                  {t('settings.gateway.maxToolIterations')}
-                </label>
-                <input
-                  type="number"
-                  value={simpleConfig.maxIterations}
-                  onChange={(e) => handleSimpleConfigChange('maxIterations', parseInt(e.target.value) || 200)}
-                  min={1}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">
-                  {t('settings.gateway.executionMode')}
-                </label>
-                <select
-                  value={simpleConfig.executionMode}
-                  onChange={(e) => handleSimpleConfigChange('executionMode', e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                >
-                  <option value="safe">Safe (只读探索)</option>
-                  <option value="ask">Ask (需要确认)</option>
-                  <option value="auto">Auto (全自动)</option>
-                </select>
-              </div>
-            </div>
-          </section>
+      {error && <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
+      {success && <div className="mb-3 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700">{success}</div>}
 
-          {/* JSON Editor */}
-          <section className="rounded-xl border border-border bg-card p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">config.json</h3>
-              <button
-                onClick={handleSaveConfig}
-                disabled={saving === 'config'}
-                className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
-              >
-                {saving === 'config' ? t('common.loading') : t('common.save')}
-              </button>
-            </div>
-            <textarea
-              value={configJson}
-              onChange={(e) => setConfigJson(e.target.value)}
-              rows={20}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs text-foreground focus:border-primary/40 focus:outline-none"
-              spellCheck={false}
-            />
-          </section>
+      <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
+        <div className="flex items-center gap-2 border-b border-border bg-secondary/50 px-4 py-2 text-xs text-foreground/60">
+          <FolderIcon className="h-3.5 w-3.5" />
+          <span>~/.maxclaw/workspace/</span>
+          <span className="font-medium text-foreground">{activeTab}.md</span>
+          <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+            {language === 'zh' ? '就地编辑' : 'Live Edit'}
+          </span>
         </div>
-      ) : (
-        <section className="rounded-xl border border-border bg-card p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold">USER_SOUL.md</h3>
-            <button
-              onClick={handleSaveSoul}
-              disabled={saving === 'soul'}
-              className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
-            >
-              {saving === 'soul' ? t('common.loading') : t('common.save')}
-            </button>
-          </div>
-          <p className="mb-4 text-sm text-foreground/60">
-            {language === 'zh'
-              ? '在此定义 AI 助手的行为准则、个性特征和偏好设置。这些指令将影响 AI 的回复风格和行为方式。'
-              : 'Define the AI assistant\'s behavior guidelines, personality traits, and preferences here. These instructions will affect how the AI responds and behaves.'}
-          </p>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground/70">Markdown</label>
-              <textarea
-                value={soulMd}
-                onChange={(e) => setSoulMd(e.target.value)}
-                rows={25}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary/40 focus:outline-none"
-                placeholder="# User Soul"
-                spellCheck={false}
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground/70">
-                {language === 'zh' ? '预览' : 'Preview'}
-              </label>
-              <div className="h-full max-h-[600px] overflow-y-auto rounded-lg border border-border bg-background px-4 py-3 text-sm">
-                <SoulMarkdownPreview content={soulMd} />
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
+        <div className="border-b border-border bg-secondary/30 px-4 py-2 text-xs text-foreground/60">
+          {activeTab === 'USER'
+            ? (language === 'zh' ? '定义你的个人信息、偏好设置和背景信息。AI 会在对话中参考这些信息来提供个性化回复。' : 'Define your personal information, preferences, and background. The AI references this for personalized responses.')
+            : (language === 'zh' ? '定义 AI 助手的行为准则、个性特征和回复风格。这些指令直接影响 AI 的回复方式。' : "Define the AI assistant's behavior guidelines, personality traits, and response style. These directly affect how the AI responds.")}
+        </div>
+        <textarea
+          value={currentContent}
+          onChange={(e) => setCurrentContent(e.target.value)}
+          className="flex-1 resize-none bg-background px-4 py-3 font-mono text-sm leading-relaxed text-foreground placeholder:text-foreground/30 focus:outline-none"
+          placeholder={activeTab === 'USER' ? '# User\n\nYour information here...' : '# SOUL\n\nAI personality here...'}
+          spellCheck={false}
+        />
+        <div className="flex items-center justify-between border-t border-border bg-secondary/30 px-4 py-2 text-xs text-foreground/50">
+          <span>{currentContent.length} {language === 'zh' ? '字符' : 'chars'}</span>
+          <span>Markdown {language === 'zh' ? '支持' : 'supported'}</span>
+        </div>
+      </div>
     </div>
   );
 }
 
-// Simple markdown preview component
-function SoulMarkdownPreview({ content }: { content: string }) {
-  // Simple markdown-to-HTML conversion for preview
-  const html = content
-    .replace(/^# (.*$)/gim, '<h1 class="text-xl font-bold mb-2">$1</h1>')
-    .replace(/^## (.*$)/gim, '<h2 class="text-lg font-semibold mb-2 mt-3">$1</h2>')
-    .replace(/^### (.*$)/gim, '<h3 class="text-base font-semibold mb-1 mt-2">$1</h3>')
-    .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-    .replace(/\*(.*)\*/gim, '<em>$1</em>')
-    .replace(/`([^`]+)`/gim, '<code class="bg-secondary px-1 rounded text-xs">$1</code>')
-    .replace(/```[\s\S]*?```/gim, '<pre class="bg-secondary p-2 rounded text-xs overflow-x-auto my-2"><code>$&</code></pre>')
-    .replace(/^- (.*$)/gim, '<li class="ml-4">$1</li>')
-    .replace(/\n/gim, '<br />');
+// Icon Components
+function FileIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  );
+}
 
-  return <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: html }} />;
+function SparklesIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  );
+}
+
+function FolderIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+    </svg>
+  );
+}
+
+function SaveIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+    </svg>
+  );
 }
