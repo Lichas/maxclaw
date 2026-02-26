@@ -959,11 +959,12 @@ function AdvancedIcon({ className }: { className?: string }) {
   );
 }
 
-// Workspace File Editor Component - Edit real USER.md and SOUL.md files
+// Workspace File Editor Component - Edit real USER.md, SOUL.md and config.json
 function AdvancedSettings({ t, language }: { t: (key: string) => string; language: string }) {
-  const [activeTab, setActiveTab] = useState<'USER' | 'SOUL'>('USER');
+  const [activeTab, setActiveTab] = useState<'USER' | 'SOUL' | 'CONFIG'>('USER');
   const [userContent, setUserContent] = useState<string>('');
   const [soulContent, setSoulContent] = useState<string>('');
+  const [configJson, setConfigJson] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -974,9 +975,10 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
       setLoading(true);
       setError(null);
       try {
-        const [userRes, soulRes] = await Promise.all([
+        const [userRes, soulRes, configRes] = await Promise.all([
           fetch('http://localhost:18890/api/workspace-file/USER.md'),
-          fetch('http://localhost:18890/api/workspace-file/SOUL.md')
+          fetch('http://localhost:18890/api/workspace-file/SOUL.md'),
+          fetch('http://localhost:18890/api/config')
         ]);
         if (userRes.ok) {
           const data = await userRes.json();
@@ -985,6 +987,10 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
         if (soulRes.ok) {
           const data = await soulRes.json();
           setSoulContent(data.content || '');
+        }
+        if (configRes.ok) {
+          const data = await configRes.json();
+          setConfigJson(JSON.stringify(data, null, 2));
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : '加载失败');
@@ -999,16 +1005,33 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
     setSaving(true);
     setError(null);
     setSuccess(null);
-    const filename = activeTab === 'USER' ? 'USER.md' : 'SOUL.md';
-    const content = activeTab === 'USER' ? userContent : soulContent;
     try {
-      const res = await fetch(`http://localhost:18890/api/workspace-file/${filename}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content })
-      });
-      if (!res.ok) throw new Error('保存失败');
-      setSuccess(`${filename} 保存成功`);
+      if (activeTab === 'CONFIG') {
+        let config: unknown;
+        try {
+          config = JSON.parse(configJson);
+        } catch (e) {
+          setError('JSON 格式错误: ' + (e instanceof Error ? e.message : 'Invalid JSON'));
+          return;
+        }
+        const res = await fetch('http://localhost:18890/api/config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config)
+        });
+        if (!res.ok) throw new Error('保存失败');
+        setSuccess('config.json 保存成功');
+      } else {
+        const filename = activeTab === 'USER' ? 'USER.md' : 'SOUL.md';
+        const content = activeTab === 'USER' ? userContent : soulContent;
+        const res = await fetch(`http://localhost:18890/api/workspace-file/${filename}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content })
+        });
+        if (!res.ok) throw new Error('保存失败');
+        setSuccess(`${filename} 保存成功`);
+      }
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : '保存失败');
@@ -1028,8 +1051,64 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
     );
   }
 
-  const currentContent = activeTab === 'USER' ? userContent : soulContent;
-  const setCurrentContent = activeTab === 'USER' ? setUserContent : setSoulContent;
+  const getCurrentContent = () => {
+    switch (activeTab) {
+      case 'USER': return userContent;
+      case 'SOUL': return soulContent;
+      case 'CONFIG': return configJson;
+    }
+  };
+
+  const getCurrentSetter = (value: string) => {
+    switch (activeTab) {
+      case 'USER': setUserContent(value); break;
+      case 'SOUL': setSoulContent(value); break;
+      case 'CONFIG': setConfigJson(value); break;
+    }
+  };
+
+  const getFileName = () => {
+    switch (activeTab) {
+      case 'USER': return 'USER.md';
+      case 'SOUL': return 'SOUL.md';
+      case 'CONFIG': return 'config.json';
+    }
+  };
+
+  const getFilePath = () => {
+    switch (activeTab) {
+      case 'USER':
+      case 'SOUL':
+        return `~/.maxclaw/workspace/${getFileName()}`;
+      case 'CONFIG':
+        return `~/.maxclaw/${getFileName()}`;
+    }
+  };
+
+  const getDescription = () => {
+    switch (activeTab) {
+      case 'USER':
+        return language === 'zh'
+          ? '定义你的个人信息、偏好设置和背景信息。AI 会在对话中参考这些信息来提供个性化回复。'
+          : 'Define your personal information, preferences, and background. The AI references this for personalized responses.';
+      case 'SOUL':
+        return language === 'zh'
+          ? '定义 AI 助手的行为准则、个性特征和回复风格。这些指令直接影响 AI 的回复方式。'
+          : "Define the AI assistant's behavior guidelines, personality traits, and response style. These directly affect how the AI responds.";
+      case 'CONFIG':
+        return language === 'zh'
+          ? '编辑应用配置文件。包含模型设置、渠道配置、工具选项等核心配置。'
+          : 'Edit the application configuration file. Contains core settings for models, channels, tools, etc.';
+    }
+  };
+
+  const getPlaceholder = () => {
+    switch (activeTab) {
+      case 'USER': return '# User\n\nYour information here...';
+      case 'SOUL': return '# SOUL\n\nAI personality here...';
+      case 'CONFIG': return '{\n  "agents": {\n    ...\n  }\n}';
+    }
+  };
 
   return (
     <div className="flex h-[calc(100vh-200px)] flex-col">
@@ -1059,6 +1138,18 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
             </span>
             {activeTab === 'SOUL' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
           </button>
+          <button
+            onClick={() => setActiveTab('CONFIG')}
+            className={`relative px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'CONFIG' ? 'text-primary' : 'text-foreground/60 hover:text-foreground'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <CogIcon className="h-4 w-4" />
+              config.json
+            </span>
+            {activeTab === 'CONFIG' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+          </button>
         </div>
         <button
           onClick={handleSave}
@@ -1079,27 +1170,24 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
       <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
         <div className="flex items-center gap-2 border-b border-border bg-secondary/50 px-4 py-2 text-xs text-foreground/60">
           <FolderIcon className="h-3.5 w-3.5" />
-          <span>~/.maxclaw/workspace/</span>
-          <span className="font-medium text-foreground">{activeTab}.md</span>
+          <span>{getFilePath()}</span>
           <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
             {language === 'zh' ? '就地编辑' : 'Live Edit'}
           </span>
         </div>
         <div className="border-b border-border bg-secondary/30 px-4 py-2 text-xs text-foreground/60">
-          {activeTab === 'USER'
-            ? (language === 'zh' ? '定义你的个人信息、偏好设置和背景信息。AI 会在对话中参考这些信息来提供个性化回复。' : 'Define your personal information, preferences, and background. The AI references this for personalized responses.')
-            : (language === 'zh' ? '定义 AI 助手的行为准则、个性特征和回复风格。这些指令直接影响 AI 的回复方式。' : "Define the AI assistant's behavior guidelines, personality traits, and response style. These directly affect how the AI responds.")}
+          {getDescription()}
         </div>
         <textarea
-          value={currentContent}
-          onChange={(e) => setCurrentContent(e.target.value)}
+          value={getCurrentContent()}
+          onChange={(e) => getCurrentSetter(e.target.value)}
           className="flex-1 resize-none bg-background px-4 py-3 font-mono text-sm leading-relaxed text-foreground placeholder:text-foreground/30 focus:outline-none"
-          placeholder={activeTab === 'USER' ? '# User\n\nYour information here...' : '# SOUL\n\nAI personality here...'}
+          placeholder={getPlaceholder()}
           spellCheck={false}
         />
         <div className="flex items-center justify-between border-t border-border bg-secondary/30 px-4 py-2 text-xs text-foreground/50">
-          <span>{currentContent.length} {language === 'zh' ? '字符' : 'chars'}</span>
-          <span>Markdown {language === 'zh' ? '支持' : 'supported'}</span>
+          <span>{getCurrentContent().length} {language === 'zh' ? '字符' : 'chars'}</span>
+          <span>{activeTab === 'CONFIG' ? 'JSON' : 'Markdown'} {language === 'zh' ? '支持' : 'supported'}</span>
         </div>
       </div>
     </div>
@@ -1111,6 +1199,15 @@ function FileIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  );
+}
+
+function CogIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   );
 }

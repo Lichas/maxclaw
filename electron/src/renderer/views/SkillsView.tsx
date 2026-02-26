@@ -291,7 +291,7 @@ export function SkillsView() {
                       className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary"
                     >
                       <FolderOpenIcon className="h-4 w-4" />
-                      {t('common.browse') || '浏览'}
+                      Open
                     </button>
                   </div>
                   <p className="text-xs text-foreground/50">
@@ -320,7 +320,7 @@ export function SkillsView() {
                       className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary"
                     >
                       <FolderOpenIcon className="h-4 w-4" />
-                      {t('common.browse') || '浏览'}
+                      Open
                     </button>
                   </div>
                   <p className="text-xs text-foreground/50">
