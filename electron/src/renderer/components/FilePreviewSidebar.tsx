@@ -26,6 +26,7 @@ interface FilePreviewSidebarProps {
   onToggle: () => void;
   onResize: (nextWidth: number) => void;
   onOpenFile: () => void;
+  onOpenPath?: (path: string) => void;
   imageAssist?: {
     enabled: boolean;
     busy?: boolean;
@@ -48,6 +49,7 @@ export function FilePreviewSidebar({
   onToggle,
   onResize,
   onOpenFile,
+  onOpenPath,
   imageAssist,
 }: FilePreviewSidebarProps) {
   const startResize = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -217,7 +219,12 @@ export function FilePreviewSidebar({
                 <div className="inline-flex rounded-full bg-secondary px-2 py-1 text-[11px] uppercase tracking-wide text-foreground/60">
                   {preview.kind || selected.kind}
                 </div>
-                <FilePreviewBody preview={preview} imageAssist={imageAssist} />
+                <FilePreviewBody
+                  preview={preview}
+                  imageAssist={imageAssist}
+                  onOpenFile={onOpenFile}
+                  onOpenPath={onOpenPath}
+                />
               </div>
             )}
           </div>
@@ -230,9 +237,13 @@ export function FilePreviewSidebar({
 function FilePreviewBody({
   preview,
   imageAssist,
+  onOpenFile,
+  onOpenPath,
 }: {
   preview: PreviewPayload;
   imageAssist?: FilePreviewSidebarProps['imageAssist'];
+  onOpenFile?: () => void;
+  onOpenPath?: () => void;
 }) {
   if (preview.kind === 'markdown') {
     return (
@@ -304,9 +315,30 @@ function FilePreviewBody({
     );
   }
 
+  // Binary or unsupported files - show action buttons
   return (
-    <div className="rounded-xl border border-border/70 bg-card/70 px-3 py-4 text-sm text-foreground/65">
-      当前文件类型暂不支持内嵌预览。可点击“打开目录”在文件夹中查看。
+    <div className="rounded-xl border border-border/70 bg-card/70 px-4 py-6 text-center">
+      <p className="mb-4 text-sm text-foreground/60">
+        当前文件类型暂不支持内嵌预览
+      </p>
+      <div className="flex justify-center gap-3">
+        {onOpenPath && (
+          <button
+            onClick={onOpenPath}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            打开文件
+          </button>
+        )}
+        {onOpenFile && (
+          <button
+            onClick={onOpenFile}
+            className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-secondary"
+          >
+            打开所在目录
+          </button>
+        )}
+      </div>
     </div>
   );
 }

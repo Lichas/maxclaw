@@ -1442,6 +1442,22 @@ export function ChatView() {
     }
   };
 
+  const handleOpenFilePath = async () => {
+    if (!selectedFileRef) {
+      return;
+    }
+    const result = await window.electronAPI.system.openPath(selectedFileRef.pathHint, {
+      workspace: workspacePath,
+      sessionKey: currentSessionKey
+    });
+    if (!result.success) {
+      setPreviewData({
+        success: false,
+        error: result.error || '打开文件失败'
+      });
+    }
+  };
+
   const handleBrowserCopilotAction = async (params: Record<string, unknown>) => {
     const requestSessionKey = currentSessionKey;
     setPreviewModeForSession(requestSessionKey, 'browser');
@@ -1908,6 +1924,9 @@ export function ChatView() {
       onResize={setPreviewSidebarWidth}
       onOpenFile={() => {
         void handleOpenSelectedFile();
+      }}
+      onOpenPath={() => {
+        void handleOpenFilePath();
       }}
       imageAssist={{
         enabled: browserScreenshotInteractive && !browserCopilotBusy,
