@@ -27,7 +27,7 @@ type SettingsCategory = 'general' | 'providers' | 'channels' | 'gateway' | 'adva
 
 export function SettingsView() {
   const dispatch = useDispatch();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { theme: storeTheme, language: storeLanguage } = useSelector((state: RootState) => state.ui);
   const { getWhatsAppStatus } = useGateway();
 
