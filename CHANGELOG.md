@@ -49,6 +49,11 @@
 - **位置**：`README.md`。
 - **验证**：`make build`。
 
+#### 修正 README 许可证声明为 Apache-2.0
+- **变更**：将 README 顶部 License 徽章与“开发者友好”中的许可证文案从 MIT 统一为 Apache-2.0，与仓库 `LICENSE` 文件保持一致。
+- **位置**：`README.md`。
+- **验证**：`make build`。
+
 #### Skills 市场支持按名称过滤，聊天下拉补齐全局技能并增强重试加载
 - **变更**：Skills 市场新增“按名称过滤已安装技能”；`/api/skills` 改为返回“工作区 + 全局（~/.agents/skills）”技能并回传来源；聊天页技能下拉改为仅展示启用技能，并在打开下拉且为空/失败时自动重试加载，减少重启后首轮加载失败导致列表为空。
 - **位置**：`electron/src/renderer/views/SkillsView.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`internal/webui/server.go`。
