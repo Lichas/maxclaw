@@ -54,6 +54,11 @@
 - **位置**：`README.md`。
 - **验证**：`make build`。
 
+#### README 增加产品截图展示
+- **变更**：新增“产品截图”章节并嵌入 `screenshot/app_ui.png`，直观展示桌面 UI，提升 README 首屏可读性与转化。
+- **位置**：`README.md`、`screenshot/app_ui.png`。
+- **验证**：`make build`。
+
 #### Skills 市场支持按名称过滤，聊天下拉补齐全局技能并增强重试加载
 - **变更**：Skills 市场新增“按名称过滤已安装技能”；`/api/skills` 改为返回“工作区 + 全局（~/.agents/skills）”技能并回传来源；聊天页技能下拉改为仅展示启用技能，并在打开下拉且为空/失败时自动重试加载，减少重启后首轮加载失败导致列表为空。
 - **位置**：`electron/src/renderer/views/SkillsView.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`internal/webui/server.go`。

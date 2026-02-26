@@ -18,6 +18,14 @@
 
 ---
 
+## 📸 产品截图
+
+![maxclaw app ui](screenshot/app_ui.png)
+
+> 图：maxclaw 桌面 UI（会话、设置、日志与工具联动界面）
+
+---
+
 ## ✨ 核心亮点
 
 ### 🏠 本地优先，隐私至上
