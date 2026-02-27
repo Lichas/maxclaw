@@ -338,7 +338,13 @@ func executeCronJob(cfg *config.Config, apiKey, apiBase string, cronService *cro
 		cfg.Tools.MCPServers,
 		cfg.Agents.Defaults.EnableGlobalSkills,
 	)
-	agentLoop.UpdateRuntimeExecutionMode(cfg.Agents.Defaults.ExecutionMode)
+	// Use job's execution mode (defaults to auto for cron jobs to avoid waiting for user confirmation)
+	executionMode := job.GetExecutionMode()
+	if executionMode == cron.ExecutionModeAsk || executionMode == "" {
+		// Cron jobs should default to auto mode to prevent hanging
+		executionMode = cron.ExecutionModeAuto
+	}
+	agentLoop.UpdateRuntimeExecutionMode(executionMode)
 	defer agentLoop.Close()
 
 	// 执行单次任务
@@ -353,7 +359,9 @@ func executeCronJob(cfg *config.Config, apiKey, apiBase string, cronService *cro
 
 	go func() {
 		// 使用 agent 处理消息
+		// Each cron job gets its own unique session based on job ID to prevent history mixing
 		msg := bus.NewInboundMessage(job.Payload.Channel, "cron", job.Payload.To, userMsg)
+		msg.SessionKey = "cron:" + job.ID
 		resp, err := agentLoop.ProcessMessage(ctx, msg)
 		if err != nil {
 			errorChan <- err

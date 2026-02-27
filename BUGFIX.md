@@ -16,7 +16,7 @@
 | **LLM/Provider** | 4 | [消息格式错误](#bug-1-openai-provider-消息格式错误), [DeepSeek 禁用工具](#bug-2-deepseek-模型工具被禁用), [模型不使用工具](#bug-3-模型不使用工具), [DeepSeek 400](#bug-4-deepseek-返回-400) |
 | **Channels** | 3 | [WhatsApp 自发消息](#2026-02-08---whatsapp-收不到回复), [Telegram 代理](#2026-02-15---telegram-收不到回复), [Telegram 间歇无回复](#2026-02-15--2026-02-16-事件总结telegram-间歇性无回复) |
 | **Daemon/部署** | 3 | [未清理 Gateway](#2026-02-16---make-up-daemon-未清理旧-gateway-进程), [假启动](#2026-02-16---daemon-假启动未被检测), [Electron 安装](#2026-02-20---electron-安装后无法启动) |
-| **Tools/Agent** | 2 | [Cron 缺上下文](#2026-02-16---agent-内-cron-工具提示缺少-channelchat_id), [Cron 触发未收到](#2026-02-17---cron-已触发但-telegram-未收到) |
+| **Tools/Agent** | 4 | [Cron 任务超时](#2026-02-27---cron-任务执行超时-10-分钟), [Cron 会话混淆](#2026-02-27---cron-不同任务共享会话导致历史混淆), [Cron 缺上下文](#2026-02-16---agent-内-cron-工具提示缺少-channelchat_id), [Cron 触发未收到](#2026-02-17---cron-已触发但-telegram-未收到) |
 | **性能** | 1 | [Agent 回复慢](#2026-02-23---agent-简单问候hi回复慢定位分析) |
 
 | 类别 | 数量 | Bug 列表 |
@@ -25,14 +25,14 @@
 | **LLM/Provider** | 5 | [消息格式错误](#bug-1-openai-provider-消息格式错误), [DeepSeek 禁用工具](#bug-2-deepseek-模型工具被禁用), [模型不使用工具](#bug-3-模型不使用工具), [DeepSeek 400](#bug-4-deepseek-返回-400), [MCP 中文工具名](#2026-02-24---mcp-中文工具名导致-llm-api-400-错误) |
 | **Channels** | 3 | [WhatsApp 自发消息](#2026-02-08---whatsapp-收不到回复), [Telegram 代理](#2026-02-15---telegram-收不到回复), [Telegram 间歇无回复](#2026-02-15--2026-02-16-事件总结telegram-间歇性无回复) |
 | **Daemon/部署** | 3 | [未清理 Gateway](#2026-02-16---make-up-daemon-未清理旧-gateway-进程), [假启动](#2026-02-16---daemon-假启动未被检测), [Electron 安装](#2026-02-20---electron-安装后无法启动) |
-| **Tools/Agent** | 2 | [Cron 缺上下文](#2026-02-16---agent-内-cron-工具提示缺少-channelchat_id), [Cron 触发未收到](#2026-02-17---cron-已触发但-telegram-未收到) |
+| **Tools/Agent** | 4 | [Cron 任务超时](#2026-02-27---cron-任务执行超时-10-分钟), [Cron 会话混淆](#2026-02-27---cron-不同任务共享会话导致历史混淆), [Cron 缺上下文](#2026-02-16---agent-内-cron-工具提示缺少-channelchat_id), [Cron 触发未收到](#2026-02-17---cron-已触发但-telegram-未收到) |
 | **性能** | 1 | [Agent 回复慢](#2026-02-23---agent-简单问候hi回复慢定位分析) |
 
 ### 按时间索引
 
 | 日期 | Bug |
 |------|-----|
-| 2026-02-27 | [文件预览无响应](#2026-02-27---文件预览点击无响应且不支持操作按钮) |
+| 2026-02-27 | [Cron 任务超时](#2026-02-27---cron-任务执行超时-10-分钟), [Cron 会话混淆](#2026-02-27---cron-不同任务共享会话导致历史混淆), [文件预览无响应](#2026-02-27---文件预览点击无响应且不支持操作按钮) |
 | 2026-02-24 | [并发会话](#2026-02-24---electron-长任务并发时会话列表丢失新会话发送受阻并触发-context-canceled), [会话串联](#2026-02-24---electron-聊天会话切换串联输入框与打断状态未隔离), [文件误识别](#2026-02-24---electron-聊天文件预览误识别带点号文本被当作文件), [文件按钮缺失](#2026-02-24---electron-文件真实存在但预览按钮未出现), [错误消息无法展开](#2026-02-24---错误消息无法展开查看详情), [MCP 中文工具名](#2026-02-24---mcp-中文工具名导致-llm-api-400-错误), [MCP Headers 显示格式](#2026-02-24---mcp-headers-编辑时显示格式错误), [MCP 测试状态](#2026-02-24---mcp-测试状态初始显示错误), [渠道切换会话隔离](#2026-02-24---切换渠道时会话列表未正确隔离) |
 | 2026-02-23 | [架构图对比度](#2026-02-23---字符架构图代码块颜色对比度过低), [聊天窗口高度](#2026-02-23---electron-聊天窗口信息流高度异常), [Agent 回复慢](#2026-02-23---agent-简单问候hi回复慢定位分析) |
 | 2026-02-22 | [SkillsView 循环](#2026-02-22---skillsview-无限循环) |
@@ -907,3 +907,70 @@ useEffect(() => {
 - `cd electron && npm run build`
 - 在 Sidebar 中切换渠道
 - 聊天视图自动切换到对应渠道的会话
+
+---
+
+## 2026-02-27 - Cron 任务执行超时 10 分钟
+
+**问题**：
+- 简单的定时任务（如 "say hello"）执行超时，提示 "context deadline exceeded"。
+- 任务执行时间远超预期（10 分钟后超时）。
+
+**根因**：
+1. `executeCronJob` 函数使用全局默认执行模式（`cfg.Agents.Defaults.ExecutionMode`）设置 agent：
+   ```go
+   agentLoop.UpdateRuntimeExecutionMode(cfg.Agents.Defaults.ExecutionMode)
+   ```
+2. 如果全局配置为 `ask` 或 `safe` 模式，cron 任务会等待用户确认，导致无限等待直到 10 分钟超时。
+3. 正确的做法应该是使用任务的执行模式，且 cron 任务默认应为 `auto` 模式。
+
+**修复**：
+- 修改为使用任务的执行模式，并强制 cron 任务默认使用 `auto` 模式：
+  ```go
+  executionMode := job.GetExecutionMode()
+  if executionMode == cron.ExecutionModeAsk || executionMode == "" {
+      executionMode = cron.ExecutionModeAuto
+  }
+  agentLoop.UpdateRuntimeExecutionMode(executionMode)
+  ```
+
+**修复文件**：
+- `internal/cli/cron.go`
+
+**验证**：
+- `make build`
+- 启动 gateway: `./build/maxclaw gateway`
+- 添加一个简单定时任务，确认能在短时间内完成（几秒而非 10 分钟）
+
+---
+
+## 2026-02-27 - Cron 不同任务共享会话导致历史混淆
+
+**问题**：
+- 不同定时任务的执行历史串在一起。
+- 左侧面板中不同定时任务显示在同一个会话中。
+- 不符合预期：每个定时任务应该有独立的会话历史。
+
+**根因**：
+1. `executeCronJob` 创建消息时，SessionKey 默认为 `channel:chatID` 格式：
+   ```go
+   msg := bus.NewInboundMessage(job.Payload.Channel, "cron", job.Payload.To, userMsg)
+   // SessionKey 自动生成为: job.Payload.Channel + ":" + job.Payload.To
+   ```
+2. 不同任务如果配置相同的 `Channel` 和 `To`，就会共享同一个 SessionKey，导致会话历史混淆。
+
+**修复**：
+- 为每个 cron 任务设置独立的 SessionKey，基于任务 ID：
+  ```go
+  msg := bus.NewInboundMessage(job.Payload.Channel, "cron", job.Payload.To, userMsg)
+  msg.SessionKey = "cron:" + job.ID  // 每个任务独立的会话
+  ```
+
+**修复文件**：
+- `internal/cli/cron.go`
+
+**验证**：
+- `make build`
+- 启动 gateway: `./build/maxclaw gateway`
+- 创建多个定时任务
+- 检查 `~/.maxclaw/workspace/sessions/` 目录，每个任务应有独立的会话文件（以 `cron:job_xxx` 开头）
