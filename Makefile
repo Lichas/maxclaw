@@ -20,7 +20,7 @@ build:
 
 # 安装到 GOPATH/bin
 install:
-	go install $(MAIN_FILE)
+	go install ./cmd/maxclaw
 
 # 运行测试
 test:
