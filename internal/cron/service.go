@@ -301,6 +301,21 @@ func (s *Service) scheduleOnceJob(job *Job) {
 	}()
 }
 
+// RunJob 手动触发执行任务
+func (s *Service) RunJob(jobID string) error {
+	s.mu.RLock()
+	job, ok := s.jobs[jobID]
+	s.mu.RUnlock()
+
+	if !ok {
+		return fmt.Errorf("job not found")
+	}
+
+	// 异步执行任务，避免阻塞 HTTP 响应
+	go s.executeJob(job, "manual")
+	return nil
+}
+
 // executeJob 执行任务
 func (s *Service) executeJob(job *Job, trigger string) {
 	if job == nil {

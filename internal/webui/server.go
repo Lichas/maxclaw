@@ -1389,7 +1389,7 @@ func (s *Server) handleCronByID(w http.ResponseWriter, r *http.Request) {
 
 	jobID := parts[0]
 
-	// 检查是否是操作请求（enable/disable）
+	// 检查是否是操作请求（enable/disable/run）
 	if len(parts) >= 2 {
 		action := parts[1]
 		switch action {
@@ -1397,6 +1397,8 @@ func (s *Server) handleCronByID(w http.ResponseWriter, r *http.Request) {
 			s.handleCronEnable(w, r, jobID, true)
 		case "disable":
 			s.handleCronEnable(w, r, jobID, false)
+		case "run":
+			s.handleCronRun(w, r, jobID)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -1427,6 +1429,20 @@ func (s *Server) handleCronEnable(w http.ResponseWriter, r *http.Request, jobID 
 	}
 
 	writeJSON(w, s.toCronJobResponse(job))
+}
+
+func (s *Server) handleCronRun(w http.ResponseWriter, r *http.Request, jobID string) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := s.cronService.RunJob(jobID); err != nil {
+		writeError(w, err)
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{"ok": true, "message": "job triggered"})
 }
 
 func (s *Server) handleCronDelete(w http.ResponseWriter, r *http.Request, jobID string) {

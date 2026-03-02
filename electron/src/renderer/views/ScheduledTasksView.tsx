@@ -148,6 +148,19 @@ export function ScheduledTasksView() {
     setDeleteDialogOpen(true);
   };
 
+  const runJobNow = async (id: string) => {
+    try {
+      const response = await fetch(`http://localhost:18890/api/cron/${id}/run`, {
+        method: 'POST'
+      });
+      if (!response.ok) throw new Error('Failed to run job');
+      // 刷新任务列表以显示执行状态
+      void fetchJobs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '执行失败');
+    }
+  };
+
   const confirmDeleteJob = async () => {
     if (!jobToDelete) return;
     try {
@@ -397,6 +410,13 @@ export function ScheduledTasksView() {
                     </div>
                   </div>
                   <div className="ml-4 flex shrink-0 items-center gap-2">
+                    <button
+                      onClick={() => void runJobNow(job.id)}
+                      className="rounded-lg bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-600 hover:bg-green-500/20"
+                      title="立即执行"
+                    >
+                      ▶ 执行
+                    </button>
                     <button
                       onClick={() => void viewJobHistory(job.id)}
                       className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary"
