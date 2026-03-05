@@ -68,7 +68,7 @@ var gatewayCmd = &cobra.Command{
 		cronService := cron.NewService(storePath)
 		cronService.SetJobHandler(func(job *cron.Job) (string, error) {
 			// Deliverable jobs should go through the live gateway bus so they are sent to the real channel/chat.
-			if job != nil && job.Payload.Deliver && job.Payload.Channel != "" && job.Payload.To != "" {
+			if job != nil && job.Payload.Deliver && len(job.Payload.Channels) > 0 && job.Payload.To != "" {
 				return enqueueCronJob(messageBus, job)
 			}
 			return executeCronJob(cfg, apiKey, apiBase, cronService, job)

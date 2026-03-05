@@ -1252,30 +1252,30 @@ func (s *Server) handleGatewayRestart(w http.ResponseWriter, r *http.Request) {
 
 // cronRequest 创建定时任务的请求格式（与前端对齐）
 type cronRequest struct {
-	Title         string `json:"title"`
-	Prompt        string `json:"prompt"`
-	Cron          string `json:"cron,omitempty"`  // cron 表达式
-	Every         string `json:"every,omitempty"` // 毫秒间隔
-	At            string `json:"at,omitempty"`    // ISO8601 时间
-	WorkDir       string `json:"workDir,omitempty"`
-	ExecutionMode string `json:"executionMode,omitempty"` // safe, ask, auto
-	Channel       string `json:"channel,omitempty"`       // 输出频道
+	Title         string   `json:"title"`
+	Prompt        string   `json:"prompt"`
+	Cron          string   `json:"cron,omitempty"`  // cron 表达式
+	Every         string   `json:"every,omitempty"` // 毫秒间隔
+	At            string   `json:"at,omitempty"`    // ISO8601 时间
+	WorkDir       string   `json:"workDir,omitempty"`
+	ExecutionMode string   `json:"executionMode,omitempty"` // safe, ask, auto
+	Channels      []string `json:"channels,omitempty"`      // 输出频道列表
 }
 
 // cronJobResponse 定时任务响应格式（与前端对齐）
 type cronJobResponse struct {
-	ID            string `json:"id"`
-	Title         string `json:"title"`
-	Prompt        string `json:"prompt"`
-	Schedule      string `json:"schedule"`
-	ScheduleType  string `json:"scheduleType"`
-	WorkDir       string `json:"workDir,omitempty"`
-	Enabled       bool   `json:"enabled"`
-	CreatedAt     string `json:"createdAt"`
-	LastRun       string `json:"lastRun,omitempty"`
-	NextRun       string `json:"nextRun,omitempty"`
-	ExecutionMode string `json:"executionMode,omitempty"`
-	Channel       string `json:"channel,omitempty"`
+	ID            string   `json:"id"`
+	Title         string   `json:"title"`
+	Prompt        string   `json:"prompt"`
+	Schedule      string   `json:"schedule"`
+	ScheduleType  string   `json:"scheduleType"`
+	WorkDir       string   `json:"workDir,omitempty"`
+	Enabled       bool     `json:"enabled"`
+	CreatedAt     string   `json:"createdAt"`
+	LastRun       string   `json:"lastRun,omitempty"`
+	NextRun       string   `json:"nextRun,omitempty"`
+	ExecutionMode string   `json:"executionMode,omitempty"`
+	Channels      []string `json:"channels,omitempty"`
 }
 
 func (s *Server) handleCron(w http.ResponseWriter, r *http.Request) {
@@ -1361,16 +1361,16 @@ func (s *Server) handleCronCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 使用请求中的 channel，如果未提供则默认为 desktop
-	channel := req.Channel
-	if channel == "" {
-		channel = "desktop"
+	// 使用请求中的 channels，如果未提供则默认为 [desktop]
+	channels := req.Channels
+	if len(channels) == 0 {
+		channels = []string{"desktop"}
 	}
 
 	payload := cron.Payload{
-		Message: req.Prompt,
-		Channel: channel,
-		Deliver: channel != "desktop",
+		Message:  req.Prompt,
+		Channels: channels,
+		Deliver:  len(channels) > 0 && !(len(channels) == 1 && channels[0] == "desktop"),
 	}
 
 	job, err := s.cronService.AddJobWithOptions(req.Title, schedule, payload, req.ExecutionMode)
@@ -1467,12 +1467,12 @@ func (s *Server) handleCronUpdate(w http.ResponseWriter, r *http.Request, jobID 
 	var req struct {
 		Title         string `json:"title"`
 		Prompt        string `json:"prompt"`
-		Cron          string `json:"cron,omitempty"`
-		Every         string `json:"every,omitempty"`
-		At            string `json:"at,omitempty"`
-		WorkDir       string `json:"workDir,omitempty"`
-		ExecutionMode string `json:"executionMode,omitempty"`
-		Channel       string `json:"channel,omitempty"`
+		Cron          string   `json:"cron,omitempty"`
+		Every         string   `json:"every,omitempty"`
+		At            string   `json:"at,omitempty"`
+		WorkDir       string   `json:"workDir,omitempty"`
+		ExecutionMode string   `json:"executionMode,omitempty"`
+		Channels      []string `json:"channels,omitempty"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -1517,16 +1517,16 @@ func (s *Server) handleCronUpdate(w http.ResponseWriter, r *http.Request, jobID 
 		return
 	}
 
-	// 使用请求中的 channel，如果未提供则默认为 desktop
-	channel := req.Channel
-	if channel == "" {
-		channel = "desktop"
+	// 使用请求中的 channels，如果未提供则默认为 [desktop]
+	channels := req.Channels
+	if len(channels) == 0 {
+		channels = []string{"desktop"}
 	}
 
 	payload := cron.Payload{
-		Message: req.Prompt,
-		Channel: channel,
-		Deliver: channel != "desktop",
+		Message:  req.Prompt,
+		Channels: channels,
+		Deliver:  len(channels) > 0 && !(len(channels) == 1 && channels[0] == "desktop"),
 	}
 
 	job, ok := s.cronService.UpdateJobWithOptions(jobID, req.Title, schedule, payload, req.ExecutionMode)
@@ -1589,7 +1589,7 @@ func (s *Server) toCronJobResponse(job *cron.Job) cronJobResponse {
 		Enabled:       job.Enabled,
 		CreatedAt:     time.UnixMilli(job.Created).Format(time.RFC3339),
 		ExecutionMode: job.ExecutionMode,
-		Channel:       job.Payload.Channel,
+		Channels:      job.Payload.Channels,
 	}
 
 	switch job.Schedule.Type {

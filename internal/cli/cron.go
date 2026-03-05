@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -105,9 +106,9 @@ var cronAddCmd = &cobra.Command{
 
 		// 构建 Payload
 		payload := cron.Payload{
-			Message: cronMessage,
-			Channel: cronChannel,
-			Deliver: cronDeliver,
+			Message:  cronMessage,
+			Channels: []string{cronChannel},
+			Deliver:  cronDeliver,
 		}
 
 		job, err := service.AddJob(cronName, schedule, payload)
@@ -360,7 +361,12 @@ func executeCronJob(cfg *config.Config, apiKey, apiBase string, cronService *cro
 	go func() {
 		// 使用 agent 处理消息
 		// Each cron job gets its own unique session based on job ID to prevent history mixing
-		msg := bus.NewInboundMessage(job.Payload.Channel, "cron", job.Payload.To, userMsg)
+		// 使用第一个渠道作为主渠道
+		primaryChannel := "desktop"
+		if len(job.Payload.Channels) > 0 {
+			primaryChannel = job.Payload.Channels[0]
+		}
+		msg := bus.NewInboundMessage(primaryChannel, "cron", job.Payload.To, userMsg)
 		msg.SessionKey = "cron:" + job.ID
 		resp, err := agentLoop.ProcessMessage(ctx, msg)
 		if err != nil {
@@ -389,8 +395,8 @@ func buildCronUserMessage(job *cron.Job) string {
 		return "[Cron Job] empty job"
 	}
 	channelPrefix := ""
-	if job.Payload.Channel != "" {
-		channelPrefix = fmt.Sprintf("[%s] ", job.Payload.Channel)
+	if len(job.Payload.Channels) > 0 {
+		channelPrefix = fmt.Sprintf("[%s] ", strings.Join(job.Payload.Channels, ", "))
 	}
 	return fmt.Sprintf("%s[Cron Job: %s] %s", channelPrefix, job.Name, job.Payload.Message)
 }
@@ -402,14 +408,16 @@ func enqueueCronJob(messageBus *bus.MessageBus, job *cron.Job) (string, error) {
 	if job == nil {
 		return "", fmt.Errorf("job is nil")
 	}
-	if job.Payload.Channel == "" {
-		return "", fmt.Errorf("cron job channel is empty")
+	if len(job.Payload.Channels) == 0 {
+		return "", fmt.Errorf("cron job channels is empty")
 	}
 	if job.Payload.To == "" {
 		return "", fmt.Errorf("cron job target is empty")
 	}
 
-	msg := bus.NewInboundMessage(job.Payload.Channel, "cron", job.Payload.To, buildCronUserMessage(job))
+	// Use the first channel as the primary channel for message routing
+	primaryChannel := job.Payload.Channels[0]
+	msg := bus.NewInboundMessage(primaryChannel, "cron", job.Payload.To, buildCronUserMessage(job))
 	if err := messageBus.PublishInbound(msg); err != nil {
 		return "", fmt.Errorf("failed to enqueue cron job: %w", err)
 	}

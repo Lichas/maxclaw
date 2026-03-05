@@ -198,10 +198,10 @@ func (t *CronTool) addJob(ctx context.Context, params map[string]interface{}) (s
 
 	// 构建负载
 	payload := cron.Payload{
-		Message: message,
-		Channel: channel,
-		To:      chatID,
-		Deliver: true,
+		Message:  message,
+		Channels: []string{channel},
+		To:       chatID,
+		Deliver:  true,
 	}
 
 	// 调用服务添加任务

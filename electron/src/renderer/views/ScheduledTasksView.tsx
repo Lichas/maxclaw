@@ -17,7 +17,7 @@ interface CronJob {
   lastRun?: string;
   nextRun?: string;
   executionMode?: 'safe' | 'ask' | 'auto';
-  channel?: string;
+  channels?: string[];
 }
 
 interface JobFormData {
@@ -27,7 +27,7 @@ interface JobFormData {
   scheduleValue: string;
   workDir: string;
   executionMode: 'safe' | 'ask' | 'auto';
-  channel: string;
+  channels: string[];
 }
 
 export function ScheduledTasksView() {
@@ -45,15 +45,17 @@ export function ScheduledTasksView() {
     scheduleValue: '0 9 * * *',
     workDir: '',
     executionMode: 'ask',
-    channel: 'desktop'
+    channels: ['desktop']
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
   const [editingJob, setEditingJob] = useState<CronJob | null>(null);
 
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = useCallback(async (showLoading = false) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       const response = await fetch('http://localhost:18890/api/cron');
       if (!response.ok) throw new Error('Failed to fetch jobs');
       const data = await response.json();
@@ -62,13 +64,15 @@ export function ScheduledTasksView() {
     } catch (err) {
       setError(err instanceof Error ? err.message : t('scheduled.error.load'));
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   }, [t]);
 
   useEffect(() => {
-    void fetchJobs();
-    const timer = setInterval(() => void fetchJobs(), 30000);
+    void fetchJobs(true);
+    const timer = setInterval(() => void fetchJobs(false), 30000);
     return () => clearInterval(timer);
   }, [fetchJobs]);
 
@@ -81,7 +85,7 @@ export function ScheduledTasksView() {
         [formData.scheduleType === 'every' ? 'every' : formData.scheduleType === 'once' ? 'at' : 'cron']: formData.scheduleValue,
         workDir: formData.workDir || undefined,
         executionMode: formData.executionMode,
-        channel: formData.channel
+        channels: formData.channels
       };
 
       const url = editingJob
@@ -104,7 +108,7 @@ export function ScheduledTasksView() {
         scheduleValue: '0 9 * * *',
         workDir: '',
         executionMode: 'ask',
-        channel: 'desktop'
+        channels: ['desktop']
       });
       void fetchJobs();
     } catch (err) {
@@ -121,7 +125,7 @@ export function ScheduledTasksView() {
       scheduleValue: job.schedule,
       workDir: job.workDir || '',
       executionMode: job.executionMode || 'ask',
-      channel: job.channel || 'desktop'
+      channels: job.channels || ['desktop']
     });
     setShowForm(true);
   };
@@ -136,7 +140,7 @@ export function ScheduledTasksView() {
       scheduleValue: '0 9 * * *',
       workDir: '',
       executionMode: 'ask',
-      channel: 'desktop'
+      channels: ['desktop']
     });
   };
 
@@ -341,22 +345,39 @@ export function ScheduledTasksView() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">{t('scheduled.channel') || 'Channel'}</label>
-                <CustomSelect
-                  value={formData.channel}
-                  onChange={(value) => setFormData({ ...formData, channel: value })}
-                  options={[
+                <label className="mb-1.5 block text-sm font-medium text-foreground">{t('scheduled.channels') || 'Channels'}</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
                     { value: 'desktop', label: 'Desktop' },
                     { value: 'telegram', label: 'Telegram' },
                     { value: 'discord', label: 'Discord' },
                     { value: 'slack', label: 'Slack' },
                     { value: 'email', label: 'Email' },
                     { value: 'websocket', label: 'WebSocket' }
-                  ]}
-                  size="md"
-                />
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => {
+                        const newChannels = formData.channels.includes(option.value)
+                          ? formData.channels.filter(c => c !== option.value)
+                          : [...formData.channels, option.value];
+                        setFormData({ ...formData, channels: newChannels });
+                      }}
+                      className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                        formData.channels.includes(option.value)
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border bg-background text-foreground/70 hover:bg-secondary'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
                 <p className="mt-1 text-xs text-foreground/50">
-                  {formData.channel === 'desktop' ? (t('scheduled.channel.desktop.desc') || 'Results will be displayed in the desktop app') : (t('scheduled.channel.other.desc') || `Results will be sent to ${formData.channel}`)}
+                  {formData.channels.length === 1 && formData.channels[0] === 'desktop'
+                    ? (t('scheduled.channel.desktop.desc') || 'Results will be displayed in the desktop app')
+                    : (t('scheduled.channels.desc') || `Results will be sent to: ${formData.channels.join(', ')}`)}
                 </p>
               </div>
 
@@ -430,6 +451,12 @@ export function ScheduledTasksView() {
                       }`}>
                         {job.executionMode === 'auto' ? 'Auto' : job.executionMode === 'safe' ? 'Safe' : 'Ask'}
                       </span>
+                      {job.channels && job.channels.length > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                          <ChannelsIcon className="h-3.5 w-3.5" />
+                          {job.channels.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ')}
+                        </span>
+                      )}
                       {job.lastRun && (
                         <span>{t('scheduled.lastRun')}: {new Date(job.lastRun).toLocaleString()}</span>
                       )}
@@ -554,6 +581,14 @@ function FolderIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+    </svg>
+  );
+}
+
+function ChannelsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
     </svg>
   );
 }

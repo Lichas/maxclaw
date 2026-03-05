@@ -41,10 +41,10 @@ type Schedule struct {
 
 // Payload 任务负载
 type Payload struct {
-	Message string `json:"message"`           // 发送给 Agent 的消息
-	Channel string `json:"channel,omitempty"` // 输出频道（可选）
-	To      string `json:"to,omitempty"`      // 接收者（可选）
-	Deliver bool   `json:"deliver"`           // 是否发送结果到频道
+	Message  string   `json:"message"`            // 发送给 Agent 的消息
+	Channels []string `json:"channels,omitempty"` // 输出频道列表（可选）
+	To       string   `json:"to,omitempty"`       // 接收者（可选）
+	Deliver  bool     `json:"deliver"`            // 是否发送结果到频道
 }
 
 // ExecutionMode 任务执行模式
