@@ -56,6 +56,10 @@
   - `electron/src/renderer/components/FileTreeSidebar.tsx`
   - 验证：`cd electron && npm run build && make build`
 
+- **Markdown 行内代码渲染修复**：修复表格和段落中的行内代码被误渲染成大号代码卡片的问题，仅真正的块级代码使用代码预览卡片
+  - `electron/src/renderer/components/MarkdownRenderer.tsx`
+  - 验证：`cd electron && npm run build && make build`
+
 ### Added
 
 #### UI/UX 增强四合一功能

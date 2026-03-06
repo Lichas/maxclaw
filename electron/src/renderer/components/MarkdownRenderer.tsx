@@ -158,8 +158,9 @@ export function MarkdownRenderer({ content, className = '', onFileLinkClick }: M
             const language = (match ? match[1] : '').toLowerCase();
             const isPlainTextBlock = ['text', 'plain', 'plaintext', 'txt'].includes(language);
             const code = String(children).replace(/\n$/, '');
+            const isInlineCode = Boolean(inline) || (!className && !code.includes('\n'));
 
-            if (!inline && language === 'mermaid') {
+            if (!isInlineCode && language === 'mermaid') {
               return (
                 <MermaidRenderer
                   chart={code}
@@ -168,7 +169,7 @@ export function MarkdownRenderer({ content, className = '', onFileLinkClick }: M
               );
             }
 
-            if (!inline) {
+            if (!isInlineCode) {
               return (
                 <CodeBlockCard
                   code={code}
