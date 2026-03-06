@@ -137,6 +137,29 @@ function formatDuration(ms: number): string {
   return `${minutes}m ${seconds}s`;
 }
 
+function pad2(value: number): string {
+  return String(value).padStart(2, '0');
+}
+
+function formatMessageTimestamp(timestamp: Date): string {
+  if (Number.isNaN(timestamp.getTime())) {
+    return '';
+  }
+
+  const now = new Date();
+  const isToday =
+    timestamp.getFullYear() === now.getFullYear() &&
+    timestamp.getMonth() === now.getMonth() &&
+    timestamp.getDate() === now.getDate();
+
+  const timeLabel = `${pad2(timestamp.getHours())}:${pad2(timestamp.getMinutes())}`;
+  if (isToday) {
+    return timeLabel;
+  }
+
+  return `${timestamp.getFullYear()}-${pad2(timestamp.getMonth() + 1)}-${pad2(timestamp.getDate())} ${timeLabel}`;
+}
+
 function fileReferenceCacheKey(sessionKey: string, pathHint: string): string {
   return `${sessionKey}::${pathHint.trim().toLowerCase()}`;
 }
@@ -2009,9 +2032,9 @@ export function ChatView() {
                         ))}
                       </div>
                     )}
-                    <div className="group relative rounded-xl bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground">
-                      <pre className="whitespace-pre-wrap break-all font-sans selection:bg-primary-foreground/30">{message.content}</pre>
-                      <button
+	                    <div className="group relative rounded-xl bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground">
+	                      <pre className="whitespace-pre-wrap break-all font-sans selection:bg-primary-foreground/30">{message.content}</pre>
+	                      <button
                         type="button"
                         onClick={() => {
                           void navigator.clipboard.writeText(message.content);
@@ -2020,29 +2043,38 @@ export function ChatView() {
                         className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-card text-foreground shadow-md opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary"
                         title="复制内容"
                       >
-                        <CopyIcon className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="w-full px-1 py-1 text-foreground">
+	                        <CopyIcon className="h-3.5 w-3.5" />
+	                      </button>
+	                    </div>
+	                    <div className="px-1 text-right text-[11px] text-foreground/45">
+	                      {formatMessageTimestamp(message.timestamp)}
+	                    </div>
+	                  </div>
+	                ) : (
+	                  <div className="w-full px-1 py-1 text-foreground">
                     {message.timeline && message.timeline.length > 0 && (
                       <div className="mb-3">
                         {renderTimeline(message.timeline, false)}
                       </div>
                     )}
                     {renderMarkdownWithActions(message.content, message.id)}
-                    {message.durationMs !== undefined && message.durationMs > 0 && (
-                      <div className="mt-2 flex items-center gap-1.5 text-[11px] text-foreground/40">
-                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <circle cx="12" cy="12" r="9" strokeWidth={1.5} />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 7v5l3 3" />
-                        </svg>
-                        <span>{formatDuration(message.durationMs)}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
+	                    <div className="mt-2 flex items-center gap-3 text-[11px] text-foreground/40">
+	                      <span>{formatMessageTimestamp(message.timestamp)}</span>
+	                      {message.durationMs !== undefined && message.durationMs > 0 && (
+	                        <>
+	                          <span aria-hidden="true">·</span>
+	                          <span className="inline-flex items-center gap-1.5">
+	                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+	                              <circle cx="12" cy="12" r="9" strokeWidth={1.5} />
+	                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 7v5l3 3" />
+	                            </svg>
+	                            <span>{formatDuration(message.durationMs)}</span>
+	                          </span>
+	                        </>
+	                      )}
+	                    </div>
+	                  </div>
+	                )}
               </div>
             ))}
 

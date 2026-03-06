@@ -24,6 +24,10 @@
   - `electron/index.html`
   - 验证：`cd electron && npm run build && make build`
 
+- **聊天消息时间显示**：聊天窗口中的用户消息和 Agent 消息均显示时间，精确到分钟；非当天消息额外显示日期
+  - `electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build && make build`
+
 ### Added
 
 #### UI/UX 增强四合一功能
