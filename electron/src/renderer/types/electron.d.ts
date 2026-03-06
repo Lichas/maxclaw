@@ -16,7 +16,7 @@ export interface FilePreviewResult {
   success: boolean;
   inputPath: string;
   resolvedPath?: string;
-  kind?: 'markdown' | 'text' | 'image' | 'pdf' | 'audio' | 'video' | 'office' | 'binary';
+  kind?: 'markdown' | 'text' | 'html' | 'image' | 'pdf' | 'audio' | 'video' | 'office' | 'binary';
   extension?: string;
   fileUrl?: string;
   content?: string;

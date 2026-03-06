@@ -68,7 +68,6 @@ const textExtensions = new Set([
   '.yml',
   '.toml',
   '.xml',
-  '.html',
   '.css',
   '.scss',
   '.go',
@@ -86,12 +85,25 @@ const textExtensions = new Set([
   '.bash',
   '.sql'
 ]);
-const imageExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg']);
+const htmlExtensions = new Set(['.html', '.htm']);
+const imageExtensions = new Set([
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.webp',
+  '.bmp',
+  '.svg',
+  '.avif',
+  '.ico',
+  '.tif',
+  '.tiff'
+]);
 const videoExtensions = new Set(['.mp4', '.webm', '.mov', '.m4v']);
 const audioExtensions = new Set(['.mp3', '.wav', '.m4a', '.ogg', '.flac']);
 const officeExtensions = new Set(['.docx', '.pptx', '.xlsx']);
 
-type PreviewKind = 'markdown' | 'text' | 'image' | 'pdf' | 'audio' | 'video' | 'office' | 'binary';
+type PreviewKind = 'markdown' | 'text' | 'html' | 'image' | 'pdf' | 'audio' | 'video' | 'office' | 'binary';
 
 interface FileResolveOptions {
   workspace?: string;
@@ -420,6 +432,9 @@ function detectPreviewKind(ext: string): PreviewKind {
   if (markdownExtensions.has(ext)) {
     return 'markdown';
   }
+  if (htmlExtensions.has(ext)) {
+    return 'html';
+  }
   if (textExtensions.has(ext)) {
     return 'text';
   }
@@ -570,7 +585,7 @@ async function buildFilePreview(inputPath: string, options?: FileResolveOptions)
       fileUrl: `${pathToFileURL(resolvedPath).toString()}?t=${Date.now()}`
     };
 
-    if (kind === 'markdown' || kind === 'text') {
+    if (kind === 'markdown' || kind === 'text' || kind === 'html') {
       const content = await fs.promises.readFile(resolvedPath, 'utf8');
       if (Buffer.byteLength(content, 'utf8') > MAX_TEXT_PREVIEW_BYTES) {
         const truncated = content.slice(0, MAX_TEXT_PREVIEW_BYTES);

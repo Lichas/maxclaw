@@ -74,6 +74,30 @@ export function FileTreeSidebar({
     }));
   }, [workspacePath, sessionKey]);
 
+  const updateNodeByPath = useCallback((
+    nodes: FileTreeNode[],
+    targetPath: number[],
+    updater: (node: FileTreeNode) => FileTreeNode
+  ): FileTreeNode[] => {
+    if (targetPath.length === 0) {
+      return nodes;
+    }
+
+    const [currentIndex, ...restPath] = targetPath;
+    return nodes.map((node, index) => {
+      if (index !== currentIndex) {
+        return node;
+      }
+      if (restPath.length === 0) {
+        return updater(node);
+      }
+      return {
+        ...node,
+        children: updateNodeByPath(node.children || [], restPath, updater)
+      };
+    });
+  }, []);
+
   useEffect(() => {
     const init = async () => {
       if (!sessionDir) {
@@ -108,68 +132,56 @@ export function FileTreeSidebar({
   const toggleDirectory = async (node: FileTreeNode, indexPath: number[]) => {
     if (node.type !== 'directory') return;
 
-    const updateNodeAtPath = (
-      nodes: FileTreeNode[],
-      path: number[],
-      depth: number
-    ): FileTreeNode[] => {
-      if (depth === path.length) {
-        return nodes.map((n, i) =>
-          i === path[depth - 1]
-            ? { ...n, expanded: !n.expanded, loading: !n.expanded && !n.children }
-            : n
-        );
-      }
-
-      return nodes.map((n, i) =>
-        i === path[depth]
-          ? { ...n, children: updateNodeAtPath(n.children || [], path, depth + 1) }
-          : n
-      );
-    };
-
     // 如果是展开且有 children，直接切换
     if (node.expanded) {
-      setTreeData((prev) => updateNodeAtPath(prev, indexPath, 0));
+      setTreeData((prev) =>
+        updateNodeByPath(prev, indexPath, (currentNode) => ({
+          ...currentNode,
+          expanded: false,
+          loading: false
+        }))
+      );
       return;
     }
 
-    // 如果是展开但没有 children，需要加载
-    setTreeData((prev) => updateNodeAtPath(prev, indexPath, 0));
+    const hasLoadedChildren = Array.isArray(node.children);
+    if (hasLoadedChildren) {
+      setTreeData((prev) =>
+        updateNodeByPath(prev, indexPath, (currentNode) => ({
+          ...currentNode,
+          expanded: true,
+          loading: false
+        }))
+      );
+      return;
+    }
+
+    setTreeData((prev) =>
+      updateNodeByPath(prev, indexPath, (currentNode) => ({
+        ...currentNode,
+        expanded: true,
+        loading: true
+      }))
+    );
 
     try {
       const relativePath = getRelativePath(node.path, sessionDir);
       const children = await loadDirectory(relativePath || '.');
-
-      const setChildrenAtPath = (
-        nodes: FileTreeNode[],
-        path: number[],
-        depth: number
-      ): FileTreeNode[] => {
-        if (depth === path.length - 1) {
-          return nodes.map((n, i) =>
-            i === path[depth] ? { ...n, children, loading: false } : n
-          );
-        }
-
-        return nodes.map((n, i) =>
-          i === path[depth]
-            ? { ...n, children: setChildrenAtPath(n.children || [], path, depth + 1) }
-            : n
-        );
-      };
-
-      setTreeData((prev) => setChildrenAtPath(prev, indexPath, 0));
-    } catch (err) {
-      // 加载失败，恢复状态
       setTreeData((prev) =>
-        updateNodeAtPath(
-          prev.map((n, i) =>
-            i === indexPath[0] ? { ...n, loading: false } : n
-          ),
-          indexPath,
-          0
-        )
+        updateNodeByPath(prev, indexPath, (currentNode) => ({
+          ...currentNode,
+          children,
+          expanded: true,
+          loading: false
+        }))
+      );
+    } catch (err) {
+      setTreeData((prev) =>
+        updateNodeByPath(prev, indexPath, (currentNode) => ({
+          ...currentNode,
+          expanded: false,
+          loading: false
+        }))
       );
     }
   };

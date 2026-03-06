@@ -5,7 +5,7 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 interface PreviewPayload {
   success: boolean;
   resolvedPath?: string;
-  kind?: 'markdown' | 'text' | 'image' | 'pdf' | 'audio' | 'video' | 'office' | 'binary';
+  kind?: 'markdown' | 'text' | 'html' | 'image' | 'pdf' | 'audio' | 'video' | 'office' | 'binary';
   extension?: string;
   fileUrl?: string;
   content?: string;
@@ -258,6 +258,19 @@ function FilePreviewBody({
       <pre className="rounded-xl border border-border/70 bg-card/75 p-3 text-xs leading-5 text-foreground/85 whitespace-pre-wrap break-all">
         {preview.content || '文件没有可展示内容。'}
       </pre>
+    );
+  }
+
+  if (preview.kind === 'html' && preview.fileUrl) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-border/70 bg-card/80">
+        <iframe
+          src={preview.fileUrl}
+          className="h-[72vh] w-full bg-white"
+          title="HTML Preview"
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+        />
+      </div>
     );
   }
 

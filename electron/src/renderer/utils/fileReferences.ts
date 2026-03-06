@@ -1,4 +1,4 @@
-export type PreviewKind = 'markdown' | 'text' | 'image' | 'pdf' | 'audio' | 'video' | 'office' | 'binary';
+export type PreviewKind = 'markdown' | 'text' | 'html' | 'image' | 'pdf' | 'audio' | 'video' | 'office' | 'binary';
 
 export interface FileReference {
   id: string;

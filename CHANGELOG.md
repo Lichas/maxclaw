@@ -4,6 +4,10 @@
 
 ### Fixed
 
+- **文件预览与文件树修复**：文件预览新增 HTML 页面渲染和更完整的图片格式支持，文件树修复目录展开逻辑以支持稳定的多层嵌套浏览
+  - `electron/src/main/ipc.ts`、`electron/src/renderer/components/FilePreviewSidebar.tsx`、`electron/src/renderer/components/FileTreeSidebar.tsx`、`electron/src/renderer/types/electron.d.ts`、`electron/src/renderer/utils/fileReferences.ts`、`electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build && make build`
+
 - **Telegram 消息 HTML 转义修复**：修复当模型返回内容包含 `<think>` 等类似 HTML 标签时，Telegram API 返回 400 错误的问题
   - `internal/channels/telegram.go`：使用 `html.EscapeString()` 对发送的文本进行转义
   - 验证：`go test ./internal/channels/... -v && make build`
