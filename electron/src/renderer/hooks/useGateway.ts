@@ -88,7 +88,7 @@ const PROVIDER_DEFAULT_MODELS: Record<string, string[]> = {
   openrouter: ['openrouter/auto', 'openrouter/anthropic/claude-sonnet-4.5'],
   anthropic: ['anthropic/claude-opus-4-1', 'anthropic/claude-sonnet-4'],
   openai: ['openai/gpt-5.1', 'openai/gpt-5-mini'],
-  deepseek: ['deepseek-chat', 'deepseek-reasoner'],
+  deepseek: ['deepseek-chat'],
   zhipu: ['glm-5', 'glm-4.7'],
   groq: ['groq/llama-3.3-70b-versatile', 'groq/mistral-saba-24b'],
   gemini: ['gemini/gemini-2.5-pro', 'gemini/gemini-2.5-flash'],

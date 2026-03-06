@@ -552,6 +552,7 @@ export function ChatView() {
       try {
         setModelsLoading(true);
         const models = await getModels();
+        const config = await getConfig() as { agents?: { defaults?: { model?: string } } };
         if (cancelled) return;
         setAvailableModels(models);
         if (models.length === 0) {
@@ -559,12 +560,14 @@ export function ChatView() {
           return;
         }
 
+        const configuredModel = (config.agents?.defaults?.model || '').trim();
         const preferredModel = loadPreferredModel();
+        const configuredExists = configuredModel !== '' && models.some((model) => model.id === configuredModel);
         const preferredExists = preferredModel !== '' && models.some((model) => model.id === preferredModel);
-        const resolvedModel = preferredExists ? preferredModel : models[0].id;
+        const resolvedModel = configuredExists ? configuredModel : preferredExists ? preferredModel : models[0].id;
 
         setCurrentModel(resolvedModel);
-        if (!preferredExists) {
+        if (preferredModel !== resolvedModel) {
           savePreferredModel(resolvedModel);
         }
       } catch {
@@ -581,7 +584,7 @@ export function ChatView() {
     return () => {
       cancelled = true;
     };
-  }, [getModels]);
+  }, [getConfig, getModels]);
 
   useEffect(() => {
     let cancelled = false;
