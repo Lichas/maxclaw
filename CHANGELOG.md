@@ -12,6 +12,10 @@
   - `electron/src/renderer/i18n/index.ts`：将 `t` 改为 `useCallback` 并仅在 `language` 变化时更新
   - 验证：`cd electron && npm run build && make build`
 
+- **Bugfix 文档补充**：新增 Scheduled Tasks 面板持续闪烁问题复盘（现象、根因、修复与验证）
+  - `BUGFIX.md`
+  - 验证：`make build`
+
 ### Added
 
 #### UI/UX 增强四合一功能

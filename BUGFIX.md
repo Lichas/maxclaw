@@ -6,6 +6,28 @@
 
 ---
 
+## 2026-03-06 - Scheduled Tasks 面板持续闪烁（轮询 effect 重复触发）
+
+**问题**：
+- 进入 `Scheduled Tasks` 面板后页面出现持续闪烁/抖动，任务卡片频繁刷新。
+
+**根因**：
+- `useTranslation()` 每次渲染都会创建新的 `t` 函数引用。
+- `ScheduledTasksView` 中 `fetchJobs` 使用 `useCallback(..., [t])`，`useEffect` 又依赖 `fetchJobs`。
+- 渲染后 `t` 变更会导致 `fetchJobs` 变更，进而触发 effect 重跑、重复请求与重渲染，形成循环刷新。
+
+**修复**：
+- 将 `electron/src/renderer/i18n/index.ts` 中 `t` 改为 `useCallback`，仅在 `language` 变化时更新引用，确保依赖链稳定。
+
+**修复文件**：
+- `electron/src/renderer/i18n/index.ts`
+
+**验证**：
+- `cd electron && npm run build`
+- `make build`
+
+---
+
 ## 目录
 
 ### 按类别索引
