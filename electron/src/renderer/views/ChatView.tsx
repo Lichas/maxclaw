@@ -225,7 +225,7 @@ export function ChatView() {
   const [selectedFileRef, setSelectedFileRef] = useState<FileReference | null>(null);
   const [previewData, setPreviewData] = useState<PreviewPayload | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewModeBySession, setPreviewModeBySession] = useState<Record<string, 'file' | 'browser'>>({});
+  const [previewModeBySession, setPreviewModeBySession] = useState<Record<string, 'tree' | 'file' | 'browser'>>({});
   const [existingFileRefs, setExistingFileRefs] = useState<Record<string, boolean>>({});
   const [browserCopilotOutputBySession, setBrowserCopilotOutputBySession] = useState<Record<string, string>>({});
   const [browserCopilotBusyBySession, setBrowserCopilotBusyBySession] = useState<Record<string, boolean>>({});
@@ -450,7 +450,7 @@ export function ChatView() {
     });
   };
 
-  const setPreviewModeForSession = (sessionKey: string, mode: 'file' | 'browser') => {
+  const setPreviewModeForSession = (sessionKey: string, mode: 'tree' | 'file' | 'browser') => {
     setPreviewModeBySession((prev) => {
       if (prev[sessionKey] === mode) {
         return prev;
@@ -1570,9 +1570,11 @@ export function ChatView() {
   const browserCopilotVisible = Boolean(
     browserActivityContext.hasBrowserActivity || browserCopilotOutput || browserCopilotError
   );
-  const previewSidebarMode = browserCopilotVisible
-    ? previewModeBySession[currentSessionKey] || 'browser'
-    : 'tree';
+  const storedPreviewMode = previewModeBySession[currentSessionKey];
+  const previewSidebarMode =
+    storedPreviewMode === 'browser' && !browserCopilotVisible
+      ? (selectedFileRef ? 'file' : 'tree')
+      : storedPreviewMode || (browserCopilotVisible ? 'browser' : selectedFileRef ? 'file' : 'tree');
   const browserCopilotNeedsManualIntervention = Boolean(
     browserActivityContext.needsManualIntervention ||
       isLoginInterventionText(browserCopilotOutput) ||

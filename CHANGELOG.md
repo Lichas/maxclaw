@@ -48,6 +48,10 @@
   - `electron/src/renderer/views/ChatView.tsx`
   - 验证：`cd electron && npm run build && make build`
 
+- **聊天文件预览行为修复**：修复聊天区“预览”按钮和右侧文件树点击后仍停留在文件树模式的问题，预览栏模式改为稳定的 `tree/file/browser` 三态
+  - `electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build && make build`
+
 ### Added
 
 #### UI/UX 增强四合一功能
