@@ -16,6 +16,10 @@
   - `BUGFIX.md`
   - 验证：`make build`
 
+- **Scheduled Tasks 表单可用性与 i18n 修复**：修复 Cron 表达式不可直接编辑、`每天/自定义` 时间难以调整、输出渠道选中态不清晰以及该页面残留硬编码文案问题
+  - `electron/src/renderer/components/CronBuilder.tsx`、`electron/src/renderer/components/CronBuilder.css`、`electron/src/renderer/views/ScheduledTasksView.tsx`、`electron/src/renderer/i18n/index.ts`
+  - 验证：`cd electron && npm run build && make build`
+
 ### Added
 
 #### UI/UX 增强四合一功能

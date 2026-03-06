@@ -50,6 +50,14 @@ export function ScheduledTasksView() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
   const [editingJob, setEditingJob] = useState<CronJob | null>(null);
+  const channelOptions = [
+    { value: 'desktop', label: t('scheduled.channel.name.desktop') },
+    { value: 'telegram', label: t('scheduled.channel.name.telegram') },
+    { value: 'discord', label: t('scheduled.channel.name.discord') },
+    { value: 'slack', label: t('scheduled.channel.name.slack') },
+    { value: 'email', label: t('scheduled.channel.name.email') },
+    { value: 'websocket', label: t('scheduled.channel.name.websocket') }
+  ];
 
   const fetchJobs = useCallback(async (showLoading = false) => {
     try {
@@ -57,7 +65,7 @@ export function ScheduledTasksView() {
         setLoading(true);
       }
       const response = await fetch('http://localhost:18890/api/cron');
-      if (!response.ok) throw new Error('Failed to fetch jobs');
+      if (!response.ok) throw new Error(t('scheduled.error.load'));
       const data = await response.json();
       setJobs(data.jobs || []);
       setError(null);
@@ -98,7 +106,7 @@ export function ScheduledTasksView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error(editingJob ? 'Failed to update job' : 'Failed to create job');
+      if (!response.ok) throw new Error(editingJob ? t('scheduled.error.update') : t('scheduled.error.create'));
       setShowForm(false);
       setEditingJob(null);
       setFormData({
@@ -149,7 +157,7 @@ export function ScheduledTasksView() {
       const response = await fetch(`http://localhost:18890/api/cron/${id}/${enabled ? 'disable' : 'enable'}`, {
         method: 'POST'
       });
-      if (!response.ok) throw new Error('Failed to toggle job');
+      if (!response.ok) throw new Error(t('scheduled.error.toggle'));
       void fetchJobs();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('scheduled.error.toggle'));
@@ -166,7 +174,7 @@ export function ScheduledTasksView() {
       const response = await fetch(`http://localhost:18890/api/cron/${id}/run`, {
         method: 'POST'
       });
-      if (!response.ok) throw new Error('Failed to run job');
+      if (!response.ok) throw new Error(t('scheduled.error.run'));
       // Refresh job list to show execution status
       void fetchJobs();
     } catch (err) {
@@ -180,7 +188,7 @@ export function ScheduledTasksView() {
       const response = await fetch(`http://localhost:18890/api/cron/${jobToDelete}`, {
         method: 'DELETE'
       });
-      if (!response.ok) throw new Error('Failed to delete job');
+      if (!response.ok) throw new Error(t('scheduled.error.delete'));
       void fetchJobs();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('scheduled.error.delete'));
@@ -198,6 +206,12 @@ export function ScheduledTasksView() {
     if (job.scheduleType === 'every') return t('scheduled.schedule.every').replace('{value}', job.schedule);
     if (job.scheduleType === 'once') return t('scheduled.schedule.once').replace('{value}', job.schedule);
     return t('scheduled.schedule.cron').replace('{value}', job.schedule);
+  };
+
+  const getExecutionModeLabel = (mode?: 'safe' | 'ask' | 'auto') => {
+    if (mode === 'auto') return t('scheduled.executionMode.auto.short');
+    if (mode === 'safe') return t('scheduled.executionMode.safe.short');
+    return t('scheduled.executionMode.ask.short');
   };
 
   return (
@@ -306,7 +320,7 @@ export function ScheduledTasksView() {
                       type="text"
                       value={formData.scheduleValue}
                       onChange={(e) => setFormData({ ...formData, scheduleValue: e.target.value })}
-                      placeholder={formData.scheduleType === 'every' ? '3600000' : '2026-02-21T09:00:00'}
+                  placeholder={formData.scheduleType === 'every' ? t('scheduled.intervalMs.placeholder') : t('scheduled.execTime.placeholder')}
                       className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
                       required
                     />
@@ -320,7 +334,7 @@ export function ScheduledTasksView() {
                   type="text"
                   value={formData.workDir}
                   onChange={(e) => setFormData({ ...formData, workDir: e.target.value })}
-                  placeholder="~/workspace"
+                  placeholder={t('scheduled.workdir.placeholder')}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
                 />
               </div>
@@ -345,40 +359,43 @@ export function ScheduledTasksView() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">{t('scheduled.channels') || 'Channels'}</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">{t('scheduled.channels')}</label>
                 <div className="flex flex-wrap gap-2">
-                  {[
-                    { value: 'desktop', label: 'Desktop' },
-                    { value: 'telegram', label: 'Telegram' },
-                    { value: 'discord', label: 'Discord' },
-                    { value: 'slack', label: 'Slack' },
-                    { value: 'email', label: 'Email' },
-                    { value: 'websocket', label: 'WebSocket' }
-                  ].map((option) => (
+                  {channelOptions.map((option) => (
                     <button
                       key={option.value}
                       type="button"
+                      aria-pressed={formData.channels.includes(option.value)}
                       onClick={() => {
                         const newChannels = formData.channels.includes(option.value)
-                          ? formData.channels.filter(c => c !== option.value)
+                          ? (formData.channels.length === 1 ? formData.channels : formData.channels.filter(c => c !== option.value))
                           : [...formData.channels, option.value];
                         setFormData({ ...formData, channels: newChannels });
                       }}
-                      className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${
                         formData.channels.includes(option.value)
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border bg-background text-foreground/70 hover:bg-secondary'
+                          ? 'border-primary bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/20'
+                          : 'border-border bg-background text-foreground/80 hover:bg-secondary'
                       }`}
                     >
+                      {formData.channels.includes(option.value) && (
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.2 7.2a1 1 0 01-1.415 0l-3-3a1 1 0 111.414-1.415L8.8 11.79l6.49-6.5a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
                       {option.label}
                     </button>
                   ))}
                 </div>
                 <p className="mt-1 text-xs text-foreground/50">
                   {formData.channels.length === 1 && formData.channels[0] === 'desktop'
-                    ? (t('scheduled.channel.desktop.desc') || 'Results will be displayed in the desktop app')
-                    : (t('scheduled.channels.desc') || `Results will be sent to: ${formData.channels.join(', ')}`)}
+                    ? t('scheduled.channel.desktop.desc')
+                    : t('scheduled.channels.desc').replace('{channels}', formData.channels.map((channel) => {
+                      const match = channelOptions.find((option) => option.value === channel);
+                      return match ? match.label : channel;
+                    }).join(', '))}
                 </p>
+                <p className="mt-1 text-xs text-foreground/40">{t('scheduled.channels.multiHint')}</p>
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
@@ -449,12 +466,15 @@ export function ScheduledTasksView() {
                           ? 'bg-blue-100 text-blue-700'
                           : 'bg-yellow-100 text-yellow-700'
                       }`}>
-                        {job.executionMode === 'auto' ? 'Auto' : job.executionMode === 'safe' ? 'Safe' : 'Ask'}
+                        {getExecutionModeLabel(job.executionMode)}
                       </span>
                       {job.channels && job.channels.length > 0 && (
                         <span className="inline-flex items-center gap-1">
                           <ChannelsIcon className="h-3.5 w-3.5" />
-                          {job.channels.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ')}
+                          {job.channels.map((channel) => {
+                            const match = channelOptions.find((option) => option.value === channel);
+                            return match ? match.label : channel;
+                          }).join(', ')}
                         </span>
                       )}
                       {job.lastRun && (
