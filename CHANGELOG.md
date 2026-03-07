@@ -4,6 +4,10 @@
 
 ### Fixed
 
+- **聊天 Thinking 图标优化**：将时间线中的 thinking 状态图标调整为更轻量的原子轨道样式，弱化厚重轮廓并增强“思考中”的语义表达
+  - `electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build && make build`
+
 - **本地 Gateway 访问与单实例启动修复**：Electron 对本地 Gateway 的运行时请求统一改为 `127.0.0.1`，绕开 `localhost` 被代理或转发时出现的 502；同时 Gateway 管理器启动前会优先复用已有健康实例，避免重复拉起多个 `18890` 进程
   - `electron/index.html`、`electron/vite.renderer.config.ts`、`electron/src/main/gateway.ts`、`electron/src/main/ipc.ts`、`electron/src/renderer/hooks/useGateway.ts`、`electron/src/renderer/services/websocket.ts`、`electron/src/renderer/views/SettingsView.tsx`、`electron/src/renderer/views/MCPView.tsx`、`electron/src/renderer/views/SkillsView.tsx`、`electron/src/renderer/views/ScheduledTasksView.tsx`、`electron/src/renderer/components/FileAttachment.tsx`、`electron/src/renderer/components/ExecutionHistory.tsx`、`electron/src/renderer/components/Sidebar.tsx`
   - 验证：`cd electron && npm run build && make build`

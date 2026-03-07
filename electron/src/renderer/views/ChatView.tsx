@@ -2165,15 +2165,13 @@ function ActivityTypeIcon({ className, type }: { className?: string; type: Strea
   if (type === 'status') {
     return (
       <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.8}
-          d="M8.5 14.5c-1.9 0-3.5-1.45-3.5-3.25C5 9.46 6.57 8 8.5 8c.66 0 1.28.17 1.82.48A4.84 4.84 0 0114 6.9c2.62 0 4.75 1.95 4.75 4.35S16.62 15.6 14 15.6h-2.15l-1.65 1.9a.6.6 0 01-1.05-.4v-1.6H8.5Z"
-        />
-        <circle cx="9" cy="11.2" r="0.7" fill="currentColor" stroke="none" />
-        <circle cx="12" cy="11.2" r="0.7" fill="currentColor" stroke="none" />
-        <circle cx="15" cy="11.2" r="0.7" fill="currentColor" stroke="none" />
+        <ellipse cx="12" cy="12" rx="7.2" ry="3.1" strokeWidth={1.55} />
+        <ellipse cx="12" cy="12" rx="7.2" ry="3.1" strokeWidth={1.55} transform="rotate(60 12 12)" />
+        <ellipse cx="12" cy="12" rx="7.2" ry="3.1" strokeWidth={1.55} transform="rotate(-60 12 12)" />
+        <circle cx="12" cy="12" r="1.25" fill="currentColor" stroke="none" />
+        <circle cx="18.1" cy="12" r="1.05" fill="currentColor" stroke="none" />
+        <circle cx="8.95" cy="17.2" r="1.05" fill="currentColor" stroke="none" />
+        <circle cx="9.1" cy="6.7" r="1.05" fill="currentColor" stroke="none" />
       </svg>
     );
   }
