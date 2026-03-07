@@ -4,6 +4,10 @@
 
 ### Fixed
 
+- **Bugfix 文档补充**：新增 `ChatView` 初始化 `ReferenceError` 复盘，说明触发原因、引入方式与避免措施
+  - `BUGFIX.md`
+  - 验证：`make build`
+
 - **聊天视图初始化崩溃修复**：修复 `ChatView` 在重构后仍引用已移除的流式清理函数，导致新包运行时报 `Cannot access ... before initialization` 的问题
   - `electron/src/renderer/views/ChatView.tsx`
   - 验证：`cd electron && npm run build && make build`
