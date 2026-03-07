@@ -52,6 +52,7 @@ export function Sidebar() {
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const [sessionToDeleteTitle, setSessionToDeleteTitle] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
+  const shouldSyncTaskContext = activeTab === 'chat' || activeTab === 'sessions' || activeTab === 'scheduled';
 
   const buildDraftSession = (key: string): SessionSummary => ({
     key,
@@ -192,6 +193,10 @@ export function Sidebar() {
   };
 
   useEffect(() => {
+    if (!shouldSyncTaskContext) {
+      return;
+    }
+
     let cancelled = false;
 
     const loadSessions = async () => {
@@ -228,7 +233,7 @@ export function Sidebar() {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [getSessions]);
+  }, [getSessions, shouldSyncTaskContext]);
 
   const mergedSessions = useMemo(() => {
     const mergedMap = new Map<string, SessionSummary>();
@@ -273,6 +278,10 @@ export function Sidebar() {
 
   // Sync current session with channel filter - when switching channels, select the most recent session of that channel
   useEffect(() => {
+    if (!shouldSyncTaskContext) {
+      return;
+    }
+
     if (channelOptions.length === 0) {
       return;
     }
@@ -303,7 +312,7 @@ export function Sidebar() {
         dispatch(setCurrentSessionKey(newSessionKey));
       }
     }
-  }, [channelFilter, channelOptions, mergedSessions, currentSessionKey, dispatch]);
+  }, [channelFilter, channelOptions, mergedSessions, currentSessionKey, dispatch, shouldSyncTaskContext]);
 
   const handleNewTask = () => {
     const newSessionKey = `desktop:${Date.now()}`;
@@ -400,7 +409,7 @@ export function Sidebar() {
             <div className="mt-3 space-y-1.5">
               {sessionItems.length === 0 && (
                 <div className="text-sm px-3 py-2 rounded-xl" style={{ color: 'var(--muted)' }}>
-                  {t('skills.empty')}
+                  {t('sidebar.empty')}
                 </div>
               )}
 

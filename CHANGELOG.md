@@ -4,6 +4,10 @@
 
 ### Fixed
 
+- **技能市场与 MCP 页侧栏闪烁修复**：限制 Sidebar 的会话轮询与自动会话同步仅在聊天/任务相关页面运行，避免切到 `Skills` 或 `MCP` 时左侧栏因会话状态被重置而出现闪烁和空白
+  - `electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/i18n/index.ts`
+  - 验证：`cd electron && npm run build && make build`
+
 - **定时任务编辑区布局收口**：重做调度配置区为“左侧摘要栏 + 右侧编辑器”结构，消除 Cron 模式下左栏空白过大的问题，并补充当前节奏、执行模式、输出渠道摘要
   - `electron/src/renderer/views/ScheduledTasksView.tsx`、`electron/src/renderer/i18n/index.ts`
   - 验证：`cd electron && npm run build && make build`
