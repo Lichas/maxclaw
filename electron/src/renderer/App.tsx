@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, setStatus, setActiveTab, setTheme, setLanguage, setCurrentSessionKey, toggleSidebar, toggleTerminal } from './store';
+import { RootState, setStatus, setActiveTab, setTheme, setLanguage, setCurrentSessionKey, toggleSidebar } from './store';
 import { Sidebar } from './components/Sidebar';
 import { ChatView } from './views/ChatView';
 import { SessionsView } from './views/SessionsView';
@@ -12,7 +12,7 @@ import { wsClient } from './services/websocket';
 
 function App() {
   const dispatch = useDispatch();
-  const { activeTab, theme, sidebarCollapsed, terminalVisible } = useSelector((state: RootState) => state.ui);
+  const { activeTab, theme, sidebarCollapsed } = useSelector((state: RootState) => state.ui);
   const isMac = window.electronAPI.platform.isMac;
   const controlAnchorStyle = isMac
     ? { left: '92px', top: '10px' }
@@ -125,23 +125,6 @@ function App() {
             </button>
           )}
         </div>
-        {activeTab === 'chat' && (
-          <div className="absolute right-3 top-2.5 z-40 no-drag">
-            <button
-              onClick={() => dispatch(toggleTerminal())}
-              className={`flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs shadow-[0_8px_24px_rgba(31,41,55,0.08)] transition-colors ${
-                terminalVisible
-                  ? 'border-primary/30 bg-primary/12 text-primary'
-                  : 'border-white/65 bg-white/78 text-foreground/70 hover:bg-white hover:text-foreground'
-              }`}
-              aria-label="Toggle terminal"
-              title="Toggle terminal"
-            >
-              <TerminalIcon className="h-3.5 w-3.5" />
-              <span>Terminal</span>
-            </button>
-          </div>
-        )}
         <Sidebar />
         <main className="mr-2 flex-1 overflow-hidden rounded-[28px] bg-transparent">
           {activeTab === 'chat' && <ChatView />}
@@ -177,15 +160,6 @@ function PencilIcon({ className }: { className?: string }) {
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 20h9" />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.5 3.5a2.1 2.1 0 113 3L7 19l-4 1 1-4 12.5-12.5z" />
-    </svg>
-  );
-}
-
-function TerminalIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x={3} y={5} width={18} height={14} rx={2.5} strokeWidth={1.8} />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 9l3 3-3 3m5 0h5" />
     </svg>
   );
 }

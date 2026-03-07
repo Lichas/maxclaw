@@ -4,6 +4,10 @@
 
 ### Fixed
 
+- **新建任务页右上角入口收敛**：新建任务启动页不再显示 `Terminal` 和文件预览栏 toggle，两个入口仅在已有任务详情页中显示
+  - `electron/src/renderer/App.tsx`、`electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build && make build`
+
 - **聊天左右栏间距修正**：为侧栏与主内容区增加明确的卡片间缝隙，避免主内容背景视觉上叠到左侧栏下方
   - `electron/src/renderer/App.tsx`
   - 验证：`cd electron && npm run build && make build`

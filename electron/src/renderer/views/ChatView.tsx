@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { RootState, setCurrentSessionKey } from '../store';
+import { RootState, setCurrentSessionKey, toggleTerminal } from '../store';
 import { GatewayStreamEvent, SkillSummary, useGateway } from '../hooks/useGateway';
 import { wsClient } from '../services/websocket';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
@@ -1926,6 +1926,24 @@ export function ChatView() {
       <div className="min-w-0">
         <h1 className="truncate text-[15px] font-semibold tracking-[0.01em] text-foreground">{sessionTitle}</h1>
       </div>
+      {!isStarterMode && (
+        <div className="ml-auto flex items-center gap-2 no-drag">
+          <button
+            type="button"
+            onClick={() => dispatch(toggleTerminal())}
+            className={`flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs shadow-[0_8px_24px_rgba(31,41,55,0.08)] transition-colors ${
+              terminalVisible
+                ? 'border-primary/30 bg-primary/12 text-primary'
+                : 'border-white/65 bg-white/78 text-foreground/70 hover:bg-white hover:text-foreground'
+            }`}
+            aria-label="Toggle terminal"
+            title="Toggle terminal"
+          >
+            <TerminalIcon className="h-3.5 w-3.5" />
+            <span>Terminal</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -2026,7 +2044,6 @@ export function ChatView() {
               </section>
             </div>
           </div>
-          {renderPreviewSidebar()}
         </div>
       </div>
     );
@@ -2149,6 +2166,15 @@ function FolderIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+    </svg>
+  );
+}
+
+function TerminalIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x={3} y={5} width={18} height={14} rx={2.5} strokeWidth={1.8} />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 9l3 3-3 3m5 0h5" />
     </svg>
   );
 }
