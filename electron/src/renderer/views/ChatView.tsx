@@ -1693,10 +1693,11 @@ export function ChatView() {
   const renderComposer = (landing: boolean) => (
     <form
       onSubmit={handleSubmit}
-      className={`relative rounded-xl border border-primary/40 bg-background shadow-sm ${
-        landing ? 'p-4' : 'p-3'
+      className={`relative overflow-hidden rounded-[26px] border border-white/70 bg-white/78 shadow-[0_22px_55px_rgba(36,48,67,0.11)] backdrop-blur-xl ${
+        landing ? 'p-5' : 'p-4'
       }`}
     >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/90" />
       <textarea
         ref={inputRef}
         value={input}
@@ -1709,8 +1710,10 @@ export function ChatView() {
         }}
         onKeyDown={handleKeyDown}
         placeholder="描述你的任务目标、上下文和输出要求..."
-        rows={landing ? 8 : 4}
-        className="w-full resize-none border-none bg-transparent px-2 py-1 text-sm leading-6 text-foreground placeholder:text-foreground/35 focus:outline-none"
+        rows={landing ? 9 : 4}
+        className={`w-full resize-none border-none bg-transparent px-2 py-1 leading-7 text-foreground placeholder:text-foreground/35 focus:outline-none ${
+          landing ? 'text-[15px]' : 'text-sm'
+        }`}
       />
 
       {/* @mention dropdown */}
@@ -1775,7 +1778,7 @@ export function ChatView() {
         </div>
       )}
 
-      <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/70 pt-3">
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/55 pt-4">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <CustomSelect
             value={currentModel}
@@ -1785,11 +1788,11 @@ export function ChatView() {
             disabled={modelsLoading || isGenerating}
             size="sm"
             className="w-[220px] max-w-full"
-            triggerClassName="bg-secondary"
+            triggerClassName="border-white/60 bg-[#f8f9fc]"
           />
           {modelsLoading && <span className="text-xs text-foreground/50">加载中...</span>}
           <div ref={skillsPickerRef} className="relative flex items-center gap-2 text-xs text-foreground/55">
-            <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1">
+            <span className="inline-flex items-center gap-1 rounded-xl border border-white/60 bg-[#f8f9fc] px-2.5 py-1.5">
               <FolderIcon className="h-3.5 w-3.5" />
               project
             </span>
@@ -1802,10 +1805,10 @@ export function ChatView() {
             <button
               type="button"
               onClick={() => setSkillsPickerOpen((prev) => !prev)}
-              className={`inline-flex items-center gap-1 rounded-md px-2 py-1 transition-colors ${
+              className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 transition-colors ${
                 selectedSkills.length > 0 || skillsPickerOpen
-                  ? 'bg-primary/15 text-primary'
-                  : 'bg-secondary text-foreground/70 hover:bg-secondary/80'
+                  ? 'bg-primary/15 text-primary shadow-[0_8px_20px_rgba(111,143,125,0.12)]'
+                  : 'border border-white/60 bg-[#f8f9fc] text-foreground/70 hover:bg-white'
               }`}
             >
               <PuzzleIcon className="h-3.5 w-3.5" />
@@ -1893,7 +1896,7 @@ export function ChatView() {
           <button
             type="submit"
             disabled={!input.trim() || isGenerating}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_12px_24px_rgba(111,143,125,0.28)] transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <SendIcon className="h-4 w-4" />
           </button>
@@ -1916,12 +1919,12 @@ export function ChatView() {
 
   const renderThreadHeader = () => (
     <div
-      className={`flex h-12 items-center border-b border-border/60 bg-card/95 ${
-        isMac && sidebarCollapsed ? 'pl-44 pr-6' : 'px-6'
+      className={`flex h-16 items-center border-b border-white/55 bg-white/58 backdrop-blur-xl ${
+        isMac && sidebarCollapsed ? 'pl-44 pr-7' : 'px-7'
       }`}
     >
       <div className="min-w-0">
-        <h1 className="truncate text-[15px] font-semibold text-foreground">{sessionTitle}</h1>
+        <h1 className="truncate text-[15px] font-semibold tracking-[0.01em] text-foreground">{sessionTitle}</h1>
       </div>
     </div>
   );
@@ -1984,36 +1987,39 @@ export function ChatView() {
 
   if (isStarterMode) {
     return (
-      <div className="h-full flex flex-col bg-card">
+      <div className="h-full flex flex-col bg-transparent">
         {renderThreadHeader()}
         <div className="min-h-0 flex flex-1">
-          <div className="flex-1 overflow-y-auto px-8 py-10">
-            <div className="mx-auto max-w-4xl">
-              <div className="mb-8 text-center">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center">
+          <div className="flex-1 overflow-y-auto px-8 py-10 md:px-12 md:py-12">
+            <div className="mx-auto max-w-5xl">
+              <div className="mb-10 text-center">
+                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-[22px] bg-white/72 shadow-[0_18px_44px_rgba(36,48,67,0.1)]">
                   <img
                     src="./icon.png"
                     alt="maxclaw"
-                    className="h-full w-full object-contain"
+                    className="h-11 w-11 object-contain"
                   />
                 </div>
-                <h1 className="text-4xl font-semibold text-foreground">{t('chat.starter.title')}</h1>
-                <p className="mt-3 text-base text-foreground/55">{t('chat.starter.subtitle')}</p>
+                <h1 className="text-[42px] font-semibold tracking-[-0.03em] text-foreground">{t('chat.starter.title')}</h1>
+                <p className="mt-3 text-[17px] text-foreground/58">{t('chat.starter.subtitle')}</p>
               </div>
 
               {renderComposer(true)}
 
-              <section className="mt-10">
-                <p className="mb-3 text-sm font-medium text-foreground/65">{t('chat.starter.templates')}</p>
-                <div className="grid grid-cols-2 gap-3">
+              <section className="mt-11">
+                <div className="mb-4 flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-foreground/45">{t('chat.starter.templates')}</p>
+                  <div className="hidden h-px flex-1 bg-white/50 md:ml-4 md:block" />
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {starterCards.map((card) => (
                     <button
                       key={card.title}
                       onClick={() => applyTemplate(card.prompt)}
-                      className="rounded-xl border border-border bg-background px-4 py-4 text-left transition-colors hover:border-primary/45 hover:bg-primary/5"
+                      className="group rounded-[22px] border border-white/70 bg-white/68 px-5 py-5 text-left shadow-[0_16px_38px_rgba(36,48,67,0.05)] transition-all hover:-translate-y-0.5 hover:border-primary/22 hover:bg-white"
                     >
-                      <p className="text-base font-semibold text-foreground">{card.title}</p>
-                      <p className="mt-1 text-sm text-foreground/55">{card.description}</p>
+                      <p className="text-[17px] font-semibold tracking-[-0.02em] text-foreground">{card.title}</p>
+                      <p className="mt-1 text-sm leading-6 text-foreground/55">{card.description}</p>
                     </button>
                   ))}
                 </div>

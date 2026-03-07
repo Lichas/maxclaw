@@ -102,13 +102,13 @@ function App() {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-background text-foreground">
-      <div className="relative flex h-full overflow-hidden">
+    <div className="h-screen overflow-hidden bg-background px-3 py-3 text-foreground md:px-5 md:py-5">
+      <div className="relative flex h-full overflow-hidden rounded-[30px] border border-white/55 bg-white/52 shadow-[0_30px_80px_rgba(44,60,94,0.18)] backdrop-blur-2xl">
         <div className={`absolute z-10 draggable ${isMac ? 'h-14' : 'h-12'}`} style={dragStripStyle} />
         <div className="absolute z-40 flex items-center gap-2 no-drag" style={controlAnchorStyle}>
           <button
             onClick={() => dispatch(toggleSidebar())}
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-border/80 bg-background/90 text-foreground/70 transition-colors hover:bg-secondary hover:text-foreground"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/65 bg-white/78 text-foreground/70 shadow-[0_8px_24px_rgba(31,41,55,0.08)] transition-colors hover:bg-white hover:text-foreground"
             aria-label="Toggle sidebar"
             title="Toggle sidebar"
           >
@@ -117,7 +117,7 @@ function App() {
           {sidebarCollapsed && (
             <button
               onClick={handleNewTask}
-              className="flex h-8 w-8 items-center justify-center rounded-md border border-border/80 bg-background/90 text-foreground/70 transition-colors hover:bg-secondary hover:text-foreground"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/65 bg-white/78 text-foreground/70 shadow-[0_8px_24px_rgba(31,41,55,0.08)] transition-colors hover:bg-white hover:text-foreground"
               aria-label="New task"
               title="New task"
             >
@@ -129,10 +129,10 @@ function App() {
           <div className="absolute right-3 top-2.5 z-40 no-drag">
             <button
               onClick={() => dispatch(toggleTerminal())}
-              className={`flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs transition-colors ${
+              className={`flex h-9 items-center gap-1.5 rounded-xl border px-3 text-xs shadow-[0_8px_24px_rgba(31,41,55,0.08)] transition-colors ${
                 terminalVisible
-                  ? 'border-primary/50 bg-primary/10 text-primary'
-                  : 'border-border/80 bg-background/90 text-foreground/70 hover:bg-secondary hover:text-foreground'
+                  ? 'border-primary/30 bg-primary/12 text-primary'
+                  : 'border-white/65 bg-white/78 text-foreground/70 hover:bg-white hover:text-foreground'
               }`}
               aria-label="Toggle terminal"
               title="Toggle terminal"
@@ -143,7 +143,7 @@ function App() {
           </div>
         )}
         <Sidebar />
-        <main className="flex-1 overflow-hidden rounded-[18px] border border-border/75 bg-card shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
+        <main className="m-2 flex-1 overflow-hidden rounded-[28px] border border-white/60 bg-card shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-xl">
           {activeTab === 'chat' && <ChatView />}
           {activeTab === 'sessions' && <SessionsView />}
           {activeTab === 'scheduled' && <ScheduledTasksView />}

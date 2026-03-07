@@ -331,14 +331,12 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`flex h-full w-72 flex-col ${isMac ? 'pt-10' : 'pt-2'}`}
-      style={{ background: 'var(--secondary)' }}
+      className={`m-2 mr-0 flex h-[calc(100%-1rem)] w-[290px] flex-col rounded-[28px] border border-white/55 bg-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.86)] backdrop-blur-xl ${isMac ? 'pt-10' : 'pt-3'}`}
     >
-      {/* New Chat Button */}
-      <div className="p-3">
+      <div className="px-4 pb-2">
         <button
           onClick={handleNewTask}
-          className="w-full flex items-center justify-center gap-2 bg-primary/15 text-primary border border-primary/30 rounded-lg py-2.5 px-4 hover:bg-primary/20 transition-colors"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-primary shadow-[0_10px_30px_rgba(111,143,125,0.12)] transition-colors hover:bg-primary/14"
         >
           <EditIcon className="w-5 h-5 flex-shrink-0" />
           <span className="font-medium">{t('sidebar.newTask')}</span>
@@ -346,7 +344,7 @@ export function Sidebar() {
       </div>
 
       {/* Menu Items */}
-      <nav className="sidebar-scroll flex-1 px-2 overflow-y-auto pb-4">
+      <nav className="sidebar-scroll flex-1 overflow-y-auto px-3 pb-4">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -356,27 +354,11 @@ export function Sidebar() {
             <button
               key={item.id}
               onClick={() => dispatch(setActiveTab(item.id))}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 transition-all duration-200 group ${
+              className={`group mb-1 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200 ${
                 isActive
-                  ? 'font-medium'
-                  : 'hover:scale-[1.02]'
+                  ? 'bg-white font-medium text-foreground shadow-[0_14px_30px_rgba(36,48,67,0.08)]'
+                  : 'text-secondary-foreground hover:bg-white/65 hover:text-foreground'
               }`}
-              style={{
-                background: isActive ? 'var(--active)' : 'transparent',
-                color: isActive ? 'var(--foreground)' : 'var(--secondary-foreground)',
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'var(--hover)';
-                  e.currentTarget.style.color = 'var(--foreground)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = 'var(--secondary-foreground)';
-                }
-              }}
             >
               <div className="relative">
                 <Icon className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
@@ -393,8 +375,8 @@ export function Sidebar() {
           );
         })}
 
-        <div className="mt-4 px-2">
-            <p className="text-xs font-medium mb-3 px-2" style={{ color: 'var(--muted)' }}>
+        <div className="mt-5 px-2">
+            <p className="mb-3 px-2 text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
               {t('sidebar.history')}
             </p>
 
@@ -415,7 +397,7 @@ export function Sidebar() {
             </div>
 
             {/* Session List */}
-            <div className="space-y-1 mt-2">
+            <div className="mt-3 space-y-1.5">
               {sessionItems.length === 0 && (
                 <div className="text-sm px-3 py-2 rounded-xl" style={{ color: 'var(--muted)' }}>
                   {t('skills.empty')}
@@ -429,11 +411,7 @@ export function Sidebar() {
 
                 if (isEditing) {
                   return (
-                    <div
-                      key={session.key}
-                      className="px-3 py-2.5 rounded-xl"
-                      style={{ background: 'var(--card)' }}
-                    >
+                    <div key={session.key} className="rounded-2xl bg-white px-3 py-3 shadow-[0_10px_24px_rgba(36,48,67,0.06)]">
                       <input
                         type="text"
                         value={editTitle}
@@ -460,13 +438,13 @@ export function Sidebar() {
                 return (
                   <div
                     key={session.key}
-                    className={`group relative flex cursor-pointer items-center gap-1 rounded-xl px-3 py-2.5 transition-colors duration-150 ${
-                      !isCurrent ? 'hover:bg-[var(--hover)]' : ''
+                    className={`group relative flex cursor-pointer items-center gap-1 rounded-2xl px-3 py-3 transition-colors duration-150 ${
+                      isCurrent
+                        ? 'bg-white shadow-[0_14px_28px_rgba(36,48,67,0.07)]'
+                        : isMenuOpen
+                          ? 'bg-white/65'
+                          : 'hover:bg-white/55'
                     }`}
-                    style={{
-                      background: isCurrent ? 'var(--card)' : isMenuOpen ? 'var(--hover)' : 'transparent',
-                      boxShadow: isCurrent ? '0 1px 3px rgba(0,0,0,0.05)' : 'none'
-                    }}
                   >
                     <button
                       onClick={() => {
@@ -475,10 +453,10 @@ export function Sidebar() {
                       }}
                       className="flex-1 text-left min-w-0"
                     >
-                      <p className="text-sm font-medium leading-5 truncate" style={{ color: 'var(--foreground)' }}>
+                      <p className="truncate text-[14px] font-medium leading-5" style={{ color: 'var(--foreground)' }}>
                         {session.lastMessage || session.key.replace(/^desktop:/, '新任务')}
                       </p>
-                      <p className="text-xs leading-5 mt-0.5" style={{ color: 'var(--muted)' }}>
+                      <p className="mt-0.5 text-[11px] leading-5" style={{ color: 'var(--muted)' }}>
                         {getChannelLabel(extractSessionChannel(session.key), language)} · {formatRelativeTime(session.lastMessageAt)}
                       </p>
                     </button>
@@ -490,7 +468,7 @@ export function Sidebar() {
                           e.stopPropagation();
                           setOpenMenuKey(isMenuOpen ? null : session.key);
                         }}
-                        className={`rounded-lg p-1.5 transition-opacity duration-150 ${
+                        className={`rounded-xl p-1.5 transition-opacity duration-150 ${
                           isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                         }`}
                         style={{
@@ -503,11 +481,7 @@ export function Sidebar() {
                       {/* Dropdown Menu */}
                       {isMenuOpen && (
                         <div
-                          className="absolute right-10 top-1/2 z-50 w-36 -translate-y-1/2 rounded-xl border border-border/75 py-1"
-                          style={{
-                            background: 'var(--card)',
-                            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-                          }}
+                          className="absolute right-10 top-1/2 z-50 w-36 -translate-y-1/2 rounded-2xl border border-white/70 bg-white py-1 shadow-[0_18px_40px_rgba(36,48,67,0.14)]"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
@@ -556,23 +530,12 @@ export function Sidebar() {
 
       {/* Settings Button with Gateway Status */}
       <div
-        className="sticky bottom-0 p-3"
-        style={{
-          background: 'var(--secondary)',
-        }}
+        className="sticky bottom-0 mt-auto border-t border-white/55 p-3"
+        style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.52))' }}
       >
         <button
           onClick={() => dispatch(setActiveTab('settings'))}
-          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all duration-200 hover:scale-[1.02] group"
-          style={{
-            background: 'transparent'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--hover)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-          }}
+          className="group flex w-full items-center gap-2 rounded-2xl px-3 py-3 transition-all duration-200 hover:bg-white/70"
         >
           <div className="relative">
             <SettingsIcon

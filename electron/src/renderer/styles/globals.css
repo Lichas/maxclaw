@@ -3,21 +3,20 @@
 @tailwind utilities;
 
 :root {
-  /* Sage Green - Elegant & Natural */
-  --background: #fafbf9;
-  --foreground: #2d3436;
-  --primary: #6b9080;
+  --background: #eef2f8;
+  --foreground: #243043;
+  --primary: #6f8f7d;
   --primary-foreground: #ffffff;
-  --secondary: #f0f4f1;
-  --secondary-foreground: #5a6c60;
-  --border: rgba(107, 144, 128, 0.12);
-  --muted: #95a5a6;
-  --card: #ffffff;
-  --card-foreground: #2d3436;
-  --accent: #a4c3b2;
-  --accent-foreground: #2d3436;
-  --hover: rgba(107, 144, 128, 0.08);
-  --active: rgba(107, 144, 128, 0.15);
+  --secondary: #f7f8fb;
+  --secondary-foreground: #6f7787;
+  --border: rgba(115, 129, 153, 0.14);
+  --muted: #8e98aa;
+  --card: rgba(255, 255, 255, 0.82);
+  --card-foreground: #243043;
+  --accent: #dbe6dd;
+  --accent-foreground: #243043;
+  --hover: rgba(111, 143, 125, 0.08);
+  --active: rgba(111, 143, 125, 0.16);
 }
 
 /* Dark mode - Deep forest */
@@ -59,10 +58,17 @@ body {
     Arial,
     sans-serif;
   overflow: hidden;
-  background: var(--background);
+  background:
+    radial-gradient(circle at top left, rgba(180, 198, 223, 0.6), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(104, 164, 255, 0.24), transparent 22%),
+    linear-gradient(180deg, #edf2f9 0%, #e8edf6 52%, #dfe6f3 100%);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100vh;
 }
 
 /* Custom scrollbar - minimal */

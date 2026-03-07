@@ -4,6 +4,10 @@
 
 ### Fixed
 
+- **聊天主界面视觉升级**：参考桌面 AI 应用的柔和玻璃质感，重做主窗口、侧栏、启动页和输入区的层次、圆角、阴影与留白结构，提升整体精致度与桌面感
+  - `electron/src/renderer/styles/globals.css`、`electron/src/renderer/App.tsx`、`electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build && make build`
+
 - **启动页网页游戏模板更新**：将“实现一个功能”模板替换为“完成一个网页游戏”，并补充中英双语下针对高质量贪吃蛇网页游戏的具体执行 prompt
   - `electron/src/renderer/i18n/index.ts`
   - 验证：`cd electron && npm run build && make build`
