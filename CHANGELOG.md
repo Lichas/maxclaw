@@ -4,6 +4,10 @@
 
 ### Fixed
 
+- **侧栏悬停闪烁修复**：将左侧栏滚动条改为稳定 gutter，避免在 `Skills / MCP` 页面鼠标悬停时滚动条宽度动态变化，引发侧栏命中区域反复抖动和空白闪烁
+  - `electron/src/renderer/styles/globals.css`
+  - 验证：`cd electron && npm run build && make build`
+
 - **技能市场与 MCP 页侧栏闪烁修复**：限制 Sidebar 的会话轮询与自动会话同步仅在聊天/任务相关页面运行，避免切到 `Skills` 或 `MCP` 时左侧栏因会话状态被重置而出现闪烁和空白
   - `electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/i18n/index.ts`
   - 验证：`cd electron && npm run build && make build`
