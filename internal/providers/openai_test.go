@@ -160,11 +160,11 @@ func TestConvertToChatMessagesFlattensImagePartsWhenModelDoesNotSupportThem(t *t
 	}
 }
 
-func TestSupportsContentPartsDisablesDeepSeekChat(t *testing.T) {
-	if supportsContentParts("deepseek", "deepseek-chat") {
+func TestSupportsImageInputDisablesDeepSeekChat(t *testing.T) {
+	if SupportsImageInput("deepseek", "deepseek-chat") {
 		t.Fatal("expected deepseek-chat to disable image content parts")
 	}
-	if !supportsContentParts("deepseek", "deepseek-vl") {
+	if !SupportsImageInput("deepseek", "deepseek-vl") {
 		t.Fatal("expected deepseek-vl to allow image content parts")
 	}
 }

@@ -130,6 +130,20 @@ func (p *captureSkillsProvider) GetDefaultModel() string {
 	return "test-model"
 }
 
+type panicProvider struct{}
+
+func (p *panicProvider) Chat(ctx context.Context, messages []providers.Message, defs []map[string]interface{}, model string) (*providers.Response, error) {
+	panic("Chat should not be called")
+}
+
+func (p *panicProvider) ChatStream(ctx context.Context, messages []providers.Message, defs []map[string]interface{}, model string, handler providers.StreamHandler) error {
+	panic("ChatStream should not be called")
+}
+
+func (p *panicProvider) GetDefaultModel() string {
+	return "glm-5"
+}
+
 func TestAgentLoopProcessMessageInjectsRuntimeContextForCron(t *testing.T) {
 	workspace := t.TempDir()
 	messageBus := bus.NewMessageBus(10)
@@ -226,6 +240,39 @@ func TestAgentLoopProcessDirectUsesProvidedSessionKey(t *testing.T) {
 
 	defaultSession := mgr.GetOrCreate("cli:direct")
 	assert.Len(t, defaultSession.Messages, 0)
+}
+
+func TestAgentLoopShortCircuitsPureImageForUnsupportedModel(t *testing.T) {
+	workspace := t.TempDir()
+	messageBus := bus.NewMessageBus(10)
+	provider := &panicProvider{}
+	cronSvc := cron.NewService(filepath.Join(workspace, ".cron", "jobs.json"))
+
+	loop := NewAgentLoop(
+		messageBus,
+		provider,
+		workspace,
+		"glm-5",
+		3,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		cronSvc,
+		nil,
+		false,
+	)
+
+	msg := bus.NewInboundMessage("qq", "user-1", "chat-42", "[Image]")
+	msg.Media = &bus.MediaAttachment{
+		Type: "image",
+		URL:  "https://example.com/image.png",
+	}
+	resp, err := loop.ProcessMessage(context.Background(), msg)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Contains(t, resp.Content, "不支持直接识图")
+	assert.Contains(t, resp.Content, "glm-5")
 }
 
 func TestAgentLoopProcessMessageSlashHelp(t *testing.T) {

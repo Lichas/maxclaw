@@ -354,7 +354,7 @@ func buildChatRequest(messages []Message, tools []map[string]interface{}, model 
 
 	reqBody := chatRequest{
 		Model:       model,
-		Messages:    convertToChatMessages(messages, supportsContentParts(providerName, model)),
+		Messages:    convertToChatMessages(messages, SupportsImageInput(providerName, model)),
 		Stream:      stream,
 		MaxTokens:   maxTokens,
 		Temperature: temperature,
@@ -407,35 +407,6 @@ func convertToChatMessages(messages []Message, allowContentParts bool) []chatMes
 		result[i] = cm
 	}
 	return result
-}
-
-func supportsContentParts(providerName, model string) bool {
-	providerName = strings.ToLower(strings.TrimSpace(providerName))
-	modelName := strings.ToLower(strings.TrimSpace(model))
-
-	switch providerName {
-	case "deepseek":
-		return strings.Contains(modelName, "vl")
-	case "openai":
-		return strings.Contains(modelName, "gpt-4o") ||
-			strings.Contains(modelName, "gpt-4.1") ||
-			strings.HasPrefix(modelName, "o1") ||
-			strings.HasPrefix(modelName, "o3")
-	case "anthropic":
-		return strings.Contains(modelName, "claude-3") || strings.Contains(modelName, "claude-sonnet-4") || strings.Contains(modelName, "claude-opus-4")
-	case "gemini":
-		return true
-	case "openrouter":
-		return strings.Contains(modelName, "gpt-4o") ||
-			strings.Contains(modelName, "gpt-4.1") ||
-			strings.Contains(modelName, "claude-3") ||
-			strings.Contains(modelName, "claude-sonnet-4") ||
-			strings.Contains(modelName, "gemini") ||
-			strings.Contains(modelName, "vl") ||
-			strings.Contains(modelName, "vision")
-	default:
-		return strings.Contains(modelName, "vision") || strings.Contains(modelName, "vl")
-	}
 }
 
 func flattenContentParts(msg Message) string {
