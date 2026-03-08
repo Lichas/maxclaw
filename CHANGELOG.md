@@ -20,7 +20,7 @@
 
 ### Fixed
 
-- **图片消息改为多模态输入**：`agent` 不再把当前图片消息包装成 `[Media: image] [Image]` 这类重复占位符，而是把入站图片构造成 OpenAI 兼容的 `text + image_url` 多模态消息，修复 QQ 图片消息只能触发“请描述图片”式误答的问题
+- **图片消息改为多模态输入**：`agent` 不再把当前图片消息包装成 `[Media: image] [Image]` 这类重复占位符，而是把入站图片构造成 OpenAI 兼容的 `text + image_url` 多模态消息；同时对 `deepseek-chat` 这类纯文本模型自动降级为文本 + 图片 URL，避免 `image_url` 请求触发 400
   - `internal/agent/context.go`、`internal/agent/context_test.go`、`internal/providers/base.go`、`internal/providers/openai.go`、`internal/providers/openai_test.go`
   - 验证：`go test ./internal/agent ./internal/providers`、`make build`
 

@@ -28,7 +28,7 @@ func TestConvertToChatMessagesAlwaysIncludesContentField(t *testing.T) {
 		},
 	}
 
-	converted := convertToChatMessages(messages)
+	converted := convertToChatMessages(messages, true)
 	body, err := json.Marshal(converted)
 	if err != nil {
 		t.Fatalf("marshal failed: %v", err)
@@ -60,7 +60,7 @@ func TestConvertToChatMessagesSupportsImageParts(t *testing.T) {
 				{Type: "image_url", ImageURL: "https://example.com/test.png"},
 			},
 		},
-	})
+	}, true)
 
 	body, err := json.Marshal(converted)
 	if err != nil {
@@ -98,6 +98,7 @@ func TestBuildChatRequestIncludesGenerationParamsAndClampsMaxTokens(t *testing.T
 		[]Message{{Role: "user", Content: "hello"}},
 		nil,
 		"gpt-4o-mini",
+		"openai",
 		false,
 		0,
 		0.2,
@@ -125,5 +126,45 @@ func TestBuildChatRequestIncludesGenerationParamsAndClampsMaxTokens(t *testing.T
 	}
 	if got, ok := decoded["temperature"]; !ok || got.(float64) != 0.2 {
 		t.Fatalf("expected temperature in payload, got %v", decoded["temperature"])
+	}
+}
+
+func TestConvertToChatMessagesFlattensImagePartsWhenModelDoesNotSupportThem(t *testing.T) {
+	converted := convertToChatMessages([]Message{
+		{
+			Role:    "user",
+			Content: "User sent an image.",
+			Parts: []ContentPart{
+				{Type: "text", Text: "User sent an image."},
+				{Type: "image_url", ImageURL: "https://example.com/test.png"},
+			},
+		},
+	}, false)
+
+	body, err := json.Marshal(converted)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+
+	var decoded []map[string]interface{}
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+
+	content, ok := decoded[0]["content"].(string)
+	if !ok {
+		t.Fatalf("expected flattened string content, got %T", decoded[0]["content"])
+	}
+	if content != "User sent an image.\nImage URL: https://example.com/test.png" {
+		t.Fatalf("unexpected flattened content: %q", content)
+	}
+}
+
+func TestSupportsContentPartsDisablesDeepSeekChat(t *testing.T) {
+	if supportsContentParts("deepseek", "deepseek-chat") {
+		t.Fatal("expected deepseek-chat to disable image content parts")
+	}
+	if !supportsContentParts("deepseek", "deepseek-vl") {
+		t.Fatal("expected deepseek-vl to allow image content parts")
 	}
 }

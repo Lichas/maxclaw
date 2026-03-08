@@ -66,7 +66,7 @@ func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, tools []m
 		model = p.defaultModel
 	}
 
-	reqBody := buildChatRequest(messages, tools, model, false, p.maxTokens, p.temperature)
+	reqBody := buildChatRequest(messages, tools, model, p.detectProvider(model), false, p.maxTokens, p.temperature)
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode request: %w", err)
@@ -125,7 +125,7 @@ func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, too
 		model = p.defaultModel
 	}
 
-	reqBody := buildChatRequest(messages, tools, model, true, p.maxTokens, p.temperature)
+	reqBody := buildChatRequest(messages, tools, model, p.detectProvider(model), true, p.maxTokens, p.temperature)
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		return fmt.Errorf("failed to encode request: %w", err)
@@ -347,14 +347,14 @@ func isCompleteJSON(s string) bool {
 }
 
 // buildChatRequest 构造请求体
-func buildChatRequest(messages []Message, tools []map[string]interface{}, model string, stream bool, maxTokens int, temperature float64) chatRequest {
+func buildChatRequest(messages []Message, tools []map[string]interface{}, model string, providerName string, stream bool, maxTokens int, temperature float64) chatRequest {
 	if maxTokens <= 0 {
 		maxTokens = 1
 	}
 
 	reqBody := chatRequest{
 		Model:       model,
-		Messages:    convertToChatMessages(messages),
+		Messages:    convertToChatMessages(messages, supportsContentParts(providerName, model)),
 		Stream:      stream,
 		MaxTokens:   maxTokens,
 		Temperature: temperature,
@@ -369,15 +369,17 @@ func buildChatRequest(messages []Message, tools []map[string]interface{}, model 
 }
 
 // convertToChatMessages 转换消息格式为 OpenAI 兼容格式
-func convertToChatMessages(messages []Message) []chatMessage {
+func convertToChatMessages(messages []Message, allowContentParts bool) []chatMessage {
 	result := make([]chatMessage, len(messages))
 	for i, msg := range messages {
 		cm := chatMessage{
 			Role: msg.Role,
 		}
 
-		if len(msg.Parts) > 0 {
+		if allowContentParts && len(msg.Parts) > 0 {
 			cm.Content = convertToChatContentParts(msg.Parts)
+		} else if len(msg.Parts) > 0 {
+			cm.Content = flattenContentParts(msg)
 		} else {
 			// 对于所有角色，都设置content字段（即使是空字符串）
 			// 有些API实现要求content字段必须存在
@@ -405,6 +407,56 @@ func convertToChatMessages(messages []Message) []chatMessage {
 		result[i] = cm
 	}
 	return result
+}
+
+func supportsContentParts(providerName, model string) bool {
+	providerName = strings.ToLower(strings.TrimSpace(providerName))
+	modelName := strings.ToLower(strings.TrimSpace(model))
+
+	switch providerName {
+	case "deepseek":
+		return strings.Contains(modelName, "vl")
+	case "openai":
+		return strings.Contains(modelName, "gpt-4o") ||
+			strings.Contains(modelName, "gpt-4.1") ||
+			strings.HasPrefix(modelName, "o1") ||
+			strings.HasPrefix(modelName, "o3")
+	case "anthropic":
+		return strings.Contains(modelName, "claude-3") || strings.Contains(modelName, "claude-sonnet-4") || strings.Contains(modelName, "claude-opus-4")
+	case "gemini":
+		return true
+	case "openrouter":
+		return strings.Contains(modelName, "gpt-4o") ||
+			strings.Contains(modelName, "gpt-4.1") ||
+			strings.Contains(modelName, "claude-3") ||
+			strings.Contains(modelName, "claude-sonnet-4") ||
+			strings.Contains(modelName, "gemini") ||
+			strings.Contains(modelName, "vl") ||
+			strings.Contains(modelName, "vision")
+	default:
+		return strings.Contains(modelName, "vision") || strings.Contains(modelName, "vl")
+	}
+}
+
+func flattenContentParts(msg Message) string {
+	var lines []string
+	if strings.TrimSpace(msg.Content) != "" {
+		lines = append(lines, msg.Content)
+	}
+	for _, part := range msg.Parts {
+		switch part.Type {
+		case "image_url":
+			if strings.TrimSpace(part.ImageURL) != "" {
+				lines = append(lines, "Image URL: "+strings.TrimSpace(part.ImageURL))
+			}
+		case "text":
+			text := strings.TrimSpace(part.Text)
+			if text != "" && text != strings.TrimSpace(msg.Content) {
+				lines = append(lines, text)
+			}
+		}
+	}
+	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
 func convertToChatContentParts(parts []ContentPart) []chatContentPart {
