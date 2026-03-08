@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -38,6 +40,15 @@ type Server struct {
 	skillsStateMgr    *workspaceSkills.StateManager
 	notificationStore *NotificationStore
 	wsHub             *WebSocketHub
+}
+
+type channelSenderStat struct {
+	Channel       string `json:"channel"`
+	Sender        string `json:"sender"`
+	ChatID        string `json:"chatId"`
+	LastSeen      string `json:"lastSeen"`
+	MessageCount  int    `json:"messageCount"`
+	LatestMessage string `json:"latestMessage,omitempty"`
 }
 
 type messagePayload struct {
@@ -107,6 +118,7 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	mux.HandleFunc("/api/notifications/pending", s.handleGetPendingNotifications)
 	mux.HandleFunc("/api/notifications/", s.handleMarkNotificationDelivered)
 	mux.HandleFunc("/api/providers/test", s.handleTestProvider)
+	mux.HandleFunc("/api/channels/senders", s.handleChannelSenders)
 	mux.HandleFunc("/api/channels/", s.handleTestChannel)
 	mux.HandleFunc("/api/channels/whatsapp/status", s.handleWhatsAppStatus)
 	mux.HandleFunc("/api/mcp", s.handleMCP)
@@ -130,6 +142,32 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 		return err
 	}
 	return nil
+}
+
+func (s *Server) handleChannelSenders(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	limit := 50
+	if rawLimit := strings.TrimSpace(r.URL.Query().Get("limit")); rawLimit != "" {
+		if parsed, err := strconv.Atoi(rawLimit); err == nil && parsed > 0 {
+			if parsed > 200 {
+				parsed = 200
+			}
+			limit = parsed
+		}
+	}
+
+	channel := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("channel")))
+	users, err := readChannelSenderStats(filepath.Join(config.GetLogsDir(), "session.log"), channel, limit)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{"users": users})
 }
 
 func (s *Server) Stop(ctx context.Context) error {
@@ -2056,6 +2094,98 @@ func testQQConnection(cfg config.QQConfig) error {
 	}
 
 	return nil
+}
+
+func readChannelSenderStats(logPath, filterChannel string, limit int) ([]channelSenderStat, error) {
+	file, err := os.Open(logPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []channelSenderStat{}, nil
+		}
+		return nil, err
+	}
+	defer file.Close()
+
+	seen := map[string]channelSenderStat{}
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+
+	for scanner.Scan() {
+		entry, ok := parseInboundSenderLogLine(scanner.Text())
+		if !ok || strings.TrimSpace(entry.Sender) == "" {
+			continue
+		}
+		if filterChannel != "" && entry.Channel != filterChannel {
+			continue
+		}
+
+		key := entry.Channel + "\x00" + entry.Sender
+		prev, exists := seen[key]
+		entry.MessageCount = prev.MessageCount + 1
+		if !exists || entry.LastSeen >= prev.LastSeen {
+			seen[key] = entry
+			continue
+		}
+		prev.MessageCount++
+		seen[key] = prev
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	users := make([]channelSenderStat, 0, len(seen))
+	for _, entry := range seen {
+		users = append(users, entry)
+	}
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].LastSeen > users[j].LastSeen
+	})
+	if limit > 0 && len(users) > limit {
+		users = users[:limit]
+	}
+	return users, nil
+}
+
+func parseInboundSenderLogLine(line string) (channelSenderStat, bool) {
+	const marker = " inbound channel="
+	idx := strings.Index(line, marker)
+	if idx <= 0 {
+		return channelSenderStat{}, false
+	}
+
+	timestampRaw := strings.TrimSpace(line[:idx])
+	lastSeen, err := time.Parse("2006/01/02 15:04:05.000000", timestampRaw)
+	if err != nil {
+		return channelSenderStat{}, false
+	}
+
+	rest := line[idx+len(marker):]
+	channelPart, rest, ok := strings.Cut(rest, " ")
+	if !ok || strings.TrimSpace(channelPart) == "" {
+		return channelSenderStat{}, false
+	}
+	chatPart, rest, ok := strings.Cut(rest, " ")
+	if !ok || !strings.HasPrefix(chatPart, "chat=") {
+		return channelSenderStat{}, false
+	}
+	senderPart, contentPart, ok := strings.Cut(rest, " ")
+	if !ok || !strings.HasPrefix(senderPart, "sender=") || !strings.HasPrefix(contentPart, "content=") {
+		return channelSenderStat{}, false
+	}
+
+	latestMessage := strings.TrimPrefix(contentPart, "content=")
+	if unquoted, err := strconv.Unquote(latestMessage); err == nil {
+		latestMessage = unquoted
+	}
+
+	return channelSenderStat{
+		Channel:       strings.ToLower(strings.TrimSpace(channelPart)),
+		Sender:        strings.TrimPrefix(senderPart, "sender="),
+		ChatID:        strings.TrimPrefix(chatPart, "chat="),
+		LastSeen:      lastSeen.Format(time.RFC3339Nano),
+		MessageCount:  1,
+		LatestMessage: latestMessage,
+	}, true
 }
 
 func testEmailConnection(cfg config.EmailConfig) error {

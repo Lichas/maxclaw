@@ -13,6 +13,15 @@ interface IMBotConfigProps {
 
 type ChannelKey = keyof ChannelsConfig;
 
+interface ChannelSenderStat {
+  channel: string;
+  sender: string;
+  chatId: string;
+  lastSeen: string;
+  messageCount: number;
+  latestMessage?: string;
+}
+
 export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus }: IMBotConfigProps) {
   const { t, language } = useTranslation();
   const [activeChannel, setActiveChannel] = useState<ChannelKey>('telegram');
@@ -33,6 +42,9 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
   const [whatsAppQRDataUrl, setWhatsAppQRDataUrl] = useState<string | null>(null);
   const [whatsAppStatus, setWhatsAppStatus] = useState<string>('');
   const [loadingQR, setLoadingQR] = useState(false);
+  const [senderStats, setSenderStats] = useState<ChannelSenderStat[]>([]);
+  const [senderStatsLoading, setSenderStatsLoading] = useState(false);
+  const [senderStatsError, setSenderStatsError] = useState<string | null>(null);
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Generate QR code data URL
@@ -84,7 +96,58 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
     return () => clearInterval(interval);
   }, [activeChannel, config.whatsapp.enabled, fetchWhatsAppStatus]);
 
+  const fetchSenderStats = useCallback(async (channel: ChannelKey) => {
+    try {
+      setSenderStatsLoading(true);
+      setSenderStatsError(null);
+      const response = await fetch(`http://127.0.0.1:18890/api/channels/senders?channel=${channel}&limit=20`);
+      if (!response.ok) {
+        throw new Error(`Failed to load sender log: ${response.status}`);
+      }
+      const data = await response.json() as { users?: ChannelSenderStat[] };
+      setSenderStats(Array.isArray(data.users) ? data.users : []);
+    } catch (error) {
+      setSenderStats([]);
+      setSenderStatsError(error instanceof Error ? error.message : 'Failed to load sender log');
+    } finally {
+      setSenderStatsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!config[activeChannel].enabled) {
+      setSenderStats([]);
+      setSenderStatsError(null);
+      return;
+    }
+
+    fetchSenderStats(activeChannel);
+  }, [activeChannel, config, fetchSenderStats]);
+
   const renderLabel = (zh: string, en: string) => (language === 'zh' ? zh : en);
+
+  const channelSupportsAllowFrom = (channel: ChannelKey): channel is Exclude<ChannelKey, 'websocket'> =>
+    channel !== 'websocket';
+
+  const toggleAllowedSender = (channel: ChannelKey, sender: string) => {
+    if (!channelSupportsAllowFrom(channel)) {
+      return;
+    }
+
+    const current = config[channel].allowFrom || [];
+    const next = current.includes(sender)
+      ? current.filter((entry) => entry !== sender)
+      : [...current, sender];
+    updateChannel(channel, { allowFrom: next } as Partial<ChannelsConfig[typeof channel]>);
+  };
+
+  const formatLastSeen = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US');
+  };
 
   const updateChannel = <K extends ChannelKey>(
     channel: K,
@@ -325,6 +388,88 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
                   {def.fields.map((field) =>
                     renderField(def.key, field, channelConfig[field.key as keyof typeof channelConfig])
                   )}
+                </div>
+
+                <div className="p-4 bg-secondary rounded-lg space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-medium">
+                        {renderLabel('发送人日志', 'Sender Log')}
+                      </h4>
+                      <p className="text-xs text-foreground/60 mt-1">
+                        {renderLabel(
+                          '显示当前渠道最近发过消息的人、最近一条记录和发送次数，可直接加入 allowFrom。',
+                          'Shows recent senders, latest inbound record, and message counts for this channel. You can add them to allowFrom directly.'
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => fetchSenderStats(def.key)}
+                      disabled={senderStatsLoading}
+                      className="px-3 py-1.5 bg-background border border-border rounded-lg text-xs font-medium hover:bg-background/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {senderStatsLoading
+                        ? renderLabel('刷新中...', 'Refreshing...')
+                        : renderLabel('刷新日志', 'Refresh Log')}
+                    </button>
+                  </div>
+
+                  {senderStatsError && (
+                    <p className="text-sm text-red-500">{senderStatsError}</p>
+                  )}
+
+                  {!senderStatsError && senderStats.length === 0 && !senderStatsLoading && (
+                    <p className="text-sm text-foreground/60">
+                      {renderLabel('还没有这个渠道的入站记录。', 'No inbound records for this channel yet.')}
+                    </p>
+                  )}
+
+                  <div className="space-y-2">
+                    {senderStats.map((entry) => {
+                      const inAllowList =
+                        channelSupportsAllowFrom(def.key) && (config[def.key].allowFrom || []).includes(entry.sender);
+
+                      return (
+                        <div
+                          key={`${entry.channel}:${entry.sender}`}
+                          className="flex items-start justify-between gap-3 rounded-lg border border-border bg-background px-3 py-3"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2 text-sm">
+                              <span className="font-medium break-all">{entry.sender}</span>
+                              <span className="text-xs text-foreground/50">
+                                {renderLabel('发送', 'Count')} {entry.messageCount}
+                              </span>
+                              <span className="text-xs text-foreground/50">
+                                {formatLastSeen(entry.lastSeen)}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-foreground/50 break-all">
+                              Chat ID: {entry.chatId}
+                            </p>
+                            <p className="mt-2 text-sm text-foreground/80 break-words">
+                              {entry.latestMessage || renderLabel('无内容', 'No content')}
+                            </p>
+                          </div>
+
+                          {channelSupportsAllowFrom(def.key) && (
+                            <button
+                              onClick={() => toggleAllowedSender(def.key, entry.sender)}
+                              className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                                inAllowList
+                                  ? 'bg-green-500/10 text-green-600 hover:bg-green-500/20'
+                                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                              }`}
+                            >
+                              {inAllowList
+                                ? renderLabel('已加入', 'Added')
+                                : renderLabel('加入白名单', 'Add to Allowlist')}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* WhatsApp QR Code */}

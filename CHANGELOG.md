@@ -10,6 +10,10 @@
   - 文件：`/Users/lua/.maxclaw/workspace/Openclaw_Comparison_Table.md`
   - 验证：基于2026年3月最新市场研究，覆盖安全、性能、易用性、成本四个维度
 
+- **渠道发送人日志面板**：新增基于 `session.log` 的发送人统计接口与设置页日志卡片，按当前渠道展示发送人、最近一条入站消息和累计发送次数，并支持一键加入 `allowFrom`
+  - `internal/webui/server.go`、`internal/webui/server_test.go`、`electron/src/renderer/components/IMBotConfig.tsx`、`electron/src/renderer/types/channels.ts`
+  - 验证：`go test ./internal/webui`、`cd electron && npm run build`、`make build`
+
 ### Fixed
 
 - **QQ 机器人官方接入修复**：`qq` 渠道改为参考 openclaw `@sliverp/qqbot` 的官方 Gateway WebSocket + OpenAPI 模式，支持 `AppID/AppSecret` 与 `AppID:AppSecret` 两种配置方式；入站 C2C 消息按 `author.user_openid` 路由，出站回复复用最近一条入站消息 `msg_id`，并兼容旧的数字 QQ 白名单配置，修复 “Hello QQ” 无响应
