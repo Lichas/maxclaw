@@ -50,6 +50,49 @@ func TestConvertToChatMessagesAlwaysIncludesContentField(t *testing.T) {
 	}
 }
 
+func TestConvertToChatMessagesSupportsImageParts(t *testing.T) {
+	converted := convertToChatMessages([]Message{
+		{
+			Role:    "user",
+			Content: "User sent an image.",
+			Parts: []ContentPart{
+				{Type: "text", Text: "User sent an image."},
+				{Type: "image_url", ImageURL: "https://example.com/test.png"},
+			},
+		},
+	})
+
+	body, err := json.Marshal(converted)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+
+	var decoded []map[string]interface{}
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+
+	content, ok := decoded[0]["content"].([]interface{})
+	if !ok {
+		t.Fatalf("expected content array, got %T", decoded[0]["content"])
+	}
+	if len(content) != 2 {
+		t.Fatalf("expected 2 content parts, got %d", len(content))
+	}
+
+	imagePart, ok := content[1].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected image part object, got %T", content[1])
+	}
+	if imagePart["type"] != "image_url" {
+		t.Fatalf("expected image_url part, got %v", imagePart["type"])
+	}
+	imageURL, ok := imagePart["image_url"].(map[string]interface{})
+	if !ok || imageURL["url"] != "https://example.com/test.png" {
+		t.Fatalf("unexpected image_url payload: %#v", imagePart["image_url"])
+	}
+}
+
 func TestBuildChatRequestIncludesGenerationParamsAndClampsMaxTokens(t *testing.T) {
 	req := buildChatRequest(
 		[]Message{{Role: "user", Content: "hello"}},

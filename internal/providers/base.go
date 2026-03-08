@@ -4,10 +4,17 @@ import (
 	"context"
 )
 
+type ContentPart struct {
+	Type     string `json:"type"`
+	Text     string `json:"text,omitempty"`
+	ImageURL string `json:"image_url,omitempty"`
+}
+
 // Message 消息
 type Message struct {
-	Role       string     `json:"role"`
-	Content    string     `json:"content"`
+	Role       string `json:"role"`
+	Content    string `json:"content"`
+	Parts      []ContentPart
 	ToolCallID string     `json:"tool_call_id,omitempty"`
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 }

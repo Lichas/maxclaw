@@ -368,7 +368,7 @@ func buildChatRequest(messages []Message, tools []map[string]interface{}, model 
 	return reqBody
 }
 
-// convertToChatMessages 转换消息格式为 OpenAI 兼容格式 (string content)
+// convertToChatMessages 转换消息格式为 OpenAI 兼容格式
 func convertToChatMessages(messages []Message) []chatMessage {
 	result := make([]chatMessage, len(messages))
 	for i, msg := range messages {
@@ -376,9 +376,13 @@ func convertToChatMessages(messages []Message) []chatMessage {
 			Role: msg.Role,
 		}
 
-		// 对于所有角色，都设置content字段（即使是空字符串）
-		// 有些API实现要求content字段必须存在
-		cm.Content = msg.Content
+		if len(msg.Parts) > 0 {
+			cm.Content = convertToChatContentParts(msg.Parts)
+		} else {
+			// 对于所有角色，都设置content字段（即使是空字符串）
+			// 有些API实现要求content字段必须存在
+			cm.Content = msg.Content
+		}
 
 		if msg.Role == "tool" {
 			cm.ToolCallID = msg.ToolCallID
@@ -399,6 +403,30 @@ func convertToChatMessages(messages []Message) []chatMessage {
 		}
 
 		result[i] = cm
+	}
+	return result
+}
+
+func convertToChatContentParts(parts []ContentPart) []chatContentPart {
+	result := make([]chatContentPart, 0, len(parts))
+	for _, part := range parts {
+		switch part.Type {
+		case "image_url":
+			if strings.TrimSpace(part.ImageURL) == "" {
+				continue
+			}
+			result = append(result, chatContentPart{
+				Type: "image_url",
+				ImageURL: &chatImageURL{
+					URL: part.ImageURL,
+				},
+			})
+		default:
+			result = append(result, chatContentPart{
+				Type: "text",
+				Text: part.Text,
+			})
+		}
 	}
 	return result
 }
@@ -579,9 +607,19 @@ type chatRequest struct {
 
 type chatMessage struct {
 	Role       string         `json:"role"`
-	Content    string         `json:"content"`
+	Content    interface{}    `json:"content"`
 	ToolCallID string         `json:"tool_call_id,omitempty"`
 	ToolCalls  []chatToolCall `json:"tool_calls,omitempty"`
+}
+
+type chatContentPart struct {
+	Type     string        `json:"type"`
+	Text     string        `json:"text,omitempty"`
+	ImageURL *chatImageURL `json:"image_url,omitempty"`
+}
+
+type chatImageURL struct {
+	URL string `json:"url"`
 }
 
 type chatToolCall struct {

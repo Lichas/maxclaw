@@ -94,16 +94,74 @@ func (b *ContextBuilder) BuildMessagesWithSkillRefs(
 	messages = append(messages, history...)
 
 	// 当前消息
-	content := currentMessage
-	if media != nil {
-		content = fmt.Sprintf("[Media: %s] %s", media.Type, content)
-	}
-	messages = append(messages, providers.Message{
+	content := normalizeInboundUserContent(currentMessage, media)
+	userMessage := providers.Message{
 		Role:    "user",
 		Content: content,
-	})
+	}
+	if parts := buildInboundContentParts(content, media); len(parts) > 0 {
+		userMessage.Parts = parts
+	}
+	messages = append(messages, userMessage)
 
 	return messages
+}
+
+func normalizeInboundUserContent(currentMessage string, media *bus.MediaAttachment) string {
+	content := strings.TrimSpace(currentMessage)
+	if media == nil {
+		return currentMessage
+	}
+
+	switch media.Type {
+	case "image":
+		if isMediaPlaceholder(content) {
+			return "User sent an image."
+		}
+		return currentMessage
+	case "document", "file":
+		if isMediaPlaceholder(content) {
+			return "User sent a document."
+		}
+		return currentMessage
+	default:
+		if isMediaPlaceholder(content) {
+			return fmt.Sprintf("User sent a %s attachment.", media.Type)
+		}
+		return currentMessage
+	}
+}
+
+func buildInboundContentParts(content string, media *bus.MediaAttachment) []providers.ContentPart {
+	if media == nil || media.Type != "image" || strings.TrimSpace(media.URL) == "" {
+		return nil
+	}
+
+	text := strings.TrimSpace(content)
+	if text == "" {
+		text = "User sent an image."
+	}
+
+	return []providers.ContentPart{
+		{
+			Type: "text",
+			Text: text,
+		},
+		{
+			Type:     "image_url",
+			ImageURL: strings.TrimSpace(media.URL),
+		},
+	}
+}
+
+func isMediaPlaceholder(content string) bool {
+	normalized := strings.TrimSpace(content)
+	switch normalized {
+	case "", "[Image]", "[Document]", "[Attachment]", "[Media: image] [Image]":
+		return true
+	default:
+		return false
+	}
 }
 
 // AddAssistantMessage 添加助手消息

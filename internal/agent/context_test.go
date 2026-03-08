@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Lichas/maxclaw/internal/bus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -181,4 +182,23 @@ func TestCommonSourceSearchPathsCoverStandardLocations(t *testing.T) {
 	assert.Contains(t, patterns, "/Users/*/git")
 	assert.Contains(t, patterns, "/home/*/git")
 	assert.Contains(t, patterns, "/data/*/git")
+}
+
+func TestContextBuilderBuildsImagePartsForInboundMedia(t *testing.T) {
+	workspace := t.TempDir()
+	builder := NewContextBuilder(workspace)
+
+	messages := builder.BuildMessages(nil, "[Image]", &bus.MediaAttachment{
+		Type:     "image",
+		URL:      "https://example.com/image.png",
+		MimeType: "image/png",
+	}, "qq", "openid")
+
+	require.Len(t, messages, 2)
+	assert.Equal(t, "User sent an image.", messages[1].Content)
+	require.Len(t, messages[1].Parts, 2)
+	assert.Equal(t, "text", messages[1].Parts[0].Type)
+	assert.Equal(t, "User sent an image.", messages[1].Parts[0].Text)
+	assert.Equal(t, "image_url", messages[1].Parts[1].Type)
+	assert.Equal(t, "https://example.com/image.png", messages[1].Parts[1].ImageURL)
 }
