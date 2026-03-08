@@ -60,8 +60,12 @@ export interface EmailConfig {
 
 export interface QQConfig {
   enabled: boolean;
+  appId?: string;
+  appSecret?: string;
   wsUrl?: string;
   accessToken?: string;
+  listenAddr?: string;
+  webhookPath?: string;
   allowFrom: string[];
 }
 
@@ -398,29 +402,60 @@ export const CHANNEL_DEFINITIONS: ChannelInfo[] = [
   },
   {
     key: 'qq',
-    name: 'QQ (OneBot)',
-    nameZh: 'QQ（OneBot）',
-    description: 'QQ via OneBot WebSocket',
-    descriptionZh: '通过 OneBot WebSocket 连接 QQ',
+    name: 'QQ Bot',
+    nameZh: 'QQ 机器人',
+    description: 'Tencent official QQBot via webhook + OpenAPI',
+    descriptionZh: '通过腾讯官方 QQBot webhook + OpenAPI 接入',
     icon: 'qq',
-    docsUrl: 'https://github.com/Mrs4s/go-cqhttp',
+    docsUrl: 'https://q.qq.com/qqbot',
     fields: [
       {
-        key: 'wsUrl',
-        label: 'WebSocket URL',
-        labelZh: 'WebSocket 地址',
+        key: 'appId',
+        label: 'App ID',
+        labelZh: 'AppID',
         type: 'text',
-        placeholder: 'ws://localhost:3002',
-        placeholderZh: 'ws://localhost:3002',
-        hint: 'go-cqhttp or Lagrange.Core WebSocket address',
-        hintZh: 'go-cqhttp 或 Lagrange.Core 的 WebSocket 地址',
+        placeholder: '1903066401',
+        placeholderZh: '1903066401',
+        hint: 'Tencent QQBot AppID',
+        hintZh: '腾讯 QQBot 的 AppID',
       },
       {
         key: 'accessToken',
-        label: 'Access Token',
-        labelZh: 'Access Token',
+        label: 'Token / Secret',
+        labelZh: 'Token / Secret',
         type: 'password',
         secret: true,
+        placeholder: 'appid:appsecret',
+        placeholderZh: 'appid:appsecret',
+        hint: 'Preferred: appid:appsecret. If App ID is already filled, you can also enter only AppSecret here.',
+        hintZh: '推荐填 appid:appsecret；如果上面已填 AppID，这里也可以只填 AppSecret。',
+      },
+      {
+        key: 'appSecret',
+        label: 'App Secret',
+        labelZh: 'AppSecret',
+        type: 'password',
+        secret: true,
+      },
+      {
+        key: 'listenAddr',
+        label: 'Listen Address',
+        labelZh: '监听地址',
+        type: 'text',
+        placeholder: '0.0.0.0:18793',
+        placeholderZh: '0.0.0.0:18793',
+        hint: 'Local webhook listener address',
+        hintZh: '本地 webhook 监听地址',
+      },
+      {
+        key: 'webhookPath',
+        label: 'Webhook Path',
+        labelZh: 'Webhook 路径',
+        type: 'text',
+        placeholder: '/qq/events',
+        placeholderZh: '/qq/events',
+        hint: 'Configure the same callback path in Tencent QQBot console',
+        hintZh: '腾讯 QQBot 控制台里的回调路径要和这里保持一致',
       },
       {
         key: 'allowFrom',

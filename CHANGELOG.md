@@ -2,7 +2,19 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Openclaw竞品分析报告**：完成maxclaw与三个主要竞争对手（NanoClaw、IronClaw、SuperAGI）的全面对比分析，包含定位、核心能力、优劣势、成本、风险和推荐决策
+  - 文件：`/Users/lua/.maxclaw/workspace/Openclaw_Competitive_Analysis_2026.md`
+  - 文件：`/Users/lua/.maxclaw/workspace/Openclaw_Decision_Summary.md`
+  - 文件：`/Users/lua/.maxclaw/workspace/Openclaw_Comparison_Table.md`
+  - 验证：基于2026年3月最新市场研究，覆盖安全、性能、易用性、成本四个维度
+
 ### Fixed
+
+- **QQ 机器人官方接入修复**：`qq` 渠道切换为腾讯官方 QQBot 链路，支持 `AppID/AppSecret` 与 `AppID:AppSecret` 两种配置方式，收消息走 webhook、回消息走官方 OpenAPI，并使用最近一条入站消息 `msg_id` 做被动回复，修复 “Hello QQ” 无响应
+  - `internal/channels/qq.go`、`internal/channels/qq_test.go`、`internal/channels/channels_test.go`、`internal/config/schema.go`、`internal/cli/gateway.go`、`internal/webui/server.go`、`electron/src/renderer/types/channels.ts`、`electron/src/renderer/views/SettingsView.tsx`、`ARCHITECTURE.md`、`go.mod`、`go.sum`
+  - 验证：`go test ./internal/channels ./internal/webui`、`cd electron && npm run build`、`make build`
 
 - **聊天页 Terminal 按钮点击修复**：提升聊天线程头部与 Terminal 操作区层级，避免顶部窗口拖拽条覆盖按钮命中区域，导致聊天过程中点击 `Terminal` 无响应
   - `electron/src/renderer/views/ChatView.tsx`

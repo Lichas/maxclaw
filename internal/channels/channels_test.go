@@ -263,15 +263,15 @@ func TestEmailChannelIsEnabled(t *testing.T) {
 }
 
 func TestQQChannelName(t *testing.T) {
-	ch := NewQQChannel(&QQConfig{Enabled: true, WSURL: "ws://localhost:3002"})
+	ch := NewQQChannel(&QQConfig{Enabled: true, AppID: "1903066401", AppSecret: "secret"})
 	assert.Equal(t, "qq", ch.Name())
 }
 
 func TestQQChannelIsEnabled(t *testing.T) {
-	ch := NewQQChannel(&QQConfig{Enabled: true, WSURL: "ws://localhost:3002"})
+	ch := NewQQChannel(&QQConfig{Enabled: true, AppID: "1903066401", AppSecret: "secret"})
 	assert.True(t, ch.IsEnabled())
 
-	disabled := NewQQChannel(&QQConfig{Enabled: true, WSURL: ""})
+	disabled := NewQQChannel(&QQConfig{Enabled: true, AppID: "1903066401"})
 	assert.False(t, disabled.IsEnabled())
 }
 

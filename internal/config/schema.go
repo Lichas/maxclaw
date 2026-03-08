@@ -98,11 +98,15 @@ type EmailConfig struct {
 	AllowFrom           []string `json:"allowFrom" mapstructure:"allowFrom"`
 }
 
-// QQConfig QQ 私聊配置（OneBot WebSocket）
+// QQConfig QQ 机器人配置（腾讯官方 QQBot）
 type QQConfig struct {
 	Enabled     bool     `json:"enabled" mapstructure:"enabled"`
+	AppID       string   `json:"appId,omitempty" mapstructure:"appId"`
+	AppSecret   string   `json:"appSecret,omitempty" mapstructure:"appSecret"`
 	WSURL       string   `json:"wsUrl,omitempty" mapstructure:"wsUrl"`
 	AccessToken string   `json:"accessToken,omitempty" mapstructure:"accessToken"`
+	ListenAddr  string   `json:"listenAddr,omitempty" mapstructure:"listenAddr"`
+	WebhookPath string   `json:"webhookPath,omitempty" mapstructure:"webhookPath"`
 	AllowFrom   []string `json:"allowFrom" mapstructure:"allowFrom"`
 }
 
@@ -320,9 +324,13 @@ func DefaultConfig() *Config {
 				AllowFrom:           []string{},
 			},
 			QQ: QQConfig{
-				Enabled:   false,
-				WSURL:     "ws://localhost:3002",
-				AllowFrom: []string{},
+				Enabled:     false,
+				AppID:       "",
+				AppSecret:   "",
+				AccessToken: "",
+				ListenAddr:  "0.0.0.0:18793",
+				WebhookPath: "/qq/events",
+				AllowFrom:   []string{},
 			},
 			Feishu: FeishuConfig{
 				Enabled:     false,

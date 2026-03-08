@@ -201,12 +201,16 @@ var gatewayCmd = &cobra.Command{
 			channelRegistry.Register(emailChannel)
 		}
 
-		// 注册 QQ（OneBot 私聊）
+		// 注册 QQ（腾讯官方 QQBot）
 		if cfg.Channels.QQ.Enabled {
 			qqChannel := channels.NewQQChannel(&channels.QQConfig{
 				Enabled:     cfg.Channels.QQ.Enabled,
-				WSURL:       cfg.Channels.QQ.WSURL,
+				AppID:       cfg.Channels.QQ.AppID,
+				AppSecret:   cfg.Channels.QQ.AppSecret,
 				AccessToken: cfg.Channels.QQ.AccessToken,
+				ListenAddr:  cfg.Channels.QQ.ListenAddr,
+				WebhookPath: cfg.Channels.QQ.WebhookPath,
+				WSURL:       cfg.Channels.QQ.WSURL,
 				AllowFrom:   cfg.Channels.QQ.AllowFrom,
 			})
 			qqChannel.SetMessageHandler(func(msg *channels.Message) {

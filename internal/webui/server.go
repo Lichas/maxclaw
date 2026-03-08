@@ -24,6 +24,7 @@ import (
 	"github.com/Lichas/maxclaw/internal/session"
 	workspaceSkills "github.com/Lichas/maxclaw/internal/skills"
 	"github.com/Lichas/maxclaw/pkg/tools"
+	qqtoken "github.com/tencent-connect/botgo/token"
 )
 
 type Server struct {
@@ -1465,8 +1466,8 @@ func (s *Server) handleCronDelete(w http.ResponseWriter, r *http.Request, jobID 
 
 func (s *Server) handleCronUpdate(w http.ResponseWriter, r *http.Request, jobID string) {
 	var req struct {
-		Title         string `json:"title"`
-		Prompt        string `json:"prompt"`
+		Title         string   `json:"title"`
+		Prompt        string   `json:"prompt"`
 		Cron          string   `json:"cron,omitempty"`
 		Every         string   `json:"every,omitempty"`
 		At            string   `json:"at,omitempty"`
@@ -2024,21 +2025,18 @@ func testFeishuConnection(cfg config.FeishuConfig) error {
 }
 
 func testQQConnection(cfg config.QQConfig) error {
-	if cfg.WSURL == "" {
-		return errors.New("websocket URL is required")
+	appID, appSecret := channels.ResolveQQBotCredentials(cfg.AppID, cfg.AppSecret, cfg.AccessToken)
+	if appID == "" || appSecret == "" {
+		return errors.New("app ID and app secret are required, or set access token to appid:appsecret")
 	}
 
-	// Similar to WhatsApp, just check if the WebSocket endpoint is reachable
-	client := &http.Client{Timeout: 5 * time.Second}
-	testURL := strings.Replace(cfg.WSURL, "ws://", "http://", 1)
-	testURL = strings.Replace(testURL, "wss://", "https://", 1)
-
-	resp, err := client.Get(testURL)
-	if err != nil {
-		// WebSocket upgrade expected, just check connectivity
-		return nil
+	tokenSource := qqtoken.NewQQBotTokenSource(&qqtoken.QQBotCredentials{
+		AppID:     appID,
+		AppSecret: appSecret,
+	})
+	if _, err := tokenSource.Token(); err != nil {
+		return fmt.Errorf("qq bot auth failed: %w", err)
 	}
-	defer resp.Body.Close()
 
 	return nil
 }
