@@ -47,6 +47,10 @@ func (p *testProvider) GetDefaultModel() string {
 	return "test-model"
 }
 
+func (p *testProvider) SupportsImageInput(model string) bool {
+	return false
+}
+
 type staticProvider struct{}
 
 func (p *staticProvider) Chat(ctx context.Context, messages []providers.Message, defs []map[string]interface{}, model string) (*providers.Response, error) {
@@ -61,6 +65,10 @@ func (p *staticProvider) ChatStream(ctx context.Context, messages []providers.Me
 
 func (p *staticProvider) GetDefaultModel() string {
 	return "test-model"
+}
+
+func (p *staticProvider) SupportsImageInput(model string) bool {
+	return false
 }
 
 type endlessToolProvider struct{}
@@ -79,6 +87,10 @@ func (p *endlessToolProvider) ChatStream(ctx context.Context, messages []provide
 
 func (p *endlessToolProvider) GetDefaultModel() string {
 	return "test-model"
+}
+
+func (p *endlessToolProvider) SupportsImageInput(model string) bool {
+	return false
 }
 
 type streamEventProvider struct {
@@ -109,6 +121,10 @@ func (p *streamEventProvider) GetDefaultModel() string {
 	return "test-model"
 }
 
+func (p *streamEventProvider) SupportsImageInput(model string) bool {
+	return false
+}
+
 type captureSkillsProvider struct {
 	systemPrompt string
 }
@@ -130,6 +146,10 @@ func (p *captureSkillsProvider) GetDefaultModel() string {
 	return "test-model"
 }
 
+func (p *captureSkillsProvider) SupportsImageInput(model string) bool {
+	return false
+}
+
 type panicProvider struct{}
 
 func (p *panicProvider) Chat(ctx context.Context, messages []providers.Message, defs []map[string]interface{}, model string) (*providers.Response, error) {
@@ -142,6 +162,10 @@ func (p *panicProvider) ChatStream(ctx context.Context, messages []providers.Mes
 
 func (p *panicProvider) GetDefaultModel() string {
 	return "glm-5"
+}
+
+func (p *panicProvider) SupportsImageInput(model string) bool {
+	return true
 }
 
 func TestAgentLoopProcessMessageInjectsRuntimeContextForCron(t *testing.T) {
@@ -242,10 +266,10 @@ func TestAgentLoopProcessDirectUsesProvidedSessionKey(t *testing.T) {
 	assert.Len(t, defaultSession.Messages, 0)
 }
 
-func TestAgentLoopShortCircuitsPureImageForUnsupportedModel(t *testing.T) {
+func TestAgentLoopProcessesPureImageWithoutAgentSideShortCircuit(t *testing.T) {
 	workspace := t.TempDir()
 	messageBus := bus.NewMessageBus(10)
-	provider := &panicProvider{}
+	provider := &staticProvider{}
 	cronSvc := cron.NewService(filepath.Join(workspace, ".cron", "jobs.json"))
 
 	loop := NewAgentLoop(
@@ -271,8 +295,7 @@ func TestAgentLoopShortCircuitsPureImageForUnsupportedModel(t *testing.T) {
 	resp, err := loop.ProcessMessage(context.Background(), msg)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
-	assert.Contains(t, resp.Content, "不支持直接识图")
-	assert.Contains(t, resp.Content, "glm-5")
+	assert.Equal(t, "ok", resp.Content)
 }
 
 func TestAgentLoopProcessMessageSlashHelp(t *testing.T) {

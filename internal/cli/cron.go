@@ -316,6 +316,7 @@ func executeCronJob(cfg *config.Config, apiKey, apiBase string, cronService *cro
 		cfg.Agents.Defaults.Model,
 		cfg.Agents.Defaults.MaxTokens,
 		cfg.Agents.Defaults.Temperature,
+		cfg.SupportsImageInput,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to create provider: %w", err)

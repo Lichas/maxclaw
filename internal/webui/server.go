@@ -1250,6 +1250,7 @@ func (s *Server) applyRuntimeModelConfig(cfg *config.Config) error {
 		model,
 		cfg.Agents.Defaults.MaxTokens,
 		cfg.Agents.Defaults.Temperature,
+		cfg.SupportsImageInput,
 	)
 	if err != nil {
 		return err

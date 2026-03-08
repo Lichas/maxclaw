@@ -377,6 +377,7 @@ func buildGatewayProvider(cfg *config.Config, apiKey, apiBase string) (providers
 		cfg.Agents.Defaults.Model,
 		cfg.Agents.Defaults.MaxTokens,
 		cfg.Agents.Defaults.Temperature,
+		cfg.SupportsImageInput,
 	)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create provider: %w", err)
@@ -406,6 +407,10 @@ func (p *unavailableProvider) GetDefaultModel() string {
 		return p.model
 	}
 	return "gpt-4"
+}
+
+func (p *unavailableProvider) SupportsImageInput(model string) bool {
+	return false
 }
 
 // handleOutboundMessages 处理出站消息

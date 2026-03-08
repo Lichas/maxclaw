@@ -16,10 +16,11 @@ type ProviderConfig struct {
 }
 
 type ProviderModelConfig struct {
-	ID        string `json:"id" mapstructure:"id"`
-	Name      string `json:"name,omitempty" mapstructure:"name"`
-	MaxTokens int    `json:"maxTokens,omitempty" mapstructure:"maxTokens"`
-	Enabled   bool   `json:"enabled" mapstructure:"enabled"`
+	ID                 string `json:"id" mapstructure:"id"`
+	Name               string `json:"name,omitempty" mapstructure:"name"`
+	MaxTokens          int    `json:"maxTokens,omitempty" mapstructure:"maxTokens"`
+	Enabled            bool   `json:"enabled" mapstructure:"enabled"`
+	SupportsImageInput *bool  `json:"supportsImageInput,omitempty" mapstructure:"supportsImageInput"`
 }
 
 // ChannelsConfig 聊天频道配置
@@ -473,4 +474,72 @@ func looksLikeRawModelID(model string) bool {
 	}
 
 	return true
+}
+
+// SupportsImageInput reports whether the target model should receive multimodal image parts.
+// Explicit per-model config wins; otherwise we fall back to provider heuristics.
+func (c *Config) SupportsImageInput(model string) bool {
+	if model == "" {
+		model = c.Agents.Defaults.Model
+	}
+	if model == "" {
+		return false
+	}
+
+	if configured, ok := c.lookupProviderModelConfig(model); ok && configured.SupportsImageInput != nil {
+		return *configured.SupportsImageInput
+	}
+
+	return providers.SupportsImageInput(providers.DetectProviderName(model), model)
+}
+
+func (c *Config) lookupProviderModelConfig(model string) (*ProviderModelConfig, bool) {
+	inputAliases := modelAliases(model)
+	for _, providerCfg := range c.providerConfigMap() {
+		for i := range providerCfg.Models {
+			cfg := &providerCfg.Models[i]
+			if aliasesOverlap(inputAliases, modelAliases(cfg.ID)) {
+				return cfg, true
+			}
+		}
+	}
+	return nil, false
+}
+
+func modelAliases(model string) map[string]struct{} {
+	aliases := make(map[string]struct{})
+	normalized := strings.ToLower(strings.TrimSpace(model))
+	if normalized == "" {
+		return aliases
+	}
+
+	aliases[normalized] = struct{}{}
+	if strings.Contains(normalized, "/") {
+		parts := strings.SplitN(normalized, "/", 2)
+		if len(parts) == 2 && parts[1] != "" {
+			aliases[parts[1]] = struct{}{}
+		}
+	}
+
+	if providerName := providers.DetectProviderName(normalized); providerName != "" && providerName != "unknown" {
+		aliases[providerName+"/"+normalized] = struct{}{}
+		prefix := providerName + "/"
+		if strings.HasPrefix(normalized, prefix) {
+			trimmed := strings.TrimPrefix(normalized, prefix)
+			if trimmed != "" {
+				aliases[trimmed] = struct{}{}
+			}
+		}
+	}
+
+	return aliases
+}
+
+func aliasesOverlap(left, right map[string]struct{}) bool {
+	for alias := range left {
+		if _, ok := right[alias]; ok {
+			return true
+		}
+	}
+	return false
 }

@@ -477,16 +477,6 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 
 	// 构建消息
 	selectedSkillRefs := normalizeSkillRefs(msg.SelectedSkills)
-	_, activeModel, _ := a.runtimeSnapshot()
-	if shouldShortCircuitUnsupportedImage(msg, activeModel) {
-		finalContent := fmt.Sprintf("当前模型 `%s` 不支持直接识图，所以这张 QQ 图片我先不走自动分析。\n\n可选做法：\n1. 切换到支持视觉的模型\n2. 发图时附一句文字说明你想让我做什么\n3. 让我先按 OCR/截图方式继续尝试", activeModel)
-		if lg := logging.Get(); lg != nil && lg.Session != nil {
-			lg.Session.Printf("outbound channel=%s chat=%s content=%q", msg.Channel, msg.ChatID, logging.Truncate(finalContent, 400))
-		}
-		sess.AddMessage("assistant", finalContent)
-		_ = a.sessions.Save(sess)
-		return bus.NewOutboundMessage(msg.Channel, msg.ChatID, finalContent), nil
-	}
 
 	// Build messages with plan context if exists
 	var messages []providers.Message
@@ -751,17 +741,6 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 	a.sessions.Save(sess)
 
 	return bus.NewOutboundMessage(msg.Channel, msg.ChatID, finalContent), nil
-}
-
-func shouldShortCircuitUnsupportedImage(msg *bus.InboundMessage, model string) bool {
-	if msg == nil || msg.Media == nil || msg.Media.Type != "image" {
-		return false
-	}
-	content := strings.TrimSpace(msg.Content)
-	if content != "" && content != "[Image]" && content != "[Media: image] [Image]" {
-		return false
-	}
-	return !providers.SupportsImageInput(providers.DetectProviderName(model), model)
 }
 
 // summarizeTimeline extracts a summary from timeline entries

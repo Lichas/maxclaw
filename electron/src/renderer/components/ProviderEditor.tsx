@@ -46,7 +46,7 @@ export function ProviderEditor({ provider, onSave, onTest, onCancel }: ProviderE
     });
   };
 
-  const handleModelChange = (index: number, field: keyof ModelConfig, value: string | boolean) => {
+  const handleModelChange = (index: number, field: keyof ModelConfig, value: string | boolean | number | undefined) => {
     const newModels = [...config.models];
     newModels[index] = { ...newModels[index], [field]: value };
     setConfig({ ...config, models: newModels });
@@ -127,6 +127,15 @@ export function ProviderEditor({ provider, onSave, onTest, onCancel }: ProviderE
                     className="h-4 w-4"
                   />
                   Enable
+                </label>
+                <label className="flex items-center gap-1.5 whitespace-nowrap text-sm">
+                  <input
+                    type="checkbox"
+                    checked={model.supportsImageInput === true}
+                    onChange={(e) => handleModelChange(index, 'supportsImageInput', e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Multimodal
                 </label>
                 <button
                   onClick={() => handleRemoveModel(index)}

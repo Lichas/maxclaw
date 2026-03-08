@@ -322,7 +322,7 @@ export function SettingsView() {
       }
 
       // Convert to gateway config format
-      const gatewayProviders: Record<string, { apiKey: string; apiBase?: string; apiFormat?: string; models?: Array<{ id: string; name?: string; enabled: boolean; maxTokens?: number }> }> = {};
+      const gatewayProviders: Record<string, { apiKey: string; apiBase?: string; apiFormat?: string; models?: Array<{ id: string; name?: string; enabled: boolean; maxTokens?: number; supportsImageInput?: boolean }> }> = {};
       newProviders.forEach((p) => {
         const key = p.name.toLowerCase().replace(/\s+/g, '');
         gatewayProviders[key] = {
@@ -335,6 +335,7 @@ export function SettingsView() {
               name: model.name.trim(),
               enabled: model.enabled !== false,
               maxTokens: model.maxTokens,
+              supportsImageInput: model.supportsImageInput,
             }))
             .filter((model) => model.id),
         };
@@ -387,7 +388,7 @@ export function SettingsView() {
     setProviders(newProviders);
 
     // Update Gateway config
-    const gatewayProviders: Record<string, { apiKey: string; apiBase?: string; apiFormat?: string; models?: Array<{ id: string; name?: string; enabled: boolean; maxTokens?: number }> }> = {};
+    const gatewayProviders: Record<string, { apiKey: string; apiBase?: string; apiFormat?: string; models?: Array<{ id: string; name?: string; enabled: boolean; maxTokens?: number; supportsImageInput?: boolean }> }> = {};
     newProviders.forEach((p) => {
       const key = p.name.toLowerCase().replace(/\s+/g, '');
       gatewayProviders[key] = {
@@ -400,6 +401,7 @@ export function SettingsView() {
             name: model.name.trim(),
             enabled: model.enabled !== false,
             maxTokens: model.maxTokens,
+            supportsImageInput: model.supportsImageInput,
           }))
           .filter((model) => model.id),
       };

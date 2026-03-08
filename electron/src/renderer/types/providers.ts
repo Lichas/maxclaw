@@ -3,6 +3,7 @@ export interface ModelConfig {
   name: string;
   maxTokens?: number;
   enabled: boolean;
+  supportsImageInput?: boolean;
 }
 
 export interface ProviderConfig {
@@ -24,7 +25,7 @@ export const PRESET_PROVIDERS: Omit<ProviderConfig, 'id' | 'apiKey'>[] = [
     apiFormat: 'openai',
     models: [
       { id: 'openrouter/auto', name: 'OpenRouter Auto', enabled: true },
-      { id: 'openrouter/anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5', enabled: true },
+      { id: 'openrouter/anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5', enabled: true, supportsImageInput: true },
     ],
     enabled: false,
   },
@@ -34,8 +35,8 @@ export const PRESET_PROVIDERS: Omit<ProviderConfig, 'id' | 'apiKey'>[] = [
     baseURL: 'https://api.deepseek.com/v1',
     apiFormat: 'openai',
     models: [
-      { id: 'deepseek-chat', name: 'DeepSeek Chat', enabled: true },
-      { id: 'deepseek-coder', name: 'DeepSeek Coder', enabled: true },
+      { id: 'deepseek-chat', name: 'DeepSeek Chat', enabled: true, supportsImageInput: false },
+      { id: 'deepseek-coder', name: 'DeepSeek Coder', enabled: true, supportsImageInput: false },
     ],
     enabled: false,
   },
@@ -45,9 +46,9 @@ export const PRESET_PROVIDERS: Omit<ProviderConfig, 'id' | 'apiKey'>[] = [
     baseURL: 'https://api.openai.com/v1',
     apiFormat: 'openai',
     models: [
-      { id: 'gpt-5.1', name: 'GPT-5.1', enabled: true },
-      { id: 'gpt-5-mini', name: 'GPT-5 mini', enabled: true },
-      { id: 'gpt-4.1-mini', name: 'GPT-4.1 mini', enabled: true },
+      { id: 'gpt-5.1', name: 'GPT-5.1', enabled: true, supportsImageInput: true },
+      { id: 'gpt-5-mini', name: 'GPT-5 mini', enabled: true, supportsImageInput: true },
+      { id: 'gpt-4.1-mini', name: 'GPT-4.1 mini', enabled: true, supportsImageInput: true },
     ],
     enabled: false,
   },
@@ -57,8 +58,8 @@ export const PRESET_PROVIDERS: Omit<ProviderConfig, 'id' | 'apiKey'>[] = [
     baseURL: 'https://api.anthropic.com',
     apiFormat: 'anthropic',
     models: [
-      { id: 'claude-opus-4-1', name: 'Claude Opus 4.1', enabled: true },
-      { id: 'claude-sonnet-4', name: 'Claude Sonnet 4', enabled: true },
+      { id: 'claude-opus-4-1', name: 'Claude Opus 4.1', enabled: true, supportsImageInput: true },
+      { id: 'claude-sonnet-4', name: 'Claude Sonnet 4', enabled: true, supportsImageInput: true },
     ],
     enabled: false,
   },
@@ -68,7 +69,7 @@ export const PRESET_PROVIDERS: Omit<ProviderConfig, 'id' | 'apiKey'>[] = [
     baseURL: 'https://open.bigmodel.cn/api/coding/paas/v4',
     apiFormat: 'openai',
     models: [
-      { id: 'glm-5', name: 'GLM-5', enabled: true },
+      { id: 'glm-5', name: 'GLM-5', enabled: true, supportsImageInput: true },
       { id: 'glm-4.7', name: 'GLM-4.7', enabled: true },
     ],
     enabled: false,
@@ -101,8 +102,8 @@ export const PRESET_PROVIDERS: Omit<ProviderConfig, 'id' | 'apiKey'>[] = [
     baseURL: 'https://generativelanguage.googleapis.com/v1beta',
     apiFormat: 'openai',
     models: [
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', enabled: true },
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', enabled: true },
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', enabled: true, supportsImageInput: true },
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', enabled: true, supportsImageInput: true },
     ],
     enabled: false,
   },

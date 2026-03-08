@@ -140,7 +140,7 @@ flowchart LR
 - **渠道无模型知识**：渠道只识别媒体，不知道模型是否支持视觉
 - **Provider 无渠道知识**：Provider 只消费标准化后的本地媒体资产
 - **优先本地缓存**：对带时效的下载 URL，入站即缓存，避免后续过期
-- **显式能力判断**：模型是否支持图片输入由 `providers.SupportsImageInput` 决定
+- **显式能力判断**：模型是否支持图片输入优先读取配置中的 `providers.<name>.models[].supportsImageInput`，只在未声明时才回退到 `providers.SupportsImageInput` 启发式
 - **可插拔 resolver**：新增渠道只需注册新的 resolver，不改 Agent 主流程
 - **渐进降级**：视觉模型走图片输入；非视觉模型走文本降级；必要时可增加 OCR 中间层，但不由 LLM 自行触发
 
@@ -148,8 +148,8 @@ flowchart LR
 
 - 接入 QQ / Telegram 入站图片缓存
 - OpenAI 兼容 Provider 将本地图片编码为 `data:` URL
+- 设置页可为每个模型显式声明 `Multimodal`
 - 非视觉模型自动降级为文本，不向模型注入图片 part
-- 纯图片消息在非视觉模型下直接快速回复，不再触发重工具链
 - **Web UI (`webui/` / `electron/`)**：
   - **Web 版本**：前端打包后由 Gateway 静态托管（同端口 18890）
   - **Electron 版本**：独立桌面应用，通过 HTTP API + WebSocket 与 Gateway 通信

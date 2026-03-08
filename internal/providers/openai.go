@@ -25,17 +25,18 @@ const debug = false
 // OpenAIProvider OpenAI 提供商实现
 // 使用 OpenAI 兼容 API (string content) 以支持 DeepSeek 等提供商
 type OpenAIProvider struct {
-	apiKey       string
-	apiBase      string
-	defaultModel string
-	maxTokens    int
-	temperature  float64
-	httpClient   *http.Client
-	streamClient *http.Client
+	apiKey             string
+	apiBase            string
+	defaultModel       string
+	maxTokens          int
+	temperature        float64
+	httpClient         *http.Client
+	streamClient       *http.Client
+	supportsImageInput func(model string) bool
 }
 
 // NewOpenAIProvider 创建 OpenAI 提供商
-func NewOpenAIProvider(apiKey, apiBase, defaultModel string, maxTokens int, temperature float64) (*OpenAIProvider, error) {
+func NewOpenAIProvider(apiKey, apiBase, defaultModel string, maxTokens int, temperature float64, supportsImageInput func(model string) bool) (*OpenAIProvider, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("API key is required")
 	}
@@ -62,7 +63,8 @@ func NewOpenAIProvider(apiKey, apiBase, defaultModel string, maxTokens int, temp
 		httpClient: &http.Client{
 			Timeout: 60 * time.Second,
 		},
-		streamClient: &http.Client{},
+		streamClient:       &http.Client{},
+		supportsImageInput: supportsImageInput,
 	}, nil
 }
 
@@ -72,7 +74,7 @@ func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, tools []m
 		model = p.defaultModel
 	}
 
-	reqBody := buildChatRequest(messages, tools, model, p.detectProvider(model), false, p.maxTokens, p.temperature)
+	reqBody := buildChatRequest(messages, tools, model, p.SupportsImageInput(model), false, p.maxTokens, p.temperature)
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode request: %w", err)
@@ -125,13 +127,23 @@ func (p *OpenAIProvider) GetDefaultModel() string {
 	return p.defaultModel
 }
 
+func (p *OpenAIProvider) SupportsImageInput(model string) bool {
+	if model == "" {
+		model = p.defaultModel
+	}
+	if p.supportsImageInput != nil {
+		return p.supportsImageInput(model)
+	}
+	return SupportsImageInput(p.detectProvider(model), model)
+}
+
 // ChatStream 流式聊天请求
 func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, tools []map[string]interface{}, model string, handler StreamHandler) error {
 	if model == "" {
 		model = p.defaultModel
 	}
 
-	reqBody := buildChatRequest(messages, tools, model, p.detectProvider(model), true, p.maxTokens, p.temperature)
+	reqBody := buildChatRequest(messages, tools, model, p.SupportsImageInput(model), true, p.maxTokens, p.temperature)
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		return fmt.Errorf("failed to encode request: %w", err)
@@ -353,14 +365,14 @@ func isCompleteJSON(s string) bool {
 }
 
 // buildChatRequest 构造请求体
-func buildChatRequest(messages []Message, tools []map[string]interface{}, model string, providerName string, stream bool, maxTokens int, temperature float64) chatRequest {
+func buildChatRequest(messages []Message, tools []map[string]interface{}, model string, allowImageInput bool, stream bool, maxTokens int, temperature float64) chatRequest {
 	if maxTokens <= 0 {
 		maxTokens = 1
 	}
 
 	reqBody := chatRequest{
 		Model:       model,
-		Messages:    convertToChatMessages(messages, SupportsImageInput(providerName, model)),
+		Messages:    convertToChatMessages(messages, allowImageInput),
 		Stream:      stream,
 		MaxTokens:   maxTokens,
 		Temperature: temperature,

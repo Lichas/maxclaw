@@ -138,7 +138,7 @@ func TestBuildChatRequestIncludesGenerationParamsAndClampsMaxTokens(t *testing.T
 		[]Message{{Role: "user", Content: "hello"}},
 		nil,
 		"gpt-4o-mini",
-		"openai",
+		true,
 		false,
 		0,
 		0.2,
@@ -206,5 +206,24 @@ func TestSupportsImageInputDisablesDeepSeekChat(t *testing.T) {
 	}
 	if !SupportsImageInput("deepseek", "deepseek-vl") {
 		t.Fatal("expected deepseek-vl to allow image content parts")
+	}
+	if !SupportsImageInput("zhipu", "glm-5") {
+		t.Fatal("expected glm-5 to allow image content parts")
+	}
+}
+
+func TestOpenAIProviderSupportsImageInputUsesResolver(t *testing.T) {
+	provider, err := NewOpenAIProvider("sk-test", "https://example.com/v1", "glm-5", 1024, 0.1, func(model string) bool {
+		return strings.EqualFold(model, "glm-5")
+	})
+	if err != nil {
+		t.Fatalf("NewOpenAIProvider failed: %v", err)
+	}
+
+	if !provider.SupportsImageInput("glm-5") {
+		t.Fatal("expected resolver to enable image input for glm-5")
+	}
+	if provider.SupportsImageInput("deepseek-chat") {
+		t.Fatal("expected resolver to keep unrelated models disabled")
 	}
 }

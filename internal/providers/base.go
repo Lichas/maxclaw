@@ -56,4 +56,5 @@ type LLMProvider interface {
 	Chat(ctx context.Context, messages []Message, tools []map[string]interface{}, model string) (*Response, error)
 	ChatStream(ctx context.Context, messages []Message, tools []map[string]interface{}, model string, handler StreamHandler) error
 	GetDefaultModel() string
+	SupportsImageInput(model string) bool
 }
