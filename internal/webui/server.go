@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -2034,8 +2035,24 @@ func testQQConnection(cfg config.QQConfig) error {
 		AppID:     appID,
 		AppSecret: appSecret,
 	})
-	if _, err := tokenSource.Token(); err != nil {
+	token, err := tokenSource.Token()
+	if err != nil {
 		return fmt.Errorf("qq bot auth failed: %w", err)
+	}
+	req, err := http.NewRequest(http.MethodGet, "https://api.sgroup.qq.com/gateway", nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "QQBot "+token.AccessToken)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("qq gateway probe failed: status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	return nil

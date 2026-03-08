@@ -61,7 +61,7 @@ export function SettingsView() {
     websocket: { enabled: false, host: '0.0.0.0', port: 18791, path: '/ws', allowOrigins: [] },
     slack: { enabled: false, botToken: '', appToken: '', allowFrom: [] },
     email: { enabled: false, consentGranted: false, allowFrom: [], imapPort: 993, smtpPort: 587, pollIntervalSeconds: 30 },
-    qq: { enabled: false, appId: '', appSecret: '', accessToken: '', listenAddr: '0.0.0.0:18793', webhookPath: '/qq/events', allowFrom: [] },
+    qq: { enabled: false, appId: '', appSecret: '', accessToken: '', allowFrom: [] },
     feishu: { enabled: false, appId: '', appSecret: '', verificationToken: '', listenAddr: '0.0.0.0:18792', webhookPath: '/feishu/events', allowFrom: [] },
   });
 

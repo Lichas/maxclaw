@@ -65,7 +65,7 @@ vercel --prod --yes
   - Slack（Socket Mode）
   - Email（IMAP/SMTP）
   - Feishu/Lark（Webhook + OpenAPI）
-  - QQ（腾讯官方 QQBot，Webhook + OpenAPI）
+  - QQ（腾讯官方 QQBot，Gateway WebSocket + OpenAPI）
   - WebSocket（自定义接入）
 - **Web UI (`webui/` / `electron/`)**：
   - **Web 版本**：前端打包后由 Gateway 静态托管（同端口 18890）
