@@ -13,8 +13,8 @@ func TestBuildCronUserMessage(t *testing.T) {
 	job := &cron.Job{
 		Name: "hello",
 		Payload: cron.Payload{
-			Channel: "telegram",
-			Message: "say hi",
+			Channels: []string{"telegram"},
+			Message:  "say hi",
 		},
 	}
 
@@ -28,10 +28,10 @@ func TestEnqueueCronJob(t *testing.T) {
 		ID:   "job_1",
 		Name: "hello",
 		Payload: cron.Payload{
-			Channel: "telegram",
-			To:      "chat-42",
-			Message: "say hi",
-			Deliver: true,
+			Channels: []string{"telegram"},
+			To:       "chat-42",
+			Message:  "say hi",
+			Deliver:  true,
 		},
 	}
 
@@ -52,10 +52,10 @@ func TestEnqueueCronJobValidation(t *testing.T) {
 		ID:   "job_1",
 		Name: "hello",
 		Payload: cron.Payload{
-			Channel: "telegram",
-			To:      "chat-42",
-			Message: "say hi",
-			Deliver: true,
+			Channels: []string{"telegram"},
+			To:       "chat-42",
+			Message:  "say hi",
+			Deliver:  true,
 		},
 	}
 
@@ -74,12 +74,12 @@ func TestEnqueueCronJobValidation(t *testing.T) {
 		},
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "channel is empty")
+	assert.Contains(t, err.Error(), "cron job channels is empty")
 
 	_, err = enqueueCronJob(bus.NewMessageBus(1), &cron.Job{
 		Payload: cron.Payload{
-			Channel: "telegram",
-			Message: "say hi",
+			Channels: []string{"telegram"},
+			Message:  "say hi",
 		},
 	})
 	require.Error(t, err)
@@ -94,9 +94,9 @@ func TestEnqueueCronJobBufferFull(t *testing.T) {
 		ID:   "job_2",
 		Name: "hello",
 		Payload: cron.Payload{
-			Channel: "telegram",
-			To:      "chat-42",
-			Message: "say hi",
+			Channels: []string{"telegram"},
+			To:       "chat-42",
+			Message:  "say hi",
 		},
 	})
 	require.Error(t, err)

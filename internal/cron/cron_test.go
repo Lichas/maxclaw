@@ -38,9 +38,9 @@ func TestAddJob(t *testing.T) {
 		EveryMs: 1000,
 	}
 	payload := Payload{
-		Message: "Test message",
-		Channel: "test",
-		Deliver: true,
+		Message:  "Test message",
+		Channels: []string{"test"},
+		Deliver:  true,
 	}
 
 	job, err := service.AddJob("Test Job", schedule, payload)

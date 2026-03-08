@@ -20,6 +20,11 @@
   - `electron/src/renderer/views/ChatView.tsx`
   - 验证：`cd electron && npm run build && make build`
 
+- **测试文件冲突和cron测试修复**：清理根目录冲突的测试文件（`test_telegram_file.go`、`test_telegram_send.go`），修复cron测试中错误的`Channel`字段引用（应为`Channels`），确保所有测试通过
+  - 删除：`test_telegram_file.go`、`test_telegram_send.go`、`test_telegram_send`
+  - 修复：`internal/cli/cron_test.go`、`internal/cron/cron_test.go`
+  - 验证：`go test ./...` 所有测试通过，`make build` 构建成功
+
 - **技能市场页侧栏联动闪烁修复**：为 `SkillsView` 建立独立合成层，并移除技能描述浮层的 `backdrop-blur`，避免技能卡片网格与左侧栏共享大面积重绘区域，导致悬停侧栏时仅在技能市场页出现发白闪烁
   - `electron/src/renderer/views/SkillsView.tsx`
   - 验证：`cd electron && npm run build && make build && cd electron && npm run start`
