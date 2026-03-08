@@ -67,6 +67,12 @@ vercel --prod --yes
   - Feishu/Lark（Webhook + OpenAPI）
   - QQ（腾讯官方 QQBot，Gateway WebSocket + OpenAPI）
   - WebSocket（自定义接入）
+  - **官方 QQBot 消息路径**：
+    - 认证：`AppID/AppSecret` 或 `AppID:AppSecret`
+    - 入站：通过 `https://api.sgroup.qq.com/gateway` 建立 Gateway WebSocket，消费 `C2C_MESSAGE_CREATE`
+    - 路由：私聊发送人使用 `author.user_openid` 作为 `sender/chat_id`
+    - 出站：通过 `/v2/users/{openid}/messages` 被动回复，并复用最近一条入站 `msg_id`
+    - 白名单：`allowFrom` 对官方 QQBot 应填写 OpenID，而不是腾讯控制台里展示的原始 QQ 号
 - **Web UI (`webui/` / `electron/`)**：
   - **Web 版本**：前端打包后由 Gateway 静态托管（同端口 18890）
   - **Electron 版本**：独立桌面应用，通过 HTTP API + WebSocket 与 Gateway 通信
@@ -81,10 +87,17 @@ vercel --prod --yes
     - `/api/cron/history` - 执行历史
     - `/api/skills` - 技能管理
     - `/api/upload` - 文件上传
+    - `/api/channels/senders` - 基于 `session.log` 的入站发送人聚合统计（支持按渠道筛选）
     - `/ws` - WebSocket 连接
   - **流式响应**：`stream=1` 或 `Accept: text/event-stream` 时返回 SSE 格式
     - 事件类型：`status`, `tool_start`, `tool_result`, `content_delta`, `final`, `error`
     - 非流式 JSON 路径保持兼容
+  - **发送人日志辅助**：
+    - 设置页的每个渠道 Tab 都会读取 `/api/channels/senders?channel=<name>`
+    - 数据源来自 `~/.maxclaw/logs/session.log` 的 `inbound` 记录
+    - 聚合维度：`channel + sender`
+    - 展示内容：发送人标识、最近一条入站消息、最近时间、累计发送次数
+    - 目标：让用户无需手工翻日志，就能把最近发过消息的 sender/OpenID 一键加入 `allowFrom`
 
 ## Electron Desktop App 架构
 

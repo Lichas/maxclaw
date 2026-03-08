@@ -14,6 +14,10 @@
   - `internal/webui/server.go`、`internal/webui/server_test.go`、`electron/src/renderer/components/IMBotConfig.tsx`、`electron/src/renderer/types/channels.ts`
   - 验证：`go test ./internal/webui`、`cd electron && npm run build`、`make build`
 
+- **架构文档补充 QQ 与发送人日志设计**：补充官方 QQBot 的 Gateway/OpenAPI 消息路径、OpenID 白名单约束，以及 `/api/channels/senders` 和设置页发送人日志卡片的架构说明
+  - `ARCHITECTURE.md`
+  - 验证：`make build`
+
 ### Fixed
 
 - **QQ 机器人官方接入修复**：`qq` 渠道改为参考 openclaw `@sliverp/qqbot` 的官方 Gateway WebSocket + OpenAPI 模式，支持 `AppID/AppSecret` 与 `AppID:AppSecret` 两种配置方式；入站 C2C 消息按 `author.user_openid` 路由，出站回复复用最近一条入站消息 `msg_id`，并兼容旧的数字 QQ 白名单配置，修复 “Hello QQ” 无响应
