@@ -2351,13 +2351,12 @@ function ActivityTypeIcon({ className, type }: { className?: string; type: Strea
 
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <circle cx="9" cy="12" r="3.1" strokeWidth={1.8} />
-      <circle cx="15.5" cy="12" r="2.2" strokeWidth={1.8} />
+      <circle cx="8" cy="12" r="2.7" strokeWidth={1.8} />
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={1.8}
-        d="M11.8 10.3l1.5-1.5m-1.2 4.6 1.8 1.8M6.4 9.2 5 7.8m1.2 6L4.8 15.2M9 8V5.8m0 12.4V16"
+        d="M10.6 12h5.1m0 0 2.1-2.1m-2.1 2.1 2.1 2.1M5.3 9.3V7.1m0 9.8v-2.2"
       />
     </svg>
   );
