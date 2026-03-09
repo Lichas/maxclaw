@@ -60,6 +60,10 @@
   - `electron/src/renderer/views/ChatView.tsx`
   - 验证：`cd electron && npm run build`、`make build`
 
+- **线程头部技能徽标改为可展开列表**：将“X 个技能已启用”改为可点击下拉，直接显示当前任务启用的技能名和描述，减少只看数量带来的信息不足
+  - `electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build`、`make build`
+
 - **模型级多模态能力改为配置驱动**：新增 `providers.<name>.models[].supportsImageInput`，Provider 运行时优先读取显式模型能力，设置页新增 `Multimodal` 开关，Agent 不再按模型名提前短路 QQ/Telegram 纯图片消息；未声明时仍保留启发式回退
   - `internal/config/schema.go`、`internal/config/schema_test.go`、`internal/providers/base.go`、`internal/providers/openai.go`、`internal/providers/openai_test.go`、`internal/agent/loop.go`、`internal/agent/loop_test.go`、`internal/cli/agent.go`、`internal/cli/cron.go`、`internal/cli/gateway.go`、`internal/webui/server.go`、`electron/src/renderer/types/providers.ts`、`electron/src/renderer/components/ProviderEditor.tsx`、`electron/src/renderer/views/SettingsView.tsx`、`ARCHITECTURE.md`
   - 验证：`go test ./internal/config ./internal/providers ./internal/agent ./internal/cli ./internal/webui`、`cd electron && npm run build`、`make build`

@@ -207,6 +207,7 @@ export function ChatView() {
   const [skillsQuery, setSkillsQuery] = useState('');
   const [skillsPickerOpen, setSkillsPickerOpen] = useState(false);
   const [skillsLoadError, setSkillsLoadError] = useState<string | null>(null);
+  const [headerSkillsOpen, setHeaderSkillsOpen] = useState(false);
   const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string; provider: string }>>([]);
   const [currentModel, setCurrentModel] = useState<string>('');
   const [modelsLoading, setModelsLoading] = useState(false);
@@ -422,6 +423,7 @@ export function ChatView() {
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const skillsPickerRef = useRef<HTMLDivElement>(null);
+  const headerSkillsRef = useRef<HTMLDivElement>(null);
   const isComposingRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const entrySeqRef = useRef(0);
@@ -453,6 +455,18 @@ export function ChatView() {
       tone: 'border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300'
     };
   }, [gatewayStatus, language]);
+  const selectedSkillSummaries = useMemo(
+    () =>
+      selectedSkills.map((skillName) => {
+        const matched = availableSkills.find((skill) => skill.name === skillName);
+        return {
+          name: skillName,
+          displayName: matched?.displayName || skillName,
+          description: matched?.description || ''
+        };
+      }),
+    [selectedSkills, availableSkills]
+  );
 
   const setBrowserCopilotOutput = (sessionKey: string, value: string) => {
     setBrowserCopilotOutputBySession((prev) => {
@@ -740,6 +754,26 @@ export function ChatView() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [skillsPickerOpen]);
+
+  useEffect(() => {
+    if (!headerSkillsOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!headerSkillsRef.current) {
+        return;
+      }
+      if (!headerSkillsRef.current.contains(event.target as Node)) {
+        setHeaderSkillsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [headerSkillsOpen]);
 
   const resetStreamingState = (sessionKey: string) => {
     setStreamingTimelineBySession((prev) => {
@@ -1994,9 +2028,38 @@ export function ChatView() {
               {messages.length} {language === 'zh' ? '条消息' : 'messages'}
             </span>
             {selectedSkills.length > 0 && (
-              <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-primary">
-                {selectedSkills.length} {language === 'zh' ? '个技能已启用' : 'skills enabled'}
-              </span>
+              <div ref={headerSkillsRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setHeaderSkillsOpen((prev) => !prev)}
+                  className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-primary transition-colors hover:bg-primary/15"
+                >
+                  <span>{language === 'zh' ? `技能 ${selectedSkills.length}` : `Skills ${selectedSkills.length}`}</span>
+                  <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform ${headerSkillsOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {headerSkillsOpen && (
+                  <div className="absolute left-0 top-[calc(100%+0.45rem)] z-40 w-72 overflow-hidden rounded-[20px] border border-white/75 bg-white/96 p-2 shadow-[0_22px_54px_rgba(28,36,50,0.14)] dark:bg-[#151d2b]">
+                    <div className="px-2 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/45">
+                      {language === 'zh' ? '本次任务技能' : 'Task skills'}
+                    </div>
+                    <div className="space-y-1">
+                      {selectedSkillSummaries.map((skill) => (
+                        <div
+                          key={skill.name}
+                          className="rounded-2xl border border-white/70 bg-white/72 px-3 py-2 dark:border-white/10 dark:bg-white/5"
+                        >
+                          <div className="text-sm font-medium text-foreground">{skill.displayName}</div>
+                          {skill.description && (
+                            <div className="mt-0.5 line-clamp-2 text-xs leading-5 text-foreground/55">
+                              {skill.description}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
