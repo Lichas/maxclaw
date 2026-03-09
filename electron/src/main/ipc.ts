@@ -678,7 +678,7 @@ export function createIPCHandlers(
   handlersRegistered = true;
 
   // Gateway IPC
-  ipcMain.handle('gateway:getStatus', () => gatewayManager.getStatus());
+  ipcMain.handle('gateway:getStatus', async () => gatewayManager.refreshStatus());
 
   ipcMain.handle('gateway:restart', async () => {
     try {
@@ -915,10 +915,13 @@ export function createIPCHandlers(
 
   // Gateway status polling - notify renderer
   gatewayStatusTimer = setInterval(() => {
-    const status = gatewayManager.getStatus();
-    if (currentMainWindow && !currentMainWindow.isDestroyed()) {
-      currentMainWindow.webContents.send('gateway:status-change', status);
-    }
+    void gatewayManager.refreshStatus().then((status) => {
+      if (currentMainWindow && !currentMainWindow.isDestroyed()) {
+        currentMainWindow.webContents.send('gateway:status-change', status);
+      }
+    }).catch((error) => {
+      log.warn('Failed to refresh gateway status:', error);
+    });
   }, 5000);
 
   // Notification polling from Gateway

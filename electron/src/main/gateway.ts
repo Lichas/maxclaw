@@ -180,6 +180,36 @@ export class GatewayManager {
     });
   }
 
+  async refreshStatus(): Promise<GatewayStatus> {
+    const healthy = await this.healthCheck();
+
+    if (healthy) {
+      this.status = { state: 'running', port: 18890 };
+      this.restartAttempts = 0;
+      return this.getStatus();
+    }
+
+    if (this.process && this.status.state === 'starting') {
+      return this.getStatus();
+    }
+
+    if (this.process) {
+      this.status = {
+        state: 'error',
+        port: 18890,
+        error: this.status.error || 'Gateway process exists but health check failed'
+      };
+      return this.getStatus();
+    }
+
+    if (this.status.state === 'error') {
+      return this.getStatus();
+    }
+
+    this.status = { state: 'stopped', port: 18890 };
+    return this.getStatus();
+  }
+
   getStatus(): GatewayStatus {
     return { ...this.status };
   }
