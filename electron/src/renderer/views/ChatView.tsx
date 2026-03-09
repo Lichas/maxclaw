@@ -1710,7 +1710,7 @@ export function ChatView() {
   const renderComposer = (landing: boolean) => (
     <form
       onSubmit={handleSubmit}
-      className={`relative overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(252,248,242,0.82))] shadow-[0_24px_64px_rgba(28,36,50,0.12)] backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(24,31,45,0.94),rgba(20,27,39,0.9))] ${
+      className={`relative overflow-visible rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(252,248,242,0.82))] shadow-[0_24px_64px_rgba(28,36,50,0.12)] backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(24,31,45,0.94),rgba(20,27,39,0.9))] ${
         landing ? 'p-6' : 'p-5'
       }`}
     >
