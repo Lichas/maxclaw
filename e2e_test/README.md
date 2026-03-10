@@ -32,6 +32,7 @@ cd e2e_test
 
 ### 聊天频道
 16. **频道配置** - 验证频道配置正确显示
+17. **Gateway Agent 回归** - 启动本地 fake OpenAI provider + 真 gateway，验证 `/api/message`、工具调用和多轮会话
 
 ## 添加新测试
 
@@ -52,6 +53,21 @@ fi
 - 测试使用临时 HOME 目录，不会影响真实配置
 - 需要提前安装 `go` 和 `python3`（用于 JSON 验证）
 - 不测试真实的 LLM API 调用（需要 API key）
+
+## Gateway Agent Regression
+
+无需真实 API key，可直接运行：
+
+```bash
+./e2e_test/gateway_agent_regression.sh
+```
+
+脚本会验证：
+
+- `/api/message` 基础文本请求成功
+- agent 通过 `write_file` 在当前 session 目录创建文件
+- agent 通过 `read_file` 读取刚刚写入的文件
+- 同一 `sessionKey` 的第二轮请求能看到第一轮上下文
 
 ## 智能插话功能测试 (Smart Interruption Testing)
 

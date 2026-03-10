@@ -8,6 +8,10 @@
   - `internal/providers/factory.go`、`internal/providers/openai_official.go`、`internal/providers/anthropic.go`、`internal/providers/*_test.go`、`internal/cli/gateway.go`、`internal/cli/agent.go`、`internal/cli/cron.go`、`internal/webui/server.go`、`internal/config/schema.go`、`internal/config/config_test.go`、`internal/providers/README.md`、`README.md`、`README.zh.md`
   - 验证：`go test ./internal/providers ./internal/cli ./internal/webui ./internal/config`、`make build`
 
+- **新增 Gateway Agent 本地 E2E 回归脚本**：增加 fake OpenAI provider 驱动的端到端回归，覆盖 `/api/message` 基础响应、`write_file`/`read_file` 工具链路以及同 session 多轮上下文，且已接入 `e2e_test/run.sh`
+  - `e2e_test/fake_openai_server.py`、`e2e_test/gateway_agent_regression.sh`、`e2e_test/run.sh`、`e2e_test/README.md`
+  - 验证：`bash e2e_test/gateway_agent_regression.sh`、`bash e2e_test/run.sh`、`make build`
+
 ### Fixed
 
 - **Go 1.24 基线统一并补齐兼容性修复**：将 `go.mod`、Docker builder、桌面 CI 和开发文档统一到 Go 1.24，执行 `go mod tidy` 清理过期间接依赖，并修复 Go 1.24 下 `pkg/tools/mcp.go` 的错误聚合写法，避免 `go test ./...` 因可疑格式串失败

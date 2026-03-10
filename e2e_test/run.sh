@@ -249,6 +249,14 @@ else
     fail "Channel info not displayed"
 fi
 
+# Test 17: Gateway agent regression
+echo "Test 17: Gateway agent regression"
+if bash "$SCRIPT_DIR/gateway_agent_regression.sh"; then
+    pass "Gateway agent regression script passed"
+else
+    fail "Gateway agent regression script failed"
+fi
+
 echo ""
 echo "=== E2E Tests Complete ==="
 echo ""
