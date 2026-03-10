@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+
+- **OpenAI / Anthropic 原生官方 SDK Provider 接入**：新增 OpenAI 与 Anthropic 官方 SDK provider 和统一 provider 工厂，让 gateway、agent、cron、Web UI 热更新按 `apiFormat`/模型选择原生实现，其它厂商继续走原有 OpenAI 兼容层；同时修正 provider 连接测试与运行时协议一致，并更新配置文档
+  - `internal/providers/factory.go`、`internal/providers/openai_official.go`、`internal/providers/anthropic.go`、`internal/providers/*_test.go`、`internal/cli/gateway.go`、`internal/cli/agent.go`、`internal/cli/cron.go`、`internal/webui/server.go`、`internal/config/schema.go`、`internal/config/config_test.go`、`internal/providers/README.md`、`README.md`、`README.zh.md`
+  - 验证：`go test ./internal/providers ./internal/cli ./internal/webui ./internal/config`、`make build`
+
 ### Fixed
 
 - **Go 1.24 基线统一并补齐兼容性修复**：将 `go.mod`、Docker builder、桌面 CI 和开发文档统一到 Go 1.24，执行 `go mod tidy` 清理过期间接依赖，并修复 Go 1.24 下 `pkg/tools/mcp.go` 的错误聚合写法，避免 `go test ./...` 因可疑格式串失败

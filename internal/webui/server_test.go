@@ -155,6 +155,56 @@ func TestHandleTestProviderMiniMaxUsesRawAuthorizationAndChatCompletions(t *test
 	assert.Equal(t, "Bearer sk-mini", authHeader)
 }
 
+func TestHandleTestProviderAnthropicUsesOfficialSDKModelsEndpoint(t *testing.T) {
+	var (
+		requestPath string
+		apiKey      string
+	)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestPath = r.URL.Path
+		apiKey = r.Header.Get("X-Api-Key")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[],"first_id":"","has_more":false,"last_id":""}`))
+	}))
+	defer upstream.Close()
+
+	s := &Server{}
+	body := bytes.NewBufferString(fmt.Sprintf(`{"name":"Anthropic","apiKey":"sk-ant","baseURL":"%s","apiFormat":"anthropic"}`, upstream.URL))
+	req := httptest.NewRequest(http.MethodPost, "/api/providers/test", body)
+	rec := httptest.NewRecorder()
+
+	s.handleTestProvider(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "/v1/models", requestPath)
+	assert.Equal(t, "sk-ant", apiKey)
+}
+
+func TestHandleTestProviderOpenAIUsesOfficialSDKModelsEndpoint(t *testing.T) {
+	var (
+		requestPath string
+		authHeader  string
+	)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestPath = r.URL.Path
+		authHeader = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"object":"list","data":[]}`))
+	}))
+	defer upstream.Close()
+
+	s := &Server{}
+	body := bytes.NewBufferString(fmt.Sprintf(`{"name":"OpenAI","apiKey":"sk-openai","baseURL":"%s/v1","apiFormat":"openai"}`, upstream.URL))
+	req := httptest.NewRequest(http.MethodPost, "/api/providers/test", body)
+	rec := httptest.NewRecorder()
+
+	s.handleTestProvider(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "/v1/models", requestPath)
+	assert.Equal(t, "Bearer sk-openai", authHeader)
+}
+
 func TestReadChannelSenderStatsAggregatesInboundMessages(t *testing.T) {
 	logPath := filepath.Join(t.TempDir(), "session.log")
 	content := strings.Join([]string{

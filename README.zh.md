@@ -163,7 +163,7 @@ Linux 默认会安装并启动：
 ```json
 {
   "providers": {
-    "openrouter": { "apiKey": "your-api-key" }
+    "anthropic": { "apiKey": "your-anthropic-key" }
   },
   "agents": {
     "defaults": {
@@ -173,6 +173,9 @@ Linux 默认会安装并启动：
   }
 }
 ```
+
+OpenAI 原生模型通过官方 `openai-go` SDK 接入，默认 API Base 为 `https://api.openai.com/v1`。
+Anthropic 原生模型通过官方 `anthropic-sdk-go` 接入，默认 API Base 为 `https://api.anthropic.com`。
 
 ### MiniMax 配置示例
 `maxclaw` 通过 OpenAI 兼容接口使用 MiniMax：

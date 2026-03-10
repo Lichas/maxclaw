@@ -29,6 +29,10 @@ import (
 	"github.com/Lichas/maxclaw/internal/session"
 	workspaceSkills "github.com/Lichas/maxclaw/internal/skills"
 	"github.com/Lichas/maxclaw/pkg/tools"
+	"github.com/anthropics/anthropic-sdk-go"
+	anthropicoption "github.com/anthropics/anthropic-sdk-go/option"
+	"github.com/openai/openai-go/v3"
+	openaioption "github.com/openai/openai-go/v3/option"
 	qqtoken "github.com/tencent-connect/botgo/token"
 )
 
@@ -1322,9 +1326,10 @@ func (s *Server) applyRuntimeModelConfig(cfg *config.Config) error {
 	}
 	apiBase := cfg.GetAPIBase(model)
 
-	provider, err := providers.NewOpenAIProvider(
+	provider, err := providers.NewProvider(
 		apiKey,
 		apiBase,
+		cfg.GetAPIFormat(model),
 		model,
 		cfg.Agents.Defaults.MaxTokens,
 		cfg.Agents.Defaults.Temperature,
@@ -1809,8 +1814,8 @@ type ProviderTestRequest struct {
 }
 
 type providerProbePayload struct {
-	Model       string `json:"model"`
-	Messages    []struct {
+	Model    string `json:"model"`
+	Messages []struct {
 		Role    string `json:"role"`
 		Content string `json:"content"`
 	} `json:"messages"`
@@ -1835,7 +1840,53 @@ func (s *Server) handleTestProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Test the provider connection
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	switch providers.ResolveProviderKind(req.Name, req.BaseURL, req.APIFormat) {
+	case "anthropic":
+		baseURL := req.BaseURL
+		baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+		if baseURL == "" {
+			baseURL = "https://api.anthropic.com"
+		}
+		if strings.HasSuffix(baseURL, "/v1") {
+			baseURL = strings.TrimSuffix(baseURL, "/v1")
+		}
+		client := anthropic.NewClient(
+			anthropicoption.WithAPIKey(req.APIKey),
+			anthropicoption.WithBaseURL(baseURL),
+			anthropicoption.WithHTTPClient(&http.Client{Timeout: 10 * time.Second}),
+		)
+		if _, err := client.Models.List(ctx, anthropic.ModelListParams{}); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	case "openai":
+		baseURL := strings.TrimRight(strings.TrimSpace(req.BaseURL), "/")
+		if baseURL == "" {
+			baseURL = "https://api.openai.com/v1"
+		}
+		client := openai.NewClient(
+			openaioption.WithAPIKey(req.APIKey),
+			openaioption.WithBaseURL(baseURL),
+			openaioption.WithHTTPClient(&http.Client{Timeout: 10 * time.Second}),
+		)
+		if _, err := client.Models.List(ctx); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	default:
+		if err := s.testCompatibleProvider(ctx, req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	writeJSON(w, map[string]bool{"ok": true})
+}
+
+func (s *Server) testCompatibleProvider(ctx context.Context, req ProviderTestRequest) error {
 	client := &http.Client{Timeout: 10 * time.Second}
 
 	var (
@@ -1845,48 +1896,34 @@ func (s *Server) handleTestProvider(w http.ResponseWriter, r *http.Request) {
 	)
 	headers := make(map[string]string)
 
-	switch req.APIFormat {
-	case "anthropic":
-		baseURL := req.BaseURL
+	baseURL := req.BaseURL
+	if strings.EqualFold(req.Name, "MiniMax") {
 		if baseURL == "" {
-			baseURL = "https://api.anthropic.com"
+			baseURL = "https://api.minimax.io/v1"
 		}
-		testURL = baseURL + "/v1/models"
-		headers["x-api-key"] = req.APIKey
-		headers["anthropic-version"] = "2023-06-01"
-	default: // openai
-		baseURL := req.BaseURL
-		if strings.EqualFold(req.Name, "MiniMax") {
-			if baseURL == "" {
-				baseURL = "https://api.minimax.io/v1"
-			}
-			baseURL = normalizeMiniMaxBaseURL(baseURL)
-			method = http.MethodPost
-			testURL = strings.TrimRight(baseURL, "/") + "/chat/completions"
-			headers["Authorization"] = "Bearer " + req.APIKey
-			headers["Content-Type"] = "application/json"
-			probe := providerProbePayload{
-				Model: "MiniMax-M2.5",
-				Messages: []struct {
-					Role    string `json:"role"`
-					Content string `json:"content"`
-				}{
-					{Role: "user", Content: "ping"},
-				},
-				MaxTokens:   1,
-				Temperature: 0,
-			}
-			payload, err := json.Marshal(probe)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			body = strings.NewReader(string(payload))
-			break
+		baseURL = normalizeMiniMaxBaseURL(baseURL)
+		method = http.MethodPost
+		testURL = strings.TrimRight(baseURL, "/") + "/chat/completions"
+		headers["Authorization"] = "Bearer " + req.APIKey
+		headers["Content-Type"] = "application/json"
+		probe := providerProbePayload{
+			Model: "MiniMax-M2.5",
+			Messages: []struct {
+				Role    string `json:"role"`
+				Content string `json:"content"`
+			}{
+				{Role: "user", Content: "ping"},
+			},
+			MaxTokens:   1,
+			Temperature: 0,
 		}
-
+		payload, err := json.Marshal(probe)
+		if err != nil {
+			return err
+		}
+		body = strings.NewReader(string(payload))
+	} else {
 		if baseURL == "" {
-			// Try to determine from provider name
 			switch req.Name {
 			case "DeepSeek":
 				baseURL = "https://api.deepseek.com/v1"
@@ -1904,10 +1941,9 @@ func (s *Server) handleTestProvider(w http.ResponseWriter, r *http.Request) {
 		headers["Authorization"] = "Bearer " + req.APIKey
 	}
 
-	httpReq, err := http.NewRequest(method, testURL, body)
+	httpReq, err := http.NewRequestWithContext(ctx, method, testURL, body)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	for k, v := range headers {
@@ -1916,17 +1952,14 @@ func (s *Server) handleTestProvider(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		http.Error(w, "API returned status "+resp.Status, resp.StatusCode)
-		return
+		return fmt.Errorf("API returned status %s", resp.Status)
 	}
-
-	writeJSON(w, map[string]bool{"ok": true})
+	return nil
 }
 
 func normalizeMiniMaxBaseURL(raw string) string {

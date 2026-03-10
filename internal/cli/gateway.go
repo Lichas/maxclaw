@@ -371,9 +371,10 @@ func buildGatewayProvider(cfg *config.Config, apiKey, apiBase string) (providers
 		}, "No API key configured. Gateway started in configuration-only mode; model requests will fail until key is set.", nil
 	}
 
-	provider, err := providers.NewOpenAIProvider(
+	provider, err := providers.NewProvider(
 		apiKey,
 		apiBase,
+		cfg.GetAPIFormat(cfg.Agents.Defaults.Model),
 		cfg.Agents.Defaults.Model,
 		cfg.Agents.Defaults.MaxTokens,
 		cfg.Agents.Defaults.Temperature,

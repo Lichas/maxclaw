@@ -112,9 +112,10 @@ var agentCmd = &cobra.Command{
 		}
 
 		// 创建 Provider
-		provider, err := providers.NewOpenAIProvider(
+		provider, err := providers.NewProvider(
 			apiKey,
 			apiBase,
+			cfg.GetAPIFormat(cfg.Agents.Defaults.Model),
 			cfg.Agents.Defaults.Model,
 			cfg.Agents.Defaults.MaxTokens,
 			cfg.Agents.Defaults.Temperature,

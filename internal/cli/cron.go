@@ -310,9 +310,10 @@ var cronRunCmd = &cobra.Command{
 // executeCronJob 执行定时任务
 func executeCronJob(cfg *config.Config, apiKey, apiBase string, cronService *cron.Service, job *cron.Job) (string, error) {
 	// 创建 Provider
-	provider, err := providers.NewOpenAIProvider(
+	provider, err := providers.NewProvider(
 		apiKey,
 		apiBase,
+		cfg.GetAPIFormat(cfg.Agents.Defaults.Model),
 		cfg.Agents.Defaults.Model,
 		cfg.Agents.Defaults.MaxTokens,
 		cfg.Agents.Defaults.Temperature,

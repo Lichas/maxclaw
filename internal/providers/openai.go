@@ -294,31 +294,7 @@ func (p *OpenAIProvider) detectProvider(model string) string {
 		}
 	}
 
-	base := strings.ToLower(p.apiBase)
-	switch {
-	case strings.Contains(base, "openrouter.ai"):
-		return "openrouter"
-	case strings.Contains(base, "api.anthropic.com"):
-		return "anthropic"
-	case strings.Contains(base, "api.openai.com"):
-		return "openai"
-	case strings.Contains(base, "deepseek.com"):
-		return "deepseek"
-	case strings.Contains(base, "bigmodel.cn"):
-		return "zhipu"
-	case strings.Contains(base, "groq.com"):
-		return "groq"
-	case strings.Contains(base, "generativelanguage.googleapis.com"):
-		return "gemini"
-	case strings.Contains(base, "dashscope.aliyuncs.com"):
-		return "dashscope"
-	case strings.Contains(base, "moonshot"):
-		return "moonshot"
-	case strings.Contains(base, "minimax"):
-		return "minimax"
-	}
-
-	return "unknown"
+	return DetectProviderNameFromAPIBase(p.apiBase)
 }
 
 // toolCallBuilder 工具调用构建器

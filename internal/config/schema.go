@@ -437,6 +437,30 @@ func (c *Config) GetAPIBase(model string) string {
 	return ""
 }
 
+// GetAPIFormat returns the wire format configured for the target provider.
+func (c *Config) GetAPIFormat(model string) string {
+	if model == "" {
+		model = c.Agents.Defaults.Model
+	}
+	model = strings.ToLower(model)
+
+	providerMap := c.providerConfigMap()
+	for _, spec := range providers.ProviderSpecs {
+		if !spec.MatchesModel(model) {
+			continue
+		}
+		if cfg, ok := providerMap[spec.Name]; ok && strings.TrimSpace(cfg.APIFormat) != "" {
+			return strings.ToLower(strings.TrimSpace(cfg.APIFormat))
+		}
+		if spec.Name == "anthropic" {
+			return "anthropic"
+		}
+		return "openai"
+	}
+
+	return "openai"
+}
+
 func normalizeProviderAPIBase(providerName, model, apiBase string) string {
 	normalizedModel := strings.ToLower(strings.TrimSpace(model))
 	normalizedBase := strings.TrimRight(strings.TrimSpace(apiBase), "/")
@@ -445,6 +469,10 @@ func normalizeProviderAPIBase(providerName, model, apiBase string) string {
 	}
 
 	switch providerName {
+	case "anthropic":
+		if strings.HasSuffix(normalizedBase, "/v1") {
+			return strings.TrimSuffix(normalizedBase, "/v1")
+		}
 	case "zhipu":
 		if zhipuVisionModel(normalizedModel) {
 			if strings.HasSuffix(normalizedBase, "/api/coding/paas/v4") {

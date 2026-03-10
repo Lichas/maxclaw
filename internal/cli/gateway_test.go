@@ -11,6 +11,7 @@ import (
 	"github.com/Lichas/maxclaw/internal/bus"
 	"github.com/Lichas/maxclaw/internal/channels"
 	"github.com/Lichas/maxclaw/internal/config"
+	"github.com/Lichas/maxclaw/internal/providers"
 )
 
 type mockChannel struct {
@@ -164,5 +165,24 @@ func TestBuildGatewayProviderWithAPIKeyUsesOpenAIProvider(t *testing.T) {
 	}
 	if warning != "" {
 		t.Fatalf("expected no warning with API key, got: %s", warning)
+	}
+	if _, ok := provider.(*providers.OpenAIOfficialProvider); !ok {
+		t.Fatalf("expected OpenAIOfficialProvider, got %T", provider)
+	}
+}
+
+func TestBuildGatewayProviderWithAnthropicModelUsesAnthropicProvider(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Agents.Defaults.Model = "anthropic/claude-sonnet-4-5"
+
+	provider, warning, err := buildGatewayProvider(cfg, "sk-ant", "https://api.anthropic.com")
+	if err != nil {
+		t.Fatalf("buildGatewayProvider returned error: %v", err)
+	}
+	if warning != "" {
+		t.Fatalf("expected no warning with API key, got: %s", warning)
+	}
+	if _, ok := provider.(*providers.AnthropicProvider); !ok {
+		t.Fatalf("expected AnthropicProvider, got %T", provider)
 	}
 }

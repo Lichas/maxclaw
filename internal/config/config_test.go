@@ -94,6 +94,7 @@ func TestGetAPIBase(t *testing.T) {
 		expected string
 	}{
 		{"openrouter/gpt-4", "https://openrouter.ai/api/v1"},
+		{"gpt-5.1", "https://api.openai.com/v1"},
 		{"vllm/llama-3", "http://localhost:8000/v1"},
 		{"meta-llama/Llama-3.1-8B-Instruct", "http://localhost:8000/v1"},
 		{"kimi-k2.5", "https://api.moonshot.ai/v1"},
@@ -104,7 +105,7 @@ func TestGetAPIBase(t *testing.T) {
 		{"zai/glm-5", "https://open.bigmodel.cn/api/coding/paas/v4"},
 		{"glm-4.6v", "https://open.bigmodel.cn/api/paas/v4"},
 		{"glm-ocr", "https://open.bigmodel.cn/api/paas/v4"},
-		{"anthropic/claude", ""},
+		{"anthropic/claude", "https://api.anthropic.com"},
 	}
 
 	for _, tt := range tests {
@@ -157,6 +158,16 @@ func TestGetAPIBaseZhipuVisionDefault(t *testing.T) {
 	cfg := DefaultConfig()
 	got := cfg.GetAPIBase("glm-4.6v")
 	assert.Equal(t, "https://open.bigmodel.cn/api/paas/v4", got)
+}
+
+func TestGetAPIFormat(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Providers.Anthropic.APIFormat = "anthropic"
+	cfg.Providers.OpenAI.APIFormat = "openai"
+
+	assert.Equal(t, "anthropic", cfg.GetAPIFormat("anthropic/claude-sonnet-4-5"))
+	assert.Equal(t, "openai", cfg.GetAPIFormat("gpt-5.1"))
+	assert.Equal(t, "openai", cfg.GetAPIFormat("openrouter/auto"))
 }
 
 func TestWorkspacePath(t *testing.T) {

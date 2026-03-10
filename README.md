@@ -89,7 +89,7 @@ Path: `~/.maxclaw/config.json`
 ```json
 {
   "providers": {
-    "openrouter": { "apiKey": "your-api-key" }
+    "anthropic": { "apiKey": "your-anthropic-key" }
   },
   "agents": {
     "defaults": {
@@ -100,6 +100,9 @@ Path: `~/.maxclaw/config.json`
   }
 }
 ```
+
+OpenAI native models use the official `openai-go` SDK with default API base `https://api.openai.com/v1`.
+Anthropic native models use the official `anthropic-sdk-go` SDK with default API base `https://api.anthropic.com`.
 
 ## Execution Modes
 
