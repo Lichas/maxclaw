@@ -40,6 +40,10 @@
 
 ### Fixed
 
+- **首屏 Hero 收口并去掉重复信息**：将启动页顶部大幅品牌 Hero 压缩为单行引导条，隐藏首屏 composer 里重复的 workspace/model 标签，并缩短输入区默认高度，避免标题区过高且和 `Mission Brief` 说明重复
+  - `electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build`、`make build`、`make electron-restart`、桌面端截图确认首屏可视高度下降
+
 - **侧边栏高对比深色块降噪**：将左栏顶部品牌卡、当前选中会话卡和激活导航项从大面积蓝黑反相改为低饱和暖灰渐层与浅阴影，保留选中层级但不再压过主内容区
   - `electron/src/renderer/components/Sidebar.tsx`
   - 验证：`cd electron && npm run build`、`make build`、`make electron-restart`、桌面端截图目视确认左栏视觉权重下降

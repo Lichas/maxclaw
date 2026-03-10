@@ -1752,26 +1752,30 @@ export function ChatView() {
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground/42">
-            {landing ? (language === 'zh' ? 'Mission Brief' : 'Mission Brief') : language === 'zh' ? 'Thread Composer' : 'Thread Composer'}
+            {landing ? (language === 'zh' ? 'Task Brief' : 'Task Brief') : language === 'zh' ? 'Thread Composer' : 'Thread Composer'}
           </p>
           <p className="mt-2 text-sm text-foreground/58">
             {landing
               ? language === 'zh'
-                ? '把目标、限制、验收条件和输出格式一次说清楚，MaxClaw 会自己往前推进。'
-                : 'Describe the goal, constraints, acceptance bar, and output format in one pass.'
+                ? '把目标、限制和验收条件一次说清楚，剩下的交给 MaxClaw。'
+                : 'Describe the goal, constraints, and acceptance bar in one pass.'
               : language === 'zh'
                 ? '继续补充上下文，或者直接交给 MaxClaw 执行下一步。'
                 : 'Add context or hand off the next execution step.'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/72 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-foreground/56 dark:bg-white/10">
-            <FolderIcon className="h-3.5 w-3.5" />
-            {workspaceLabel}
-          </span>
-          <span className="inline-flex items-center rounded-full border border-white/80 bg-white/72 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-foreground/56 dark:bg-white/10">
-            {currentModel || (language === 'zh' ? '自动模型' : 'Auto model')}
-          </span>
+          {!landing && (
+            <>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/72 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-foreground/56 dark:bg-white/10">
+                <FolderIcon className="h-3.5 w-3.5" />
+                {workspaceLabel}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-white/80 bg-white/72 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-foreground/56 dark:bg-white/10">
+                {currentModel || (language === 'zh' ? '自动模型' : 'Auto model')}
+              </span>
+            </>
+          )}
           {selectedSkills.length > 0 && (
             <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-primary">
               {selectedSkills.length} {language === 'zh' ? '个技能已激活' : 'skills active'}
@@ -1792,7 +1796,7 @@ export function ChatView() {
         }}
         onKeyDown={handleKeyDown}
         placeholder={language === 'zh' ? '描述你的任务目标、上下文和输出要求...' : 'Describe the goal, context, and expected output...'}
-        rows={landing ? 8 : 4}
+        rows={landing ? 6 : 4}
         className={`w-full resize-none border-none bg-transparent px-2 py-1 leading-7 text-foreground placeholder:text-foreground/32 focus:outline-none ${
           landing ? 'text-[15px]' : 'text-sm'
         }`}
@@ -2148,42 +2152,31 @@ export function ChatView() {
         <div className="flex min-h-0 flex-1">
           <div className="flex-1 overflow-y-auto px-8 py-8 md:px-10 md:py-10">
             <div className="mx-auto max-w-4xl">
-              <section className="rounded-[34px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(250,244,236,0.82))] p-6 shadow-[0_28px_70px_rgba(28,36,50,0.1)] dark:bg-[linear-gradient(180deg,rgba(24,31,45,0.92),rgba(20,27,39,0.9))] md:p-8">
-                <div className="max-w-2xl">
-                  <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#192233] shadow-[0_18px_44px_rgba(25,34,51,0.18)]">
+              <section className="rounded-[34px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(250,244,236,0.82))] p-5 shadow-[0_28px_70px_rgba(28,36,50,0.1)] dark:bg-[linear-gradient(180deg,rgba(24,31,45,0.92),rgba(20,27,39,0.9))] md:p-6">
+                <div className="flex flex-wrap items-center gap-4 rounded-[26px] border border-white/70 bg-white/46 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] dark:bg-white/5">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-[#192233] shadow-[0_14px_28px_rgba(25,34,51,0.16)]">
                     <img
                       src="./icon.png"
                       alt="maxclaw"
-                      className="h-11 w-11 object-contain"
+                      className="h-8 w-8 object-contain"
                     />
                   </div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-foreground/42">
-                    Local-first operator
-                  </p>
-                  <h1 className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[44px] font-semibold tracking-[-0.06em] text-foreground">
-                    <span>{language === 'zh' ? '启动你的' : 'Launch your'}</span>
-                    <span className="inline-flex items-center gap-2">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#192233] shadow-[0_12px_28px_rgba(25,34,51,0.18)]">
-                        <img
-                          src="./icon.png"
-                          alt="MaxClaw"
-                          className="h-7 w-7 object-contain"
-                        />
-                      </span>
-                      <span>MaxClaw</span>
-                    </span>
-                  </h1>
-                  <p className="mt-4 max-w-xl text-[17px] leading-8 text-foreground/62">
-                    {t('chat.starter.subtitle')}
-                  </p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground/42">
+                      {language === 'zh' ? 'Ready to Work' : 'Ready to Work'}
+                    </p>
+                    <p className="mt-1 text-[15px] font-medium tracking-[-0.02em] text-foreground">
+                      {language === 'zh' ? '交代目标、限制和输出要求，MaxClaw 会继续往前推进。' : 'Describe the goal, constraints, and expected output. MaxClaw will take it forward.'}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="mt-8">
+                <div className="mt-5">
                   {renderComposer(true)}
                 </div>
               </section>
 
-              <section className="mt-8">
+              <section className="mt-6">
                 <div className="mb-4 flex items-center justify-between">
                   <p className="text-xs font-semibold uppercase tracking-[0.22em] text-foreground/45">{t('chat.starter.templates')}</p>
                   <div className="hidden h-px flex-1 bg-white/50 md:ml-4 md:block" />
