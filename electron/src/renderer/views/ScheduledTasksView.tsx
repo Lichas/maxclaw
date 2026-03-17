@@ -18,6 +18,7 @@ interface CronJob {
   nextRun?: string;
   executionMode?: 'safe' | 'ask' | 'auto';
   channels?: string[];
+  to?: string;
 }
 
 interface JobFormData {
@@ -28,6 +29,7 @@ interface JobFormData {
   workDir: string;
   executionMode: 'safe' | 'ask' | 'auto';
   channels: string[];
+  to: string;
 }
 
 export function ScheduledTasksView() {
@@ -46,7 +48,8 @@ export function ScheduledTasksView() {
     scheduleValue: '0 9 * * *',
     workDir: '',
     executionMode: 'ask',
-    channels: ['desktop']
+    channels: ['desktop'],
+    to: ''
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
@@ -105,7 +108,8 @@ export function ScheduledTasksView() {
         [formData.scheduleType === 'every' ? 'every' : formData.scheduleType === 'once' ? 'at' : 'cron']: formData.scheduleValue,
         workDir: formData.workDir || undefined,
         executionMode: formData.executionMode,
-        channels: formData.channels
+        channels: formData.channels,
+        to: formData.to || undefined
       };
 
       const url = editingJob
@@ -128,7 +132,8 @@ export function ScheduledTasksView() {
         scheduleValue: '0 9 * * *',
         workDir: '',
         executionMode: 'ask',
-        channels: ['desktop']
+        channels: ['desktop'],
+        to: ''
       });
       void fetchJobs();
     } catch (err) {
@@ -145,7 +150,8 @@ export function ScheduledTasksView() {
       scheduleValue: job.schedule,
       workDir: job.workDir || '',
       executionMode: job.executionMode || 'ask',
-      channels: job.channels || ['desktop']
+      channels: job.channels || ['desktop'],
+      to: job.to || ''
     });
     setShowForm(true);
   };
@@ -160,7 +166,8 @@ export function ScheduledTasksView() {
       scheduleValue: '0 9 * * *',
       workDir: '',
       executionMode: 'ask',
-      channels: ['desktop']
+      channels: ['desktop'],
+      to: ''
     });
   };
 
@@ -487,6 +494,25 @@ export function ScheduledTasksView() {
                 </p>
                 <p className="mt-1 text-xs text-foreground/40">{t('scheduled.channels.multiHint')}</p>
               </div>
+
+              {/* To field - shown when channels other than desktop are selected */}
+              {formData.channels.some(c => c !== 'desktop') && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">
+                    {t('scheduled.to') || '接收者 (To)'}
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.to}
+                    onChange={(e) => setFormData({ ...formData, to: e.target.value })}
+                    placeholder={t('scheduled.to.placeholder') || '输入接收者 ID (如 Telegram Chat ID)'}
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                  />
+                  <p className="mt-1 text-xs text-foreground/50">
+                    {t('scheduled.to.desc') || '用于接收任务结果的 Chat ID、用户名或邮箱地址'}
+                  </p>
+                </div>
+              )}
 
               <div className="flex justify-end gap-3 pt-2">
                 <button

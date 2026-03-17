@@ -1384,6 +1384,7 @@ type cronRequest struct {
 	WorkDir       string   `json:"workDir,omitempty"`
 	ExecutionMode string   `json:"executionMode,omitempty"` // safe, ask, auto
 	Channels      []string `json:"channels,omitempty"`      // 输出频道列表
+	To            string   `json:"to,omitempty"`            // 接收者（chatID/用户名等）
 }
 
 // cronJobResponse 定时任务响应格式（与前端对齐）
@@ -1400,6 +1401,7 @@ type cronJobResponse struct {
 	NextRun       string   `json:"nextRun,omitempty"`
 	ExecutionMode string   `json:"executionMode,omitempty"`
 	Channels      []string `json:"channels,omitempty"`
+	To            string   `json:"to,omitempty"`
 }
 
 func (s *Server) handleCron(w http.ResponseWriter, r *http.Request) {
@@ -1494,6 +1496,7 @@ func (s *Server) handleCronCreate(w http.ResponseWriter, r *http.Request) {
 	payload := cron.Payload{
 		Message:  req.Prompt,
 		Channels: channels,
+		To:       req.To,
 		Deliver:  len(channels) > 0 && !(len(channels) == 1 && channels[0] == "desktop"),
 	}
 
@@ -1597,6 +1600,7 @@ func (s *Server) handleCronUpdate(w http.ResponseWriter, r *http.Request, jobID 
 		WorkDir       string   `json:"workDir,omitempty"`
 		ExecutionMode string   `json:"executionMode,omitempty"`
 		Channels      []string `json:"channels,omitempty"`
+		To            string   `json:"to,omitempty"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -1650,6 +1654,7 @@ func (s *Server) handleCronUpdate(w http.ResponseWriter, r *http.Request, jobID 
 	payload := cron.Payload{
 		Message:  req.Prompt,
 		Channels: channels,
+		To:       req.To,
 		Deliver:  len(channels) > 0 && !(len(channels) == 1 && channels[0] == "desktop"),
 	}
 
@@ -1714,6 +1719,7 @@ func (s *Server) toCronJobResponse(job *cron.Job) cronJobResponse {
 		CreatedAt:     time.UnixMilli(job.Created).Format(time.RFC3339),
 		ExecutionMode: job.ExecutionMode,
 		Channels:      job.Payload.Channels,
+		To:            job.Payload.To,
 	}
 
 	switch job.Schedule.Type {

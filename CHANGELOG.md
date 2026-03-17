@@ -12,6 +12,10 @@
   - `electron/src/renderer/components/ExecutionHistory.tsx`
   - 验证：`cd electron && npm run build`
 
+- **定时任务 Web UI 支持设置接收者 (To)**：后端 API 和前端表单新增 `to` 字段，用于指定任务结果的接收者（如 Telegram Chat ID、Discord 频道等）
+  - `internal/webui/server.go`、`electron/src/renderer/views/ScheduledTasksView.tsx`
+  - 验证：`make build`、`cd electron && npm run build`
+
 ### Added
 
 - **MCP 管理页支持 JSON 导入服务器配置**：桌面端 MCP 管理弹窗新增“JSON 导入”模式，兼容单个 server 对象、命名 server 块和 Claude/Cursor 风格的 `mcpServers` JSON，并支持一次批量导入多个服务器，避免手动把 `command` / `args` JSON 误填进表单字段
