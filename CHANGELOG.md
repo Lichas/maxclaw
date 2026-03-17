@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **定时任务执行结果支持发送到 Telegram 等频道**：修复 `executeCronJob` 函数中 `Payload.Deliver` 设置不生效的问题。现在在独立执行模式下（非 gateway 队列模式），如果 `Deliver=true` 且配置了 Channels 和 To，执行结果会通过相应渠道发送给用户
+  - `internal/cli/cron.go`
+  - 验证：`go test ./internal/cli/...`、`make build`
+
+- **定时任务执行历史支持 Markdown 渲染**：Electron 端执行历史详情弹窗的输出内容现在使用 `react-markdown` 渲染，支持代码高亮和 GitHub Flavored Markdown
+  - `electron/src/renderer/components/ExecutionHistory.tsx`
+  - 验证：`cd electron && npm run build`
+
 ### Added
 
 - **MCP 管理页支持 JSON 导入服务器配置**：桌面端 MCP 管理弹窗新增“JSON 导入”模式，兼容单个 server 对象、命名 server 块和 Claude/Cursor 风格的 `mcpServers` JSON，并支持一次批量导入多个服务器，避免手动把 `command` / `args` JSON 误填进表单字段

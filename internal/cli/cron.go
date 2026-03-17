@@ -12,6 +12,7 @@ import (
 
 	"github.com/Lichas/maxclaw/internal/agent"
 	"github.com/Lichas/maxclaw/internal/bus"
+	"github.com/Lichas/maxclaw/internal/channels"
 	"github.com/Lichas/maxclaw/internal/config"
 	"github.com/Lichas/maxclaw/internal/cron"
 	"github.com/Lichas/maxclaw/internal/logging"
@@ -382,14 +383,27 @@ func executeCronJob(cfg *config.Config, apiKey, apiBase string, cronService *cro
 		resultChan <- resp.Content
 	}()
 
+	var result string
+	var execErr error
+
 	select {
-	case result := <-resultChan:
-		return result, nil
-	case err := <-errorChan:
-		return "", err
+	case result = <-resultChan:
+		// Continue to delivery logic
+	case execErr = <-errorChan:
+		// Continue to delivery logic with error
 	case <-ctx.Done():
 		return "", ctx.Err()
 	}
+
+	// Deliver result to channels if configured
+	if job.Payload.Deliver && len(job.Payload.Channels) > 0 && job.Payload.To != "" {
+		deliverCronResult(cfg, job, result, execErr)
+	}
+
+	if execErr != nil {
+		return "", execErr
+	}
+	return result, nil
 }
 
 func buildCronUserMessage(job *cron.Job) string {
@@ -424,4 +438,128 @@ func enqueueCronJob(messageBus *bus.MessageBus, job *cron.Job) (string, error) {
 		return "", fmt.Errorf("failed to enqueue cron job: %w", err)
 	}
 	return fmt.Sprintf("enqueued cron job %s", job.ID), nil
+}
+
+// deliverCronResult delivers cron job result to configured channels
+func deliverCronResult(cfg *config.Config, job *cron.Job, result string, execErr error) {
+	if len(job.Payload.Channels) == 0 || job.Payload.To == "" {
+		return
+	}
+
+	// Build message content
+	var content string
+	if execErr != nil {
+		content = fmt.Sprintf("❌ **定时任务执行失败**\n\n**任务**: %s\n**错误**: %v", job.Name, execErr)
+	} else {
+		if result == "" {
+			content = fmt.Sprintf("✅ **定时任务完成**\n\n**任务**: %s\n\n无输出内容", job.Name)
+		} else {
+			// Truncate if too long
+			displayResult := result
+			if len(result) > 4000 {
+				displayResult = result[:4000] + "\n\n...(内容已截断)"
+			}
+			content = fmt.Sprintf("✅ **定时任务完成**\n\n**任务**: %s\n\n**输出**:\n%s", job.Name, displayResult)
+		}
+	}
+
+	// Send to each configured channel
+	for _, channelName := range job.Payload.Channels {
+		switch channelName {
+		case "telegram":
+			if cfg.Channels.Telegram.Enabled && cfg.Channels.Telegram.Token != "" {
+				tgChannel := channels.NewTelegramChannel(&channels.TelegramConfig{
+					Token:   cfg.Channels.Telegram.Token,
+					Enabled: true,
+					Proxy:   cfg.Channels.Telegram.Proxy,
+				})
+				if err := tgChannel.SendMessage(job.Payload.To, content); err != nil {
+					if lg := logging.Get(); lg != nil && lg.Cron != nil {
+						lg.Cron.Printf("cron deliver failed channel=telegram job=%s err=%v", job.ID, err)
+					}
+				} else {
+					if lg := logging.Get(); lg != nil && lg.Cron != nil {
+						lg.Cron.Printf("cron delivered channel=telegram job=%s", job.ID)
+					}
+				}
+			}
+		case "discord":
+			if cfg.Channels.Discord.Enabled && cfg.Channels.Discord.Token != "" {
+				dcChannel := channels.NewDiscordChannel(&channels.DiscordConfig{
+					Token:   cfg.Channels.Discord.Token,
+					Enabled: true,
+				})
+				if err := dcChannel.SendMessage(job.Payload.To, content); err != nil {
+					if lg := logging.Get(); lg != nil && lg.Cron != nil {
+						lg.Cron.Printf("cron deliver failed channel=discord job=%s err=%v", job.ID, err)
+					}
+				} else {
+					if lg := logging.Get(); lg != nil && lg.Cron != nil {
+						lg.Cron.Printf("cron delivered channel=discord job=%s", job.ID)
+					}
+				}
+			}
+		case "whatsapp":
+			if cfg.Channels.WhatsApp.Enabled && cfg.Channels.WhatsApp.BridgeURL != "" {
+				waChannel := channels.NewWhatsAppChannel(&channels.WhatsAppConfig{
+					Enabled:     true,
+					BridgeURL:   cfg.Channels.WhatsApp.BridgeURL,
+					BridgeToken: cfg.Channels.WhatsApp.BridgeToken,
+				})
+				if err := waChannel.SendMessage(job.Payload.To, content); err != nil {
+					if lg := logging.Get(); lg != nil && lg.Cron != nil {
+						lg.Cron.Printf("cron deliver failed channel=whatsapp job=%s err=%v", job.ID, err)
+					}
+				} else {
+					if lg := logging.Get(); lg != nil && lg.Cron != nil {
+						lg.Cron.Printf("cron delivered channel=whatsapp job=%s", job.ID)
+					}
+				}
+			}
+		case "slack":
+			if cfg.Channels.Slack.Enabled && cfg.Channels.Slack.BotToken != "" {
+				slackChannel := channels.NewSlackChannel(&channels.SlackConfig{
+					Enabled:  true,
+					BotToken: cfg.Channels.Slack.BotToken,
+					AppToken: cfg.Channels.Slack.AppToken,
+				})
+				if err := slackChannel.SendMessage(job.Payload.To, content); err != nil {
+					if lg := logging.Get(); lg != nil && lg.Cron != nil {
+						lg.Cron.Printf("cron deliver failed channel=slack job=%s err=%v", job.ID, err)
+					}
+				} else {
+					if lg := logging.Get(); lg != nil && lg.Cron != nil {
+						lg.Cron.Printf("cron delivered channel=slack job=%s", job.ID)
+					}
+				}
+			}
+		case "email":
+			if cfg.Channels.Email.Enabled && cfg.Channels.Email.SMTPHost != "" {
+				emailChannel := channels.NewEmailChannel(&channels.EmailConfig{
+					Enabled:          true,
+					SMTPHost:         cfg.Channels.Email.SMTPHost,
+					SMTPPort:         cfg.Channels.Email.SMTPPort,
+					SMTPUsername:     cfg.Channels.Email.SMTPUsername,
+					SMTPPassword:     cfg.Channels.Email.SMTPPassword,
+					SMTPUseTLS:       cfg.Channels.Email.SMTPUseTLS,
+					SMTPUseSSL:       cfg.Channels.Email.SMTPUseSSL,
+					FromAddress:      cfg.Channels.Email.FromAddress,
+					AutoReplyEnabled: cfg.Channels.Email.AutoReplyEnabled,
+				})
+				if err := emailChannel.SendMessage(job.Payload.To, content); err != nil {
+					if lg := logging.Get(); lg != nil && lg.Cron != nil {
+						lg.Cron.Printf("cron deliver failed channel=email job=%s err=%v", job.ID, err)
+					}
+				} else {
+					if lg := logging.Get(); lg != nil && lg.Cron != nil {
+						lg.Cron.Printf("cron delivered channel=email job=%s", job.ID)
+					}
+				}
+			}
+		default:
+			if lg := logging.Get(); lg != nil && lg.Cron != nil {
+				lg.Cron.Printf("cron deliver skipped unsupported channel=%s job=%s", channelName, job.ID)
+			}
+		}
+	}
 }

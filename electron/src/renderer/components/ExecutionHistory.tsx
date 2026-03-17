@@ -1,4 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface ExecutionRecord {
   id: string;
@@ -227,10 +231,31 @@ export function ExecutionHistory({ jobId, jobTitle }: ExecutionHistoryProps) {
               {selectedRecord.output && (
                 <div>
                   <div className="text-xs font-medium text-foreground/50 mb-1.5">输出内容</div>
-                  <div className="rounded-lg border border-border bg-secondary/50 p-3">
-                    <pre className="text-sm text-foreground whitespace-pre-wrap break-words max-h-64 overflow-y-auto">
+                  <div className="rounded-lg border border-border bg-secondary/50 p-3 max-h-96 overflow-y-auto prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        code({ node, inline, className, children, ...props }: { node?: unknown; inline?: boolean; className?: string; children?: React.ReactNode }) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <SyntaxHighlighter
+                              style={vscDarkPlus}
+                              language={match[1]}
+                              PreTag="div"
+                              {...props}
+                            >
+                              {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                      }}
+                    >
                       {selectedRecord.output}
-                    </pre>
+                    </ReactMarkdown>
                   </div>
                 </div>
               )}
