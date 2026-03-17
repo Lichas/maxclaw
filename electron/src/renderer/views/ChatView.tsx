@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, setCurrentSessionKey, toggleTerminal } from '../store';
 import { GatewayStreamEvent, SkillSummary, useGateway } from '../hooks/useGateway';
@@ -188,6 +188,107 @@ function extractFirstURL(text: string): string {
   const matched = text.match(/https?:\/\/[^\s)>\]'"`]+/i);
   return matched ? matched[0] : '';
 }
+
+// Memoized message item component to prevent re-rendering on input
+interface MemoizedMessageItemProps {
+  message: Message;
+  renderTimeline: (items: TimelineEntry[], streaming: boolean) => React.ReactNode;
+  renderMarkdownWithActions: (content: string, keyPrefix: string) => React.ReactNode;
+  formatMessageTimestamp: (date: Date) => string;
+  formatDuration: (ms: number) => string;
+  showToast: (message: string) => void;
+  language: string;
+}
+
+const MemoizedMessageItem = memo(function MemoizedMessageItem({
+  message,
+  renderTimeline,
+  renderMarkdownWithActions,
+  formatMessageTimestamp,
+  formatDuration,
+  showToast,
+  language
+}: MemoizedMessageItemProps) {
+  if (message.role === 'user') {
+    return (
+      <div className={`flex justify-end`}>
+        <div className="max-w-3xl space-y-2">
+          {message.attachments && message.attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {message.attachments.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center gap-1.5 rounded-full border border-white/70 bg-white/82 px-3 py-1.5 text-xs text-foreground shadow-[0_10px_24px_rgba(28,36,50,0.06)] dark:bg-white/10"
+                >
+                  <DocumentIcon className="h-3.5 w-3.5 text-foreground/60" />
+                  <span className="max-w-[150px] truncate">{file.filename}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="group relative rounded-[26px] bg-[#192233] px-5 py-4 text-sm leading-7 text-white shadow-[0_22px_48px_rgba(25,34,51,0.2)]">
+            <pre className="whitespace-pre-wrap break-all font-sans selection:bg-primary-foreground/30">{message.content}</pre>
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard.writeText(message.content);
+                showToast(language === 'zh' ? '已复制到剪贴板' : 'Copied to clipboard');
+              }}
+              className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-foreground shadow-md opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary"
+              title={language === 'zh' ? '复制内容' : 'Copy content'}
+            >
+              <CopyIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="px-1 text-right text-[11px] uppercase tracking-[0.12em] text-foreground/38">
+            {formatMessageTimestamp(message.timestamp)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex justify-start`}>
+      <div className="w-full text-foreground">
+        {message.timeline && message.timeline.length > 0 && (
+          <div className="mb-3">
+            {renderTimeline(message.timeline, false)}
+          </div>
+        )}
+        <div className="rounded-[28px] border border-white/72 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(248,244,238,0.82))] px-5 py-4 shadow-[0_22px_52px_rgba(28,36,50,0.06)] dark:bg-[linear-gradient(180deg,rgba(24,31,45,0.94),rgba(20,27,39,0.9))]">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#192233] text-xs font-semibold uppercase tracking-[0.18em] text-white">
+              AI
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">MaxClaw</p>
+              <p className="text-[11px] uppercase tracking-[0.14em] text-foreground/42">
+                {formatMessageTimestamp(message.timestamp)}
+              </p>
+            </div>
+          </div>
+          {renderMarkdownWithActions(message.content, message.id)}
+          <div className="mt-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.12em] text-foreground/40">
+            <span>{formatMessageTimestamp(message.timestamp)}</span>
+            {message.durationMs !== undefined && message.durationMs > 0 && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" strokeWidth={1.5} />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 7v5l3 3" />
+                  </svg>
+                  <span>{formatDuration(message.durationMs)}</span>
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 export function ChatView() {
   const dispatch = useDispatch();
@@ -2206,6 +2307,22 @@ export function ChatView() {
     );
   }
 
+  // Memoized message list to prevent re-rendering on input
+  const renderedMessages = useMemo(() => {
+    return messages.map((message) => (
+      <MemoizedMessageItem
+        key={message.id}
+        message={message}
+        renderTimeline={renderTimeline}
+        renderMarkdownWithActions={renderMarkdownWithActions}
+        formatMessageTimestamp={formatMessageTimestamp}
+        formatDuration={formatDuration}
+        showToast={showToast}
+        language={language}
+      />
+    ));
+  }, [messages, renderTimeline, renderMarkdownWithActions, formatMessageTimestamp, formatDuration, showToast, language]);
+
   return (
     <div className="flex h-full flex-col bg-transparent">
       {renderThreadHeader()}
@@ -2213,84 +2330,7 @@ export function ChatView() {
         <div className="min-w-0 flex flex-1 flex-col">
           <div className="flex-1 overflow-y-auto px-6 py-6">
             <div className="mx-auto flex w-full max-w-[980px] flex-col gap-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  {message.role === 'user' ? (
-                    <div className="max-w-3xl space-y-2">
-                    {message.attachments && message.attachments.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {message.attachments.map((file) => (
-                          <div
-                            key={file.id}
-                            className="flex items-center gap-1.5 rounded-full border border-white/70 bg-white/82 px-3 py-1.5 text-xs text-foreground shadow-[0_10px_24px_rgba(28,36,50,0.06)] dark:bg-white/10"
-                          >
-                            <DocumentIcon className="h-3.5 w-3.5 text-foreground/60" />
-                            <span className="max-w-[150px] truncate">{file.filename}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <div className="group relative rounded-[26px] bg-[#192233] px-5 py-4 text-sm leading-7 text-white shadow-[0_22px_48px_rgba(25,34,51,0.2)]">
-                      <pre className="whitespace-pre-wrap break-all font-sans selection:bg-primary-foreground/30">{message.content}</pre>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void navigator.clipboard.writeText(message.content);
-                          showToast('已复制到剪贴板');
-                        }}
-                        className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-foreground shadow-md opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary"
-                        title="复制内容"
-                      >
-                        <CopyIcon className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                    <div className="px-1 text-right text-[11px] uppercase tracking-[0.12em] text-foreground/38">
-                      {formatMessageTimestamp(message.timestamp)}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="w-full text-foreground">
-                    {message.timeline && message.timeline.length > 0 && (
-                      <div className="mb-3">
-                        {renderTimeline(message.timeline, false)}
-                      </div>
-                    )}
-                    <div className="rounded-[28px] border border-white/72 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(248,244,238,0.82))] px-5 py-4 shadow-[0_22px_52px_rgba(28,36,50,0.06)] dark:bg-[linear-gradient(180deg,rgba(24,31,45,0.94),rgba(20,27,39,0.9))]">
-                      <div className="mb-4 flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#192233] text-xs font-semibold uppercase tracking-[0.18em] text-white">
-                          AI
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">MaxClaw</p>
-                          <p className="text-[11px] uppercase tracking-[0.14em] text-foreground/42">
-                            {formatMessageTimestamp(message.timestamp)}
-                          </p>
-                        </div>
-                      </div>
-                      {renderMarkdownWithActions(message.content, message.id)}
-                      <div className="mt-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.12em] text-foreground/40">
-                        <span>{formatMessageTimestamp(message.timestamp)}</span>
-                        {message.durationMs !== undefined && message.durationMs > 0 && (
-                          <>
-                            <span aria-hidden="true">·</span>
-                            <span className="inline-flex items-center gap-1.5">
-                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="9" strokeWidth={1.5} />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 7v5l3 3" />
-                              </svg>
-                              <span>{formatDuration(message.durationMs)}</span>
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                </div>
-              ))}
+              {renderedMessages}
 
               {streamingTimeline.length > 0 && (
                 <div className="flex justify-start">

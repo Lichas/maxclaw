@@ -24,6 +24,13 @@
   - `internal/cron/types.go`、`internal/cron/service.go`、`internal/cli/gateway.go`
   - 验证：`make build`
 
+- **修复 Electron GUI 输入延迟和性能问题**：
+  - 使用 `React.memo` 包装 `MermaidRenderer` 和 `MarkdownRenderer`，避免不必要的重新渲染
+  - 全局只初始化一次 mermaid，避免每次渲染都重新初始化
+  - 添加 `MemoizedMessageItem` 组件，使用 `useMemo` 缓存消息列表，输入时不再重新渲染所有消息
+  - `electron/src/renderer/components/MermaidRenderer.tsx`、`electron/src/renderer/components/MarkdownRenderer.tsx`、`electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build`
+
 ### Added
 
 - **MCP 管理页支持 JSON 导入服务器配置**：桌面端 MCP 管理弹窗新增“JSON 导入”模式，兼容单个 server 对象、命名 server 块和 Claude/Cursor 风格的 `mcpServers` JSON，并支持一次批量导入多个服务器，避免手动把 `command` / `args` JSON 误填进表单字段

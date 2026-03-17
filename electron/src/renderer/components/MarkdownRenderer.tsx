@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -136,10 +136,11 @@ function CodeBlockCard({ code, language, isDark }: CodeBlockCardProps) {
   );
 }
 
-export function MarkdownRenderer({ content, className = '', onFileLinkClick }: MarkdownRendererProps) {
+export const MarkdownRenderer = memo(function MarkdownRenderer({ content, className = '', onFileLinkClick }: MarkdownRendererProps) {
   const { theme } = useSelector((state: RootState) => state.ui);
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
+  // Memoize processed content to avoid re-processing
   const processedContent = useMemo(() => {
     return content;
   }, [content]);
@@ -276,4 +277,4 @@ export function MarkdownRenderer({ content, className = '', onFileLinkClick }: M
       </ReactMarkdown>
     </div>
   );
-}
+});

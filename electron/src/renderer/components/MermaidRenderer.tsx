@@ -1,23 +1,32 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 
-interface MermaidRendererProps {
-  chart: string;
-  theme?: 'light' | 'dark';
-}
-
-export function MermaidRenderer({ chart, theme = 'light' }: MermaidRendererProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [svg, setSvg] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
+// Initialize mermaid once globally
+let mermaidInitialized = false;
+function initMermaid(theme: 'light' | 'dark') {
+  if (!mermaidInitialized) {
     mermaid.initialize({
       theme: theme === 'dark' ? 'dark' : 'default',
       securityLevel: 'strict',
       startOnLoad: false,
     });
-  }, [theme]);
+    mermaidInitialized = true;
+  }
+}
+
+interface MermaidRendererProps {
+  chart: string;
+  theme?: 'light' | 'dark';
+}
+
+export const MermaidRenderer = React.memo(function MermaidRenderer({ chart, theme = 'light' }: MermaidRendererProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [svg, setSvg] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    initMermaid(theme);
+  }, []); // Only initialize once
 
   useEffect(() => {
     const renderChart = async () => {
@@ -57,4 +66,4 @@ export function MermaidRenderer({ chart, theme = 'light' }: MermaidRendererProps
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );
-}
+});
