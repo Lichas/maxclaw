@@ -63,6 +63,7 @@ type Job struct {
 	Enabled       bool     `json:"enabled"`
 	Created       int64    `json:"created"`
 	ExecutionMode string   `json:"executionMode,omitempty"` // safe, ask, auto
+	IsManualRun   bool     `json:"-"`                       // 标记是否为手动执行（不持久化）
 }
 
 // GetExecutionMode 获取任务的执行模式，默认为 ask

@@ -20,6 +20,10 @@
   - `internal/webui/server.go`、`electron/src/renderer/views/ScheduledTasksView.tsx`
   - 验证：`make build`、`cd electron && npm run build`
 
+- **修复定时任务手动执行返回 "enqueued" 而非结果的问题**：添加 `IsManualRun` 标志区分手动执行和定时触发，手动执行时直接调用 `executeCronJob` 返回实际结果，定时触发才走 `enqueueCronJob` 消息队列
+  - `internal/cron/types.go`、`internal/cron/service.go`、`internal/cli/gateway.go`
+  - 验证：`make build`
+
 ### Added
 
 - **MCP 管理页支持 JSON 导入服务器配置**：桌面端 MCP 管理弹窗新增“JSON 导入”模式，兼容单个 server 对象、命名 server 块和 Claude/Cursor 风格的 `mcpServers` JSON，并支持一次批量导入多个服务器，避免手动把 `command` / `args` JSON 误填进表单字段

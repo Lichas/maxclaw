@@ -345,6 +345,9 @@ func (s *Service) RunJob(jobID string) error {
 		return fmt.Errorf("job not found")
 	}
 
+	// 标记为手动执行
+	job.IsManualRun = true
+
 	// 异步执行任务，避免阻塞 HTTP 响应
 	go s.executeJob(job, "manual")
 	return nil

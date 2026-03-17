@@ -68,7 +68,11 @@ var gatewayCmd = &cobra.Command{
 		storePath := filepath.Join(cfg.Agents.Defaults.Workspace, ".cron", "jobs.json")
 		cronService := cron.NewService(storePath)
 		cronService.SetJobHandler(func(job *cron.Job) (string, error) {
-			// Deliverable jobs should go through the live gateway bus so they are sent to the real channel/chat.
+			// Manual runs should execute directly and return results immediately.
+			if job != nil && job.IsManualRun {
+				return executeCronJob(cfg, apiKey, apiBase, cronService, job)
+			}
+			// Scheduled jobs with delivery config go through the message bus for async processing.
 			if job != nil && job.Payload.Deliver && len(job.Payload.Channels) > 0 && job.Payload.To != "" {
 				return enqueueCronJob(messageBus, job)
 			}
