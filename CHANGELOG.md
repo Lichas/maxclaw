@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **修复 Electron 打包配置中的宏变量错误**：`electron-builder.yml` 中的 `extraResources` 使用 `${ext}` 宏导致打包失败（"macro ext is not defined"），改为显式指定两个文件路径
+  - `electron/electron-builder.yml`
+  - 验证：`cd electron && npm run build`
+
+- **修复 GitHub Actions 桌面端打包流水线**：
+  - 升级 Node.js 20 → 22（避免 deprecation 警告）
+  - 移除 snapcraft（导致构建失败）
+  - 修复 Windows 构建缺少 `maxclaw-gateway.exe` 的构建步骤
+  - 升级 action-gh-release v1 → v2
+  - `.github/workflows/build-desktop.yml`
+
 ## [v0.1.1] - 2026-03-18
 
 ### Fixed
