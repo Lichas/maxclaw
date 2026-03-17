@@ -38,7 +38,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: electron/package-lock.json
 
@@ -80,7 +80,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: electron/package-lock.json
 
@@ -96,6 +96,7 @@ jobs:
       - name: Build Go backend (Windows)
         run: |
           go build -o build/maxclaw.exe ./cmd/maxclaw
+          go build -o build/maxclaw-gateway.exe ./cmd/maxclaw-gateway
 
       - name: Build Electron app (Windows)
         working-directory: electron
@@ -109,7 +110,6 @@ jobs:
           name: windows-artifacts
           path: |
             electron/release/*.exe
-            electron/release/*.portable.exe
           if-no-files-found: warn
 
   # 构建 Linux 版本
@@ -123,7 +123,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: electron/package-lock.json
 
@@ -135,7 +135,7 @@ jobs:
       - name: Install dependencies (Linux)
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm snapcraft
+          sudo apt-get install -y rpm
 
       - name: Install dependencies
         working-directory: electron
@@ -158,7 +158,6 @@ jobs:
             electron/release/*.AppImage
             electron/release/*.deb
             electron/release/*.rpm
-            electron/release/*.snap
           if-no-files-found: warn
 
   # 发布 Release（仅在打 tag 时）
@@ -176,7 +175,7 @@ jobs:
           merge-multiple: true
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**
           draft: true
