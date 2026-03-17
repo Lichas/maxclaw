@@ -24,6 +24,10 @@
   - `internal/cron/types.go`、`internal/cron/service.go`、`internal/cli/gateway.go`
   - 验证：`make build`
 
+- **修复 React Error #310（Hooks 顺序错误）**：性能优化时 `useMemo` 被放置在条件提前 return 之后，导致 Starter 模式与 Chat 模式之间切换时 hooks 计数不匹配。将 `renderedMessages` useMemo 移至 `if (isStarterMode)` 之前，确保每次渲染 hooks 调用顺序一致
+  - `electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build`
+
 - **修复 Electron GUI 输入延迟和性能问题**：
   - 使用 `React.memo` 包装 `MermaidRenderer` 和 `MarkdownRenderer`，避免不必要的重新渲染
   - 全局只初始化一次 mermaid，避免每次渲染都重新初始化
