@@ -55,6 +55,8 @@ export function ScheduledTasksView() {
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
   const [editingJob, setEditingJob] = useState<CronJob | null>(null);
   const [runningJobId, setRunningJobId] = useState<string | null>(null);
+  const [recentRecipients, setRecentRecipients] = useState<Record<string, Array<{ chatId: string; sender: string; lastSeen: string }>>>({});
+  const [showRecipientSuggestions, setShowRecipientSuggestions] = useState(false);
   const channelOptions = [
     { value: 'desktop', label: t('scheduled.channel.name.desktop') },
     { value: 'telegram', label: t('scheduled.channel.name.telegram') },
@@ -96,6 +98,49 @@ export function ScheduledTasksView() {
     const timer = setInterval(() => void fetchJobs(false), 30000);
     return () => clearInterval(timer);
   }, [fetchJobs]);
+
+  // Fetch recent recipients for each channel
+  const fetchRecentRecipients = useCallback(async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:18890/api/channels/senders?grouped=true&limit=100');
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data.grouped) {
+        setRecentRecipients(data.grouped);
+      }
+    } catch {
+      // Silently fail - recipient suggestions are optional
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchRecentRecipients();
+  }, [fetchRecentRecipients]);
+
+  // Get recipients for currently selected channels (excluding desktop)
+  const getSuggestedRecipients = () => {
+    const suggestions: Array<{ chatId: string; sender: string; channel: string }> = [];
+    const seen = new Set<string>();
+
+    formData.channels
+      .filter(c => c !== 'desktop')
+      .forEach(channel => {
+        const channelRecipients = recentRecipients[channel] || [];
+        channelRecipients.forEach(recipient => {
+          const key = `${channel}:${recipient.chatId}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            suggestions.push({
+              chatId: recipient.chatId,
+              sender: recipient.sender,
+              channel
+            });
+          }
+        });
+      });
+
+    return suggestions.slice(0, 10); // Limit to 10 suggestions
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -497,7 +542,7 @@ export function ScheduledTasksView() {
 
               {/* To field - shown when channels other than desktop are selected */}
               {formData.channels.some(c => c !== 'desktop') && (
-                <div>
+                <div className="relative">
                   <label className="mb-1.5 block text-sm font-medium text-foreground">
                     {t('scheduled.to') || '接收者 (To)'}
                   </label>
@@ -505,9 +550,43 @@ export function ScheduledTasksView() {
                     type="text"
                     value={formData.to}
                     onChange={(e) => setFormData({ ...formData, to: e.target.value })}
+                    onFocus={() => setShowRecipientSuggestions(true)}
+                    onBlur={() => {
+                      // Delay to allow click on suggestion
+                      setTimeout(() => setShowRecipientSuggestions(false), 200);
+                    }}
                     placeholder={t('scheduled.to.placeholder') || '输入接收者 ID (如 Telegram Chat ID)'}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
                   />
+                  {/* Recipient suggestions dropdown */}
+                  {showRecipientSuggestions && getSuggestedRecipients().length > 0 && (
+                    <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-background shadow-lg">
+                      <div className="px-3 py-2 text-xs font-medium text-foreground/50 border-b border-border">
+                        {t('scheduled.to.recent') || '最近的接收者'}
+                      </div>
+                      <div className="max-h-48 overflow-y-auto">
+                        {getSuggestedRecipients().map((recipient, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, to: recipient.chatId });
+                              setShowRecipientSuggestions(false);
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors flex items-center justify-between"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-foreground">{recipient.chatId}</span>
+                              {recipient.sender && recipient.sender !== recipient.chatId && (
+                                <span className="text-xs text-foreground/60">({recipient.sender})</span>
+                              )}
+                            </div>
+                            <span className="text-xs text-foreground/40 capitalize">{recipient.channel}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <p className="mt-1 text-xs text-foreground/50">
                     {t('scheduled.to.desc') || '用于接收任务结果的 Chat ID、用户名或邮箱地址'}
                   </p>

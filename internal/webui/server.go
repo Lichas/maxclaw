@@ -168,9 +168,40 @@ func (s *Server) handleChannelSenders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	channel := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("channel")))
+	grouped := strings.TrimSpace(r.URL.Query().Get("grouped")) == "true"
+
 	users, err := readChannelSenderStats(filepath.Join(config.GetLogsDir(), "session.log"), channel, limit)
 	if err != nil {
 		writeError(w, err)
+		return
+	}
+
+	// Return grouped by channel for recipient selection UI
+	if grouped && channel == "" {
+		groupedUsers := make(map[string][]map[string]interface{})
+		seen := make(map[string]map[string]bool) // channel -> chatId -> seen
+
+		for _, u := range users {
+			if u.ChatID == "" {
+				continue
+			}
+			// Skip duplicates per channel
+			if seen[u.Channel] == nil {
+				seen[u.Channel] = make(map[string]bool)
+			}
+			if seen[u.Channel][u.ChatID] {
+				continue
+			}
+			seen[u.Channel][u.ChatID] = true
+
+			entry := map[string]interface{}{
+				"chatId":   u.ChatID,
+				"sender":   u.Sender,
+				"lastSeen": u.LastSeen,
+			}
+			groupedUsers[u.Channel] = append(groupedUsers[u.Channel], entry)
+		}
+		writeJSON(w, map[string]interface{}{"grouped": groupedUsers})
 		return
 	}
 

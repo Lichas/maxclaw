@@ -16,6 +16,10 @@
   - `internal/webui/server.go`、`electron/src/renderer/views/ScheduledTasksView.tsx`
   - 验证：`make build`、`cd electron && npm run build`
 
+- **定时任务接收者支持从最近联系人中选择**：新增 `/api/channels/senders?grouped=true` API 按渠道分组返回最近的消息发送者，前端添加下拉建议列表方便选择接收者
+  - `internal/webui/server.go`、`electron/src/renderer/views/ScheduledTasksView.tsx`
+  - 验证：`make build`、`cd electron && npm run build`
+
 ### Added
 
 - **MCP 管理页支持 JSON 导入服务器配置**：桌面端 MCP 管理弹窗新增“JSON 导入”模式，兼容单个 server 对象、命名 server 块和 Claude/Cursor 风格的 `mcpServers` JSON，并支持一次批量导入多个服务器，避免手动把 `command` / `args` JSON 误填进表单字段
