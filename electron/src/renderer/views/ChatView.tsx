@@ -2248,6 +2248,22 @@ export function ChatView() {
     />
   );
 
+  // Memoized message list to prevent re-rendering on input
+  const renderedMessages = useMemo(() => {
+    return messages.map((message) => (
+      <MemoizedMessageItem
+        key={message.id}
+        message={message}
+        renderTimeline={renderTimeline}
+        renderMarkdownWithActions={renderMarkdownWithActions}
+        formatMessageTimestamp={formatMessageTimestamp}
+        formatDuration={formatDuration}
+        showToast={showToast}
+        language={language}
+      />
+    ));
+  }, [messages, renderTimeline, renderMarkdownWithActions, formatMessageTimestamp, formatDuration, showToast, language]);
+
   if (isStarterMode) {
     return (
       <div className="flex h-full flex-col bg-transparent">
@@ -2306,22 +2322,6 @@ export function ChatView() {
       </div>
     );
   }
-
-  // Memoized message list to prevent re-rendering on input
-  const renderedMessages = useMemo(() => {
-    return messages.map((message) => (
-      <MemoizedMessageItem
-        key={message.id}
-        message={message}
-        renderTimeline={renderTimeline}
-        renderMarkdownWithActions={renderMarkdownWithActions}
-        formatMessageTimestamp={formatMessageTimestamp}
-        formatDuration={formatDuration}
-        showToast={showToast}
-        language={language}
-      />
-    ));
-  }, [messages, renderTimeline, renderMarkdownWithActions, formatMessageTimestamp, formatDuration, showToast, language]);
 
   return (
     <div className="flex h-full flex-col bg-transparent">
