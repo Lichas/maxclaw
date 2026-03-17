@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.1.1] - 2026-03-18
+
 ### Fixed
 
 - **定时任务执行结果支持发送到 Telegram 等频道**：修复 `executeCronJob` 函数中 `Payload.Deliver` 设置不生效的问题。现在在独立执行模式下（非 gateway 队列模式），如果 `Deliver=true` 且配置了 Channels 和 To，执行结果会通过相应渠道发送给用户
@@ -1985,3 +1987,7 @@
 - 会话持久化
 - 工作区限制（安全沙箱）
 - E2E 测试脚本
+
+[Unreleased]: https://github.com/Lichas/maxclaw/compare/v0.1.1...HEAD
+[v0.1.1]: https://github.com/Lichas/maxclaw/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/Lichas/maxclaw/releases/tag/v0.1.0
