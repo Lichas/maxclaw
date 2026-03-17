@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v0.1.2] - 2026-03-18
+
 ### Fixed
 
 - **修复 Electron 打包配置中的宏变量错误**：`electron-builder.yml` 中的 `extraResources` 使用 `${ext}` 宏导致打包失败（"macro ext is not defined"），改为显式指定两个文件路径
@@ -2001,6 +2003,7 @@
 - 工作区限制（安全沙箱）
 - E2E 测试脚本
 
-[Unreleased]: https://github.com/Lichas/maxclaw/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/Lichas/maxclaw/compare/v0.1.2...HEAD
+[v0.1.2]: https://github.com/Lichas/maxclaw/compare/v0.1.1...v0.1.2
 [v0.1.1]: https://github.com/Lichas/maxclaw/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Lichas/maxclaw/releases/tag/v0.1.0
