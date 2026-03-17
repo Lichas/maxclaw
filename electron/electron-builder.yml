@@ -9,6 +9,10 @@ files:
   - assets/**/*
   - package.json
 extraResources:
+  - from: ../build/maxclaw
+    to: bin/maxclaw
+  - from: ../build/maxclaw.exe
+    to: bin/maxclaw.exe
   - from: ../build/maxclaw-gateway
     to: bin/maxclaw-gateway
   - from: ../build/maxclaw-gateway.exe
