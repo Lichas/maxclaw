@@ -18,6 +18,10 @@
   - `electron/src/renderer/views/ChatView.tsx`
   - 验证：`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`
 
+- **侧边栏“技能市场”图标替换为锤子**：将左侧导航中 `skills` 项图标由拼图改为锤子 SVG，视觉语义更贴近“工具/工坊”
+  - `electron/src/renderer/components/Sidebar.tsx`
+  - 验证：`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`
+
 ## [v0.1.2] - 2026-03-18
 
 ### Fixed
