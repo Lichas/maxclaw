@@ -2550,9 +2550,7 @@ function SendIcon({ className }: { className?: string }) {
 
 function FolderIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-    </svg>
+    <img src="./icons/workspace-folder.png" alt="" className={className} />
   );
 }
 

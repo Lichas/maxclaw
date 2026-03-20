@@ -28,3 +28,9 @@ This file provides guidance to coding agents (Codex, Claude, and similar) when w
 - Do all edits, validation, and commit in that task worktree.
 - Merge back to `main` only after verification passes (relevant tests + `make build`).
 - After merge, clean up the worktree and merged task branch.
+
+## UI Icon Search Rule
+
+- For future UI icon updates, use this source first:
+  - `https://igoutu.cn/icons/set/{keyworkd}--os-macos`
+- Replace `{keyworkd}` with the icon keyword (for example: `hammer`, `search`, `settings`) and prefer macOS-style icons from that result page.
