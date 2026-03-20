@@ -1,6 +1,15 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, setStatus, setActiveTab, setTheme, setLanguage, setCurrentSessionKey, toggleSidebar } from './store';
+import {
+  RootState,
+  setStatus,
+  setActiveTab,
+  setTheme,
+  setLanguage,
+  setRenderThinkTags,
+  setCurrentSessionKey,
+  toggleSidebar
+} from './store';
 import { Sidebar } from './components/Sidebar';
 import { ChatView } from './views/ChatView';
 import { SessionsView } from './views/SessionsView';
@@ -33,6 +42,9 @@ function App() {
       if (config.language) {
         dispatch(setLanguage(config.language));
       }
+      if (typeof config.renderThinkTags === 'boolean') {
+        dispatch(setRenderThinkTags(config.renderThinkTags));
+      }
       // Note: if config.language is not set, the system-detected language from store/index.ts is used
     });
 
@@ -53,6 +65,9 @@ function App() {
       }
       if (config.language) {
         dispatch(setLanguage(config.language));
+      }
+      if (typeof config.renderThinkTags === 'boolean') {
+        dispatch(setRenderThinkTags(config.renderThinkTags));
       }
     });
 

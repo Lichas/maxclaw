@@ -189,6 +189,27 @@ function extractFirstURL(text: string): string {
   return matched ? matched[0] : '';
 }
 
+const thinkTagPattern = /<think>([\s\S]*?)<\/think>/gi;
+
+function renderThinkTagsAsThoughtBlocks(content: string, language: string): string {
+  if (!content.includes('<think>')) {
+    return content;
+  }
+
+  const heading = language === 'zh' ? '思考' : 'Thinking';
+  return content.replace(thinkTagPattern, (_, rawBody: string) => {
+    const body = rawBody.trim();
+    if (!body) {
+      return '';
+    }
+    const quotedBody = body
+      .split('\n')
+      .map((line) => (line.trim() ? `> ${line}` : '>'))
+      .join('\n');
+    return `\n\n**${heading}**\n${quotedBody}\n\n`;
+  });
+}
+
 // Memoized message item component to prevent re-rendering on input
 interface MemoizedMessageItemProps {
   message: Message;
@@ -293,7 +314,7 @@ const MemoizedMessageItem = memo(function MemoizedMessageItem({
 export function ChatView() {
   const dispatch = useDispatch();
   const { t, language } = useTranslation();
-  const { currentSessionKey, sidebarCollapsed, terminalVisible } = useSelector((state: RootState) => state.ui);
+  const { currentSessionKey, sidebarCollapsed, terminalVisible, renderThinkTags } = useSelector((state: RootState) => state.ui);
   const gatewayStatus = useSelector((state: RootState) => state.gateway.status);
   const isMac = window.electronAPI.platform.isMac;
   const { sendMessage, getSession, getSessions, getSkills, getModels, getConfig, updateConfig, runBrowserAction } =
@@ -1729,12 +1750,18 @@ export function ChatView() {
     );
   };
 
-  const renderMarkdownWithActions = (content: string, keyPrefix: string) => (
-    <div className="space-y-1.5">
-      <MarkdownRenderer content={content} onFileLinkClick={handleFileLinkPreview} />
-      {renderFileActions(content, keyPrefix)}
-    </div>
-  );
+  const renderMarkdownWithActions = (content: string, keyPrefix: string) => {
+    const displayContent = renderThinkTags
+      ? renderThinkTagsAsThoughtBlocks(content, language)
+      : content;
+
+    return (
+      <div className="space-y-1.5">
+        <MarkdownRenderer content={displayContent} onFileLinkClick={handleFileLinkPreview} />
+        {renderFileActions(displayContent, keyPrefix)}
+      </div>
+    );
+  };
 
   const browserCopilotURL = browserActivityContext.latestURL || extractFirstURL(browserCopilotOutput);
   const browserCopilotVisible = Boolean(
@@ -2262,7 +2289,15 @@ export function ChatView() {
         language={language}
       />
     ));
-  }, [messages, renderTimeline, renderMarkdownWithActions, formatMessageTimestamp, formatDuration, showToast, language]);
+  }, [
+    messages,
+    renderTimeline,
+    renderMarkdownWithActions,
+    formatMessageTimestamp,
+    formatDuration,
+    showToast,
+    language
+  ]);
 
   if (isStarterMode) {
     return (

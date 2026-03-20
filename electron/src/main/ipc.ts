@@ -18,6 +18,7 @@ import { ShortcutManager } from './shortcuts';
 interface AppConfig {
   theme: 'light' | 'dark' | 'system';
   language: 'zh' | 'en';
+  renderThinkTags: boolean;
   autoLaunch: boolean;
   minimizeToTray: boolean;
   shortcuts: Record<string, string>;
@@ -28,6 +29,7 @@ const configStore = new Store<AppConfig>({
   defaults: {
     theme: 'system',
     language: 'zh',
+    renderThinkTags: true,
     autoLaunch: false,
     minimizeToTray: true,
     shortcuts: {

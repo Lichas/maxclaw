@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+
+- **设置页新增 `<think>` 标签渲染开关**：新增“Think 标签渲染”选项并默认开启，开启后聊天内容中的 `<think>...</think>` 会以“思考”块样式渲染，避免原始标签直接暴露
+  - `electron/src/renderer/views/SettingsView.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/store/index.ts`、`electron/src/renderer/i18n/index.ts`、`electron/src/main/ipc.ts`、`electron/src/preload/index.ts`、`electron/src/renderer/types/electron.d.ts`、`electron/src/renderer/App.tsx`
+  - 验证：`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`
+
 ## [v0.1.2] - 2026-03-18
 
 ### Fixed

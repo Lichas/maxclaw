@@ -38,6 +38,8 @@ const zh: Translations = {
   'settings.language': '语言',
   'settings.language.zh': '中文',
   'settings.language.en': 'English',
+  'settings.renderThinkTags': 'Think 标签渲染',
+  'settings.renderThinkTags.hint': '将 content 中的 <think>...</think> 以思考块样式显示',
   'settings.system': '系统',
   'settings.autoLaunch': '开机自启动',
   'settings.minimizeToTray': '最小化到托盘',
@@ -342,6 +344,9 @@ const en: Translations = {
   'settings.language': 'Language',
   'settings.language.zh': '中文',
   'settings.language.en': 'English',
+  'settings.renderThinkTags': 'Think Tag Rendering',
+  'settings.renderThinkTags.hint':
+    'Render <think>...</think> inside content as thought blocks',
   'settings.system': 'System',
   'settings.autoLaunch': 'Auto Launch',
   'settings.minimizeToTray': 'Minimize to Tray',

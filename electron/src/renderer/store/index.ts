@@ -43,6 +43,7 @@ function normalizeGatewayStatus(payload: GatewayStatusPayload): GatewayState {
 interface UIState {
   theme: 'light' | 'dark' | 'system';
   language: 'zh' | 'en';
+  renderThinkTags: boolean;
   sidebarCollapsed: boolean;
   terminalVisible: boolean;
   activeTab: 'chat' | 'sessions' | 'scheduled' | 'skills' | 'mcp' | 'settings';
@@ -67,6 +68,7 @@ const uiSlice = createSlice({
   initialState: {
     theme: 'system',
     language: getInitialLanguage(),
+    renderThinkTags: true,
     sidebarCollapsed: false,
     terminalVisible: false,
     activeTab: 'chat',
@@ -78,6 +80,9 @@ const uiSlice = createSlice({
     },
     setLanguage: (state, action: PayloadAction<'zh' | 'en'>) => {
       state.language = action.payload;
+    },
+    setRenderThinkTags: (state, action: PayloadAction<boolean>) => {
+      state.renderThinkTags = action.payload;
     },
     toggleSidebar: (state) => {
       state.sidebarCollapsed = !state.sidebarCollapsed;
@@ -98,7 +103,16 @@ const uiSlice = createSlice({
 });
 
 export const { setStatus } = gatewaySlice.actions;
-export const { setTheme, setLanguage, toggleSidebar, toggleTerminal, setTerminalVisible, setActiveTab, setCurrentSessionKey } = uiSlice.actions;
+export const {
+  setTheme,
+  setLanguage,
+  setRenderThinkTags,
+  toggleSidebar,
+  toggleTerminal,
+  setTerminalVisible,
+  setActiveTab,
+  setCurrentSessionKey
+} = uiSlice.actions;
 
 export const store = configureStore({
   reducer: {

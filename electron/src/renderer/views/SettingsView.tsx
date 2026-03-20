@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, setTheme, setLanguage } from '../store';
+import { RootState, setTheme, setLanguage, setRenderThinkTags } from '../store';
 import { useTranslation } from '../i18n';
 import { ProviderConfig, PRESET_PROVIDERS } from '../types/providers';
 import { ProviderEditor } from '../components/ProviderEditor';
@@ -13,6 +13,7 @@ import type { ChannelsConfig } from '../types/channels';
 interface Settings {
   theme: 'light' | 'dark' | 'system';
   language: 'zh' | 'en';
+  renderThinkTags: boolean;
   autoLaunch: boolean;
   minimizeToTray: boolean;
   notificationsEnabled: boolean;
@@ -28,12 +29,17 @@ type SettingsCategory = 'general' | 'providers' | 'channels' | 'gateway' | 'adva
 export function SettingsView() {
   const dispatch = useDispatch();
   const { t, language } = useTranslation();
-  const { theme: storeTheme, language: storeLanguage } = useSelector((state: RootState) => state.ui);
+  const {
+    theme: storeTheme,
+    language: storeLanguage,
+    renderThinkTags: storeRenderThinkTags
+  } = useSelector((state: RootState) => state.ui);
   const { getWhatsAppStatus } = useGateway();
 
   const [settings, setSettings] = useState<Settings>({
     theme: 'system',
     language: 'zh',
+    renderThinkTags: true,
     autoLaunch: false,
     minimizeToTray: true,
     notificationsEnabled: true
@@ -75,6 +81,7 @@ export function SettingsView() {
       setSettings({
         theme: config.theme || 'system',
         language: config.language || 'zh',
+        renderThinkTags: config.renderThinkTags !== false,
         autoLaunch: config.autoLaunch || false,
         minimizeToTray: config.minimizeToTray !== false,
         notificationsEnabled: config.notificationsEnabled !== false
@@ -154,9 +161,10 @@ export function SettingsView() {
     setSettings(prev => ({
       ...prev,
       theme: storeTheme,
-      language: storeLanguage
+      language: storeLanguage,
+      renderThinkTags: storeRenderThinkTags
     }));
-  }, [storeTheme, storeLanguage]);
+  }, [storeTheme, storeLanguage, storeRenderThinkTags]);
 
   const handleChange = async <K extends keyof Settings>(key: K, value: Settings[K]) => {
     const updated = { ...settings, [key]: value };
@@ -168,6 +176,8 @@ export function SettingsView() {
       dispatch(setTheme(value as 'light' | 'dark' | 'system'));
     } else if (key === 'language') {
       dispatch(setLanguage(value as 'zh' | 'en'));
+    } else if (key === 'renderThinkTags') {
+      dispatch(setRenderThinkTags(Boolean(value)));
     }
   };
 
@@ -590,6 +600,19 @@ export function SettingsView() {
                         triggerClassName="bg-secondary"
                       />
                     </div>
+
+                    <label className="flex cursor-pointer items-center justify-between gap-4 px-4 py-3">
+                      <div className="space-y-0.5">
+                        <span className="block text-sm font-medium">{t('settings.renderThinkTags')}</span>
+                        <span className="block text-xs text-foreground/55">{t('settings.renderThinkTags.hint')}</span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={settings.renderThinkTags}
+                        onChange={(e) => handleChange('renderThinkTags', e.target.checked)}
+                        className="h-4 w-4 rounded border-border"
+                      />
+                    </label>
                   </div>
                 </section>
 

@@ -7,6 +7,7 @@ export interface GatewayStatus {
 export interface AppConfig {
   theme: 'light' | 'dark' | 'system';
   language: 'zh' | 'en';
+  renderThinkTags: boolean;
   autoLaunch: boolean;
   minimizeToTray: boolean;
   shortcuts: Record<string, string>;
