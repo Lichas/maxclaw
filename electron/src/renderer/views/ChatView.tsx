@@ -191,23 +191,45 @@ function extractFirstURL(text: string): string {
 
 const thinkTagPattern = /<think>([\s\S]*?)<\/think>/gi;
 
-function renderThinkTagsAsThoughtBlocks(content: string, language: string): string {
+type ThinkSegment = {
+  kind: 'text' | 'think';
+  content: string;
+};
+
+function splitThinkSegments(content: string): ThinkSegment[] {
   if (!content.includes('<think>')) {
-    return content;
+    return [{ kind: 'text', content }];
   }
 
-  const heading = language === 'zh' ? '思考' : 'Thinking';
-  return content.replace(thinkTagPattern, (_, rawBody: string) => {
-    const body = rawBody.trim();
-    if (!body) {
-      return '';
+  const segments: ThinkSegment[] = [];
+  let cursor = 0;
+  let matched: RegExpExecArray | null;
+
+  thinkTagPattern.lastIndex = 0;
+  while ((matched = thinkTagPattern.exec(content)) !== null) {
+    const start = matched.index;
+    const end = thinkTagPattern.lastIndex;
+    if (start > cursor) {
+      segments.push({ kind: 'text', content: content.slice(cursor, start) });
     }
-    const quotedBody = body
-      .split('\n')
-      .map((line) => (line.trim() ? `> ${line}` : '>'))
-      .join('\n');
-    return `\n\n**${heading}**\n${quotedBody}\n\n`;
-  });
+    segments.push({ kind: 'think', content: (matched[1] || '').trim() });
+    cursor = end;
+  }
+
+  if (cursor < content.length) {
+    segments.push({ kind: 'text', content: content.slice(cursor) });
+  }
+
+  if (segments.length === 0) {
+    return [{ kind: 'text', content }];
+  }
+
+  return segments;
+}
+
+function stripThinkTags(content: string): string {
+  thinkTagPattern.lastIndex = 0;
+  return content.replace(thinkTagPattern, (_, body: string) => body || '');
 }
 
 // Memoized message item component to prevent re-rendering on input
@@ -1469,9 +1491,6 @@ export function ChatView() {
     const activityItems = items.filter(
       (entry): entry is Extract<TimelineEntry, { kind: 'activity' }> => entry.kind === 'activity'
     );
-    const textItems = items.filter(
-      (entry): entry is Extract<TimelineEntry, { kind: 'text' }> => entry.kind === 'text' && entry.text.trim() !== ''
-    );
 
     const renderActivityItem = (
       entry: Extract<TimelineEntry, { kind: 'activity' }>,
@@ -1527,12 +1546,6 @@ export function ChatView() {
               </div>
             </details>
           )}
-
-          {textItems.map((entry) => (
-            <div key={entry.id} className="text-foreground">
-              {renderMarkdownWithActions(entry.text, entry.id)}
-            </div>
-          ))}
         </div>
       );
     }
@@ -1751,14 +1764,51 @@ export function ChatView() {
   };
 
   const renderMarkdownWithActions = (content: string, keyPrefix: string) => {
-    const displayContent = renderThinkTags
-      ? renderThinkTagsAsThoughtBlocks(content, language)
-      : content;
+    if (!renderThinkTags || !content.includes('<think>')) {
+      return (
+        <div className="space-y-1.5">
+          <MarkdownRenderer content={content} onFileLinkClick={handleFileLinkPreview} />
+          {renderFileActions(content, keyPrefix)}
+        </div>
+      );
+    }
+
+    const segments = splitThinkSegments(content);
+    const thinkTitle = language === 'zh' ? '思考' : 'Thinking';
+    const contentForFileActions = stripThinkTags(content);
 
     return (
       <div className="space-y-1.5">
-        <MarkdownRenderer content={displayContent} onFileLinkClick={handleFileLinkPreview} />
-        {renderFileActions(displayContent, keyPrefix)}
+        {segments.map((segment, index) => {
+          if (!segment.content.trim()) {
+            return null;
+          }
+
+          if (segment.kind === 'think') {
+            return (
+              <details
+                key={`${keyPrefix}-think-${index}`}
+                className="overflow-hidden rounded-xl border border-border/70 bg-secondary/35"
+              >
+                <summary className="cursor-pointer list-none px-3 py-2 text-sm font-medium text-foreground/80">
+                  {thinkTitle}
+                </summary>
+                <div className="border-t border-border/60 px-3 py-2">
+                  <MarkdownRenderer content={segment.content} onFileLinkClick={handleFileLinkPreview} />
+                </div>
+              </details>
+            );
+          }
+
+          return (
+            <MarkdownRenderer
+              key={`${keyPrefix}-text-${index}`}
+              content={segment.content}
+              onFileLinkClick={handleFileLinkPreview}
+            />
+          );
+        })}
+        {renderFileActions(contentForFileActions, keyPrefix)}
       </div>
     );
   };

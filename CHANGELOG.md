@@ -8,6 +8,12 @@
   - `electron/src/renderer/views/SettingsView.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/store/index.ts`、`electron/src/renderer/i18n/index.ts`、`electron/src/main/ipc.ts`、`electron/src/preload/index.ts`、`electron/src/renderer/types/electron.d.ts`、`electron/src/renderer/App.tsx`
   - 验证：`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`
 
+### Fixed
+
+- **`<think>` 渲染改为可折叠并去掉重复显示**：`<think>...</think>` 现在在消息正文中渲染为可折叠“思考”块；历史时间线不再重复渲染文本片段，避免“同一内容出现两次”
+  - `electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`
+
 ## [v0.1.2] - 2026-03-18
 
 ### Fixed
