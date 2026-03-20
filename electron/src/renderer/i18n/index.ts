@@ -155,6 +155,7 @@ const zh: Translations = {
     '围绕这个主题做一份调研。至少比较 3 个竞品或 3 条技术路线，输出：定位或适用场景、核心能力、优缺点、成本、风险、结论与推荐方案。结果要结构化，适合直接做决策输入。',
   'chat.timeline.label.thinking': '思考中',
   'chat.timeline.label.tool': '工具',
+  'chat.timeline.label.skill': '技能',
   'chat.timeline.label.error': '错误',
 
   // Scheduled Tasks
@@ -472,6 +473,7 @@ const en: Translations = {
     'Research this topic by comparing at least three competitors or three technical options. For each one, cover positioning or fit, core capabilities, pros and cons, cost, risks, and your final recommendation. The output should be structured and ready to support a decision.',
   'chat.timeline.label.thinking': 'Thinking',
   'chat.timeline.label.tool': 'Tool',
+  'chat.timeline.label.skill': 'Skill',
   'chat.timeline.label.error': 'Error',
 
   // Scheduled Tasks

@@ -29,26 +29,7 @@ func truncateRunes(s string, limit int, suffix string) string {
 }
 
 func (b *ContextBuilder) buildSkillsSection(currentMessage string, explicitSkillRefs []string) string {
-	skillsDir := filepath.Join(b.workspace, "skills")
-	entries, err := skills.DiscoverAll(skillsDir, b.enableGlobalSkills)
-	if err != nil || len(entries) == 0 {
-		return ""
-	}
-
-	// Filter out disabled skills
-	stateMgr := skills.NewStateManager(filepath.Join(b.workspace, ".skills_state.json"))
-	entries = stateMgr.FilterEnabled(entries)
-	if len(entries) == 0 {
-		return ""
-	}
-
-	selected := entries
-	if len(explicitSkillRefs) > 0 {
-		selectorMessage := strings.TrimSpace(strings.Join(skillRefsToSelectors(explicitSkillRefs), " "))
-		selected = skills.FilterByMessage(entries, selectorMessage)
-	} else {
-		selected = skills.FilterByMessage(entries, currentMessage)
-	}
+	selected := b.resolveSkillEntries(currentMessage, explicitSkillRefs)
 	if len(selected) == 0 {
 		return ""
 	}
@@ -70,6 +51,27 @@ func (b *ContextBuilder) buildSkillsSection(currentMessage string, explicitSkill
 	}
 
 	return strings.TrimSpace(sb.String())
+}
+
+func (b *ContextBuilder) resolveSkillEntries(currentMessage string, explicitSkillRefs []string) []skills.Entry {
+	skillsDir := filepath.Join(b.workspace, "skills")
+	entries, err := skills.DiscoverAll(skillsDir, b.enableGlobalSkills)
+	if err != nil || len(entries) == 0 {
+		return nil
+	}
+
+	// Filter out disabled skills.
+	stateMgr := skills.NewStateManager(filepath.Join(b.workspace, ".skills_state.json"))
+	entries = stateMgr.FilterEnabled(entries)
+	if len(entries) == 0 {
+		return nil
+	}
+
+	if len(explicitSkillRefs) > 0 {
+		selectorMessage := strings.TrimSpace(strings.Join(skillRefsToSelectors(explicitSkillRefs), " "))
+		return skills.FilterByMessage(entries, selectorMessage)
+	}
+	return skills.FilterByMessage(entries, currentMessage)
 }
 
 func skillRefsToSelectors(refs []string) []string {

@@ -32,7 +32,7 @@ interface PreviewPayload {
 }
 
 interface StreamActivity {
-  type: 'status' | 'tool_start' | 'tool_result' | 'error';
+  type: 'status' | 'tool_start' | 'tool_result' | 'skill_start' | 'skill_result' | 'error';
   summary: string;
   detail?: string;
 }
@@ -1247,6 +1247,24 @@ export function ChatView() {
           detail: trimDetail(event.toolResult)
         };
       }
+      case 'skill_start': {
+        const skillName = event.skillName || 'Skill';
+        const summary = event.summary || `${skillName} started`;
+        return {
+          type: 'skill_start',
+          summary,
+          detail: trimDetail(event.skillDetail)
+        };
+      }
+      case 'skill_result': {
+        const skillName = event.skillName || 'Skill';
+        const summary = event.summary || `${skillName} completed`;
+        return {
+          type: 'skill_result',
+          summary,
+          detail: trimDetail(event.skillDetail)
+        };
+      }
       case 'error':
         return {
           type: 'error',
@@ -1289,6 +1307,9 @@ export function ChatView() {
     if (type === 'error') {
       return t('chat.timeline.label.error');
     }
+    if (type === 'skill_start' || type === 'skill_result') {
+      return t('chat.timeline.label.skill');
+    }
     return t('chat.timeline.label.tool');
   };
 
@@ -1296,7 +1317,7 @@ export function ChatView() {
     entries: Array<{
       kind: 'activity' | 'text';
       activity?: {
-        type: 'status' | 'tool_start' | 'tool_result' | 'error';
+        type: 'status' | 'tool_start' | 'tool_result' | 'skill_start' | 'skill_result' | 'error';
         summary: string;
         detail?: string;
       };
@@ -2612,6 +2633,10 @@ function ActivityTypeIcon({ className, type }: { className?: string; type: Strea
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v5m0 3h.01" />
       </svg>
     );
+  }
+
+  if (type === 'skill_start' || type === 'skill_result') {
+    return <PuzzleIcon className={className} />;
   }
 
   return (

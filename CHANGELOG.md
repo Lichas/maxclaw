@@ -4,6 +4,10 @@
 
 ### Added
 
+- **聊天过程新增 Skill 调用可折叠展示**：当请求显式触发技能选择时，事件流会新增 `skill_start` / `skill_result`，并在聊天“执行过程”中以和 tools 一致的可折叠项展示具体 skill 与注入详情
+  - `internal/agent/loop.go`、`internal/agent/skills.go`、`internal/agent/loop_test.go`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`electron/src/renderer/i18n/index.ts`
+  - 验证：`go test ./internal/agent`、`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`
+
 - **设置页新增 `<think>` 标签渲染开关**：新增“Think 标签渲染”选项并默认开启，开启后聊天内容中的 `<think>...</think>` 会以“思考”块样式渲染，避免原始标签直接暴露
   - `electron/src/renderer/views/SettingsView.tsx`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/store/index.ts`、`electron/src/renderer/i18n/index.ts`、`electron/src/main/ipc.ts`、`electron/src/preload/index.ts`、`electron/src/renderer/types/electron.d.ts`、`electron/src/renderer/App.tsx`
   - 验证：`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`

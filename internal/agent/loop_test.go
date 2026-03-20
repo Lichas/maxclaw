@@ -633,6 +633,70 @@ func TestProcessDirectWithSkillsUsesOnlySelectedSkills(t *testing.T) {
 	assert.NotContains(t, sess.Messages[0].Content, "@skill:")
 }
 
+func TestAgentLoopProcessDirectEventStreamWithSkillsEmitsSkillEvents(t *testing.T) {
+	workspace := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(workspace, "skills"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(workspace, "skills", "alpha.md"), []byte("# Alpha\nAlpha content"), 0644))
+
+	loop := NewAgentLoop(
+		bus.NewMessageBus(10),
+		&staticProvider{},
+		workspace,
+		"test-model",
+		2,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		nil,
+		nil,
+		false,
+	)
+
+	var events []StreamEvent
+	resp, err := loop.ProcessDirectEventStreamWithSkills(
+		context.Background(),
+		"hello",
+		"desktop:test",
+		"desktop",
+		"chat-1",
+		[]string{"alpha"},
+		func(event StreamEvent) {
+			events = append(events, event)
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "ok", resp)
+	require.NotEmpty(t, events)
+
+	var hasSkillStart bool
+	var hasSkillResult bool
+	for _, event := range events {
+		switch event.Type {
+		case "skill_start":
+			hasSkillStart = true
+		case "skill_result":
+			hasSkillResult = true
+		}
+	}
+	assert.True(t, hasSkillStart)
+	assert.True(t, hasSkillResult)
+
+	mgr := session.NewManager(workspace)
+	sess := mgr.GetOrCreate("desktop:test")
+	require.Len(t, sess.Messages, 2)
+	require.NotEmpty(t, sess.Messages[1].Timeline)
+
+	var timelineHasSkill bool
+	for _, entry := range sess.Messages[1].Timeline {
+		if entry.Kind == "activity" && entry.Activity != nil && (entry.Activity.Type == "skill_start" || entry.Activity.Type == "skill_result") {
+			timelineHasSkill = true
+			break
+		}
+	}
+	assert.True(t, timelineHasSkill)
+}
+
 func TestAgentLoop_PlanManagerIntegration(t *testing.T) {
 	tmpDir := t.TempDir()
 	pm := NewPlanManager(tmpDir)

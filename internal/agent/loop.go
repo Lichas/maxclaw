@@ -60,17 +60,19 @@ type AgentLoop struct {
 
 // StreamEvent is a structured event for UI streaming consumers.
 type StreamEvent struct {
-	Type       string `json:"type"`
-	Iteration  int    `json:"iteration,omitempty"`
-	Message    string `json:"message,omitempty"`
-	Delta      string `json:"delta,omitempty"`
-	ToolID     string `json:"toolId,omitempty"`
-	ToolName   string `json:"toolName,omitempty"`
-	ToolArgs   string `json:"toolArgs,omitempty"`
-	Summary    string `json:"summary,omitempty"`
-	ToolResult string `json:"toolResult,omitempty"`
-	Response   string `json:"response,omitempty"`
-	Done       bool   `json:"done,omitempty"`
+	Type        string `json:"type"`
+	Iteration   int    `json:"iteration,omitempty"`
+	Message     string `json:"message,omitempty"`
+	Delta       string `json:"delta,omitempty"`
+	ToolID      string `json:"toolId,omitempty"`
+	ToolName    string `json:"toolName,omitempty"`
+	ToolArgs    string `json:"toolArgs,omitempty"`
+	SkillName   string `json:"skillName,omitempty"`
+	SkillDetail string `json:"skillDetail,omitempty"`
+	Summary     string `json:"summary,omitempty"`
+	ToolResult  string `json:"toolResult,omitempty"`
+	Response    string `json:"response,omitempty"`
+	Done        bool   `json:"done,omitempty"`
 }
 
 // NewAgentLoop 创建 Agent 循环
@@ -477,6 +479,22 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 
 	// 构建消息
 	selectedSkillRefs := normalizeSkillRefs(msg.SelectedSkills)
+	if len(selectedSkillRefs) > 0 {
+		for _, entry := range a.context.resolveSkillEntries(msg.Content, selectedSkillRefs) {
+			emitEvent(StreamEvent{
+				Type:        "skill_start",
+				SkillName:   entry.Name,
+				SkillDetail: fmt.Sprintf("selector: @skill:%s\nsource: %s", entry.Name, entry.Source),
+				Summary:     fmt.Sprintf("Load skill %s", entry.DisplayName),
+			})
+			emitEvent(StreamEvent{
+				Type:        "skill_result",
+				SkillName:   entry.Name,
+				SkillDetail: fmt.Sprintf("Skill loaded into context from %s", entry.Path),
+				Summary:     fmt.Sprintf("Skill %s ready", entry.DisplayName),
+			})
+		}
+	}
 
 	// Build messages with plan context if exists
 	var messages []providers.Message
@@ -1143,7 +1161,7 @@ func appendTimelineFromEvent(timeline []session.TimelineEntry, event StreamEvent
 			Kind: "text",
 			Text: event.Delta,
 		})
-	case "status", "tool_start", "tool_result", "error":
+	case "status", "tool_start", "tool_result", "skill_start", "skill_result", "error":
 		summary := strings.TrimSpace(event.Summary)
 		if summary == "" {
 			summary = strings.TrimSpace(event.Message)
@@ -1154,6 +1172,8 @@ func appendTimelineFromEvent(timeline []session.TimelineEntry, event StreamEvent
 			detail = strings.TrimSpace(event.ToolArgs)
 		case "tool_result":
 			detail = strings.TrimSpace(event.ToolResult)
+		case "skill_start", "skill_result":
+			detail = strings.TrimSpace(event.SkillDetail)
 		}
 
 		if summary == "" && detail == "" {

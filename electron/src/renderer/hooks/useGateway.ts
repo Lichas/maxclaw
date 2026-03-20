@@ -35,6 +35,8 @@ export interface GatewayStreamEvent {
   toolId?: string;
   toolName?: string;
   toolArgs?: string;
+  skillName?: string;
+  skillDetail?: string;
   summary?: string;
   toolResult?: string;
   response?: string;
@@ -61,7 +63,7 @@ export interface SessionDetail {
     timeline?: Array<{
       kind: 'activity' | 'text';
       activity?: {
-        type: 'status' | 'tool_start' | 'tool_result' | 'error';
+        type: 'status' | 'tool_start' | 'tool_result' | 'skill_start' | 'skill_result' | 'error';
         summary: string;
         detail?: string;
       };
