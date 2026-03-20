@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +27,8 @@ const (
 	sessionConsolidateKeepRecent = 40
 	autoModeIterationMultiplier  = 5
 )
+
+var skillSelectorPattern = regexp.MustCompile(`(?i)@skill:[a-z0-9_.-]+|\$[a-zA-Z][a-zA-Z0-9_.-]*`)
 
 // AgentLoop Agent 循环
 type AgentLoop struct {
@@ -479,13 +482,18 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 
 	// 构建消息
 	selectedSkillRefs := normalizeSkillRefs(msg.SelectedSkills)
-	if len(selectedSkillRefs) > 0 {
+	shouldEmitSkillEvents := len(selectedSkillRefs) > 0 || skillSelectorPattern.MatchString(msg.Content)
+	if shouldEmitSkillEvents {
 		for _, entry := range a.context.resolveSkillEntries(msg.Content, selectedSkillRefs) {
+			summaryPrefix := "Load skill"
+			if len(selectedSkillRefs) == 0 {
+				summaryPrefix = "Auto match skill"
+			}
 			emitEvent(StreamEvent{
 				Type:        "skill_start",
 				SkillName:   entry.Name,
 				SkillDetail: fmt.Sprintf("selector: @skill:%s\nsource: %s", entry.Name, entry.Source),
-				Summary:     fmt.Sprintf("Load skill %s", entry.DisplayName),
+				Summary:     fmt.Sprintf("%s %s", summaryPrefix, entry.DisplayName),
 			})
 			emitEvent(StreamEvent{
 				Type:        "skill_result",

@@ -697,6 +697,95 @@ func TestAgentLoopProcessDirectEventStreamWithSkillsEmitsSkillEvents(t *testing.
 	assert.True(t, timelineHasSkill)
 }
 
+func TestAgentLoopProcessDirectEventStreamAutoMatchedSkillsEmitSkillEvents(t *testing.T) {
+	workspace := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(workspace, "skills"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(workspace, "skills", "alpha.md"), []byte("# Alpha\nAlpha content"), 0644))
+
+	loop := NewAgentLoop(
+		bus.NewMessageBus(10),
+		&staticProvider{},
+		workspace,
+		"test-model",
+		2,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		nil,
+		nil,
+		false,
+	)
+
+	var events []StreamEvent
+	resp, err := loop.ProcessDirectEventStream(
+		context.Background(),
+		"use @skill:alpha please",
+		"desktop:test-auto",
+		"desktop",
+		"chat-1",
+		func(event StreamEvent) {
+			events = append(events, event)
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "ok", resp)
+
+	var hasSkillStart bool
+	var hasSkillResult bool
+	for _, event := range events {
+		switch event.Type {
+		case "skill_start":
+			hasSkillStart = true
+			assert.Contains(t, event.Summary, "Auto match skill")
+		case "skill_result":
+			hasSkillResult = true
+		}
+	}
+	assert.True(t, hasSkillStart)
+	assert.True(t, hasSkillResult)
+}
+
+func TestAgentLoopProcessDirectEventStreamWithoutSkillSelectorSkipsSkillEvents(t *testing.T) {
+	workspace := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(workspace, "skills"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(workspace, "skills", "alpha.md"), []byte("# Alpha\nAlpha content"), 0644))
+
+	loop := NewAgentLoop(
+		bus.NewMessageBus(10),
+		&staticProvider{},
+		workspace,
+		"test-model",
+		2,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		nil,
+		nil,
+		false,
+	)
+
+	var events []StreamEvent
+	resp, err := loop.ProcessDirectEventStream(
+		context.Background(),
+		"hello",
+		"desktop:test-no-selector",
+		"desktop",
+		"chat-1",
+		func(event StreamEvent) {
+			events = append(events, event)
+		},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "ok", resp)
+
+	for _, event := range events {
+		assert.NotEqual(t, "skill_start", event.Type)
+		assert.NotEqual(t, "skill_result", event.Type)
+	}
+}
+
 func TestAgentLoop_PlanManagerIntegration(t *testing.T) {
 	tmpDir := t.TempDir()
 	pm := NewPlanManager(tmpDir)

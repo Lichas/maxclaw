@@ -4,7 +4,7 @@
 
 ### Added
 
-- **聊天过程新增 Skill 调用可折叠展示**：当请求显式触发技能选择时，事件流会新增 `skill_start` / `skill_result`，并在聊天“执行过程”中以和 tools 一致的可折叠项展示具体 skill 与注入详情
+- **聊天过程新增 Skill 调用可折叠展示**：显式 `selectedSkills` 与消息内自动命中（`@skill:` / `$skill`）都会触发 `skill_start` / `skill_result` 事件，并在聊天“执行过程”中以和 tools 一致的可折叠项展示具体 skill 与注入详情
   - `internal/agent/loop.go`、`internal/agent/skills.go`、`internal/agent/loop_test.go`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`electron/src/renderer/i18n/index.ts`
   - 验证：`go test ./internal/agent`、`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`
 
