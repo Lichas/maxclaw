@@ -189,6 +189,64 @@ function extractFirstURL(text: string): string {
   return matched ? matched[0] : '';
 }
 
+function resolveSessionTitleFromSummary(
+  summary: { title?: string; lastMessage?: string } | undefined,
+  fallbackTitle: string
+): string {
+  const preferredTitle = (summary?.title || '').trim();
+  if (preferredTitle !== '') {
+    return formatSessionTitle(preferredTitle);
+  }
+  const fallbackMessage = (summary?.lastMessage || '').trim();
+  if (fallbackMessage !== '') {
+    return formatSessionTitle(fallbackMessage);
+  }
+  return fallbackTitle;
+}
+
+function extractModelFromSessionDetail(session: {
+  messages?: Array<{
+    timeline?: Array<{
+      kind?: string;
+      activity?: {
+        type?: string;
+        summary?: string;
+        detail?: string;
+      };
+    }>;
+  }>;
+}): string {
+  const messages = session.messages || [];
+  const patternList = [
+    /using model:\s*([^\n]+)/i,
+    /使用模型[:：]\s*([^\n]+)/i
+  ];
+
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const timeline = messages[i].timeline || [];
+    for (let j = timeline.length - 1; j >= 0; j -= 1) {
+      const entry = timeline[j];
+      if (entry.kind !== 'activity') {
+        continue;
+      }
+      const content = [entry.activity?.summary || '', entry.activity?.detail || '']
+        .filter(Boolean)
+        .join('\n');
+      if (!content) {
+        continue;
+      }
+      for (const pattern of patternList) {
+        const matched = content.match(pattern);
+        if (matched && matched[1]) {
+          return matched[1].trim();
+        }
+      }
+    }
+  }
+
+  return '';
+}
+
 const thinkTagPattern = /<think>([\s\S]*?)<\/think>/gi;
 
 type ThinkSegment = {
@@ -354,6 +412,7 @@ export function ChatView() {
   const [headerSkillsOpen, setHeaderSkillsOpen] = useState(false);
   const [availableModels, setAvailableModels] = useState<Array<{ id: string; name: string; provider: string }>>([]);
   const [currentModel, setCurrentModel] = useState<string>('');
+  const [sessionModelBySession, setSessionModelBySession] = useState<Record<string, string>>({});
   const [modelsLoading, setModelsLoading] = useState(false);
   const [workspacePath, setWorkspacePath] = useState('');
   const [previewSidebarCollapsed, setPreviewSidebarCollapsed] = useState(true);
@@ -385,6 +444,7 @@ export function ChatView() {
   const [slashQuery, setSlashQuery] = useState('');
   const [slashIndex, setSlashIndex] = useState(0);
   const slashRef = useRef<HTMLDivElement>(null);
+  const activeSessionModel = sessionModelBySession[currentSessionKey] || '';
 
   const starterCards = useMemo(
     () => [
@@ -751,6 +811,7 @@ export function ChatView() {
 
   useEffect(() => {
     let cancelled = false;
+    const sessionModel = activeSessionModel;
 
     const loadModels = async () => {
       try {
@@ -769,8 +830,9 @@ export function ChatView() {
         const configuredExists = configuredModel !== '' && models.some((model) => model.id === configuredModel);
         const preferredExists = preferredModel !== '' && models.some((model) => model.id === preferredModel);
         const resolvedModel = configuredExists ? configuredModel : preferredExists ? preferredModel : models[0].id;
+        const sessionModelExists = sessionModel !== '' && models.some((model) => model.id === sessionModel);
 
-        setCurrentModel(resolvedModel);
+        setCurrentModel(sessionModelExists ? sessionModel : resolvedModel);
         if (preferredModel !== resolvedModel) {
           savePreferredModel(resolvedModel);
         }
@@ -788,7 +850,7 @@ export function ChatView() {
     return () => {
       cancelled = true;
     };
-  }, [getConfig, getModels]);
+  }, [getConfig, getModels, activeSessionModel, currentSessionKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1312,6 +1374,17 @@ export function ChatView() {
           return;
         }
 
+        const sessionModel = extractModelFromSessionDetail(session);
+        if (sessionModel) {
+          setSessionModelBySession((prev) => {
+            if (prev[currentSessionKey] === sessionModel) {
+              return prev;
+            }
+            return { ...prev, [currentSessionKey]: sessionModel };
+          });
+          setCurrentModel(sessionModel);
+        }
+
         const restored = (session.messages || [])
           .filter((message) => message.role === 'user' || message.role === 'assistant')
           .map((message, index) => ({
@@ -1333,8 +1406,8 @@ export function ChatView() {
             return;
           }
           const matched = sessions.find((item) => item.key === currentSessionKey);
-          if (matched?.lastMessage) {
-            setSessionTitle(formatSessionTitle(matched.lastMessage));
+          if (matched) {
+            setSessionTitle(resolveSessionTitleFromSummary(matched, fallbackTitle));
           } else {
             setSessionTitle(fallbackTitle);
           }
@@ -1571,6 +1644,7 @@ export function ChatView() {
     }
 
     setCurrentModel(modelId);
+    setSessionModelBySession((prev) => ({ ...prev, [currentSessionKey]: modelId }));
     savePreferredModel(modelId);
 
     try {

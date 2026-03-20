@@ -14,6 +14,10 @@
   - `electron/src/renderer/views/ChatView.tsx`
   - 验证：`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`
 
+- **会话标题与模型显示按会话真实状态对齐**：顶部标题改为与左侧会话列表同规则（优先 `title`，再回退 `lastMessage`）；会话切换时从会话历史时间线提取并恢复该会话模型，避免新任务切换模型后历史会话顶部/输入区模型被全局模型污染
+  - `electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`
+
 ## [v0.1.2] - 2026-03-18
 
 ### Fixed
