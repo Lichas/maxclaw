@@ -694,11 +694,7 @@ function ClockIcon({ className }: { className?: string }) {
 
 function PuzzleIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3l7 7-2 2-7-7-2 2-2-2 4-4 2 2z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21l7-1 9-9-6-6-9 9-1 7z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.5 15.5l3 3" />
-    </svg>
+    <img src="./icons/skills-hammer.png" alt="" className={className} />
   );
 }
 

@@ -22,6 +22,10 @@
   - `electron/src/renderer/components/Sidebar.tsx`
   - 验证：`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`
 
+- **技能市场图标改为用户提供的锤子 PNG**：侧边栏 `skills` 图标改为使用 `/Users/lua/Downloads/icons8-锤子-50.png` 导入后的静态资源，避免自绘 SVG 形状不符合预期
+  - `electron/src/renderer/components/Sidebar.tsx`、`electron/public/icons/skills-hammer.png`
+  - 验证：`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`
+
 ## [v0.1.2] - 2026-03-18
 
 ### Fixed
