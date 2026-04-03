@@ -54,3 +54,35 @@ cd electron && npm run build  # 构建成功无报错
 **修复文件**：
 - `go.mod`
 - `go.sum`
+
+---
+
+## 2026-04-04 - 新增 MCP Server 后运行中对话无法感知新工具
+
+**问题**：
+- 桌面端启动后，在 MCP 管理页新增、编辑或删除 MCP server，`config.json` 已经更新成功。
+- 但随后直接发起新对话时，Agent 仍然只看到旧的 MCP 工具集合。
+- 用户必须手动重启 app / gateway，新的 MCP tool 才会出现在对话工具调用里。
+
+**根因**：
+- 运行中的 `AgentLoop` 只在 gateway 启动时读取一次 `cfg.Tools.MCPServers` 并创建 `MCPConnector`。
+- `/api/mcp` 的增删改接口只负责保存配置和更新 `Server.cfg`，没有把新的 MCP 配置同步到运行中的 `AgentLoop`。
+- 因此磁盘配置和运行态工具注册发生了分离，导致“配置已保存，但当前会话看不到新 MCP”。
+
+**修复**：
+- 为 `AgentLoop` 增加运行态 MCP 刷新能力：关闭旧连接、移除旧 `mcp_` 工具、按最新配置重新连接并注册。
+- 在 `/api/mcp` 的新增、更新、删除，以及 `/api/config` 的整体配置更新后，立即调用运行态 MCP 刷新逻辑。
+- 增加回归测试，覆盖“新增 MCP 后立即可见工具”和“删除 MCP 后工具立即移除”。
+
+**验证**：
+```bash
+go test ./internal/agent ./internal/webui ./pkg/tools
+./e2e_test/gateway_agent_regression.sh
+make build
+```
+
+**修复文件**：
+- `internal/agent/loop.go`
+- `internal/webui/server.go`
+- `internal/webui/server_test.go`
+- `pkg/tools/registry.go`
