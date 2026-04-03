@@ -11,9 +11,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Lichas/maxclaw/internal/agent"
 	"github.com/Lichas/maxclaw/internal/bus"
 	"github.com/Lichas/maxclaw/internal/config"
 	"github.com/Lichas/maxclaw/internal/session"
+	"github.com/Lichas/maxclaw/pkg/tools"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -336,4 +338,99 @@ func TestRenameSessionStoresDedicatedTitle(t *testing.T) {
 	assert.Equal(t, session.TitleSourceUser, updated.TitleSource)
 	require.Len(t, updated.Messages, 2)
 	assert.Equal(t, "好的", updated.Messages[1].Content)
+}
+
+func TestHandleMCPAddAndDeleteRefreshRuntimeTools(t *testing.T) {
+	configHome := t.TempDir()
+	workspace := filepath.Join(configHome, "workspace")
+	t.Setenv("MAXCLAW_HOME", configHome)
+
+	cfg := config.DefaultConfig()
+	cfg.Agents.Defaults.Workspace = workspace
+	require.NoError(t, config.SaveConfig(cfg))
+
+	loop := agent.NewAgentLoop(
+		bus.NewMessageBus(10),
+		nil,
+		workspace,
+		"test-model",
+		3,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		nil,
+		nil,
+		false,
+	)
+	defer loop.Close()
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			ID     interface{} `json:"id"`
+			Method string      `json:"method"`
+		}
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Mcp-Session-Id", "test-session")
+
+		switch req.Method {
+		case "initialize":
+			require.NoError(t, json.NewEncoder(w).Encode(map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      req.ID,
+				"result": map[string]interface{}{
+					"protocolVersion": "2024-11-05",
+					"serverInfo": map[string]interface{}{
+						"name":    "test-server",
+						"version": "1.0.0",
+					},
+					"capabilities": map[string]interface{}{
+						"tools": map[string]interface{}{},
+					},
+				},
+			}))
+		case "notifications/initialized":
+			w.WriteHeader(http.StatusOK)
+		case "tools/list":
+			require.NoError(t, json.NewEncoder(w).Encode(map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      req.ID,
+				"result": map[string]interface{}{
+					"tools": []map[string]interface{}{
+						{
+							"name":        "ping",
+							"description": "Ping tool",
+							"inputSchema": map[string]interface{}{
+								"type":       "object",
+								"properties": map[string]interface{}{},
+							},
+						},
+					},
+				},
+			}))
+		default:
+			t.Fatalf("unexpected MCP method: %s", req.Method)
+		}
+	}))
+	defer upstream.Close()
+
+	s := &Server{cfg: cfg, agentLoop: loop}
+
+	addReq := httptest.NewRequest(http.MethodPost, "/api/mcp", bytes.NewBufferString(fmt.Sprintf(`{
+		"name":"docs",
+		"type":"sse",
+		"url":"%s"
+	}`, upstream.URL)))
+	addRec := httptest.NewRecorder()
+	s.handleMCP(addRec, addReq)
+	require.Equal(t, http.StatusOK, addRec.Code)
+	assert.Contains(t, loop.ListToolNames(), "mcp_docs_ping")
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/mcp/docs", nil)
+	deleteRec := httptest.NewRecorder()
+	s.handleMCPByName(deleteRec, deleteReq)
+	require.Equal(t, http.StatusOK, deleteRec.Code)
+	assert.NotContains(t, loop.ListToolNames(), "mcp_docs_ping")
 }

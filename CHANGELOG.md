@@ -18,6 +18,10 @@
 
 ### Fixed
 
+- **运行中的 Gateway 现在会立即刷新 MCP 工具配置**：在桌面端/`/api/mcp` 新增、更新、删除 MCP server 后，运行中的 `AgentLoop` 会同步重载 MCP 连接与工具注册，不再必须重启 app 才能在新对话中感知到新工具
+  - `internal/agent/loop.go`、`internal/webui/server.go`、`internal/webui/server_test.go`、`pkg/tools/registry.go`
+  - 验证：`go test ./internal/agent ./internal/webui ./pkg/tools`、`./e2e_test/gateway_agent_regression.sh`、`make build`
+
 - **`<think>` 渲染改为可折叠并去掉重复显示**：`<think>...</think>` 现在在消息正文中渲染为可折叠“思考”块；历史时间线不再重复渲染文本片段，避免“同一内容出现两次”
   - `electron/src/renderer/views/ChatView.tsx`
   - 验证：`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`

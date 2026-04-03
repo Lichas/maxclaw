@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -91,6 +92,18 @@ func (r *Registry) List() []string {
 		names = append(names, name)
 	}
 	return names
+}
+
+// RemoveByPrefix removes all tools whose names start with the given prefix.
+func (r *Registry) RemoveByPrefix(prefix string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for name := range r.tools {
+		if prefix == "" || strings.HasPrefix(name, prefix) {
+			delete(r.tools, name)
+		}
+	}
 }
 
 // Count 返回工具数量

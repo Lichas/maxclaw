@@ -1236,6 +1236,11 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 				lg.Web.Printf("apply runtime model config failed: %v", err)
 			}
 		}
+		if err := s.applyRuntimeMCPConfig(updated); err != nil {
+			if lg := logging.Get(); lg != nil && lg.Web != nil {
+				lg.Web.Printf("apply runtime MCP config failed: %v", err)
+			}
+		}
 		writeJSON(w, updated)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -1372,6 +1377,13 @@ func (s *Server) applyRuntimeModelConfig(cfg *config.Config) error {
 
 	s.agentLoop.UpdateRuntimeModel(provider, model)
 	return nil
+}
+
+func (s *Server) applyRuntimeMCPConfig(cfg *config.Config) error {
+	if s.agentLoop == nil || cfg == nil {
+		return nil
+	}
+	return s.agentLoop.UpdateRuntimeMCPServers(cfg.Tools.MCPServers)
 }
 
 func (s *Server) handleGatewayRestart(w http.ResponseWriter, r *http.Request) {
@@ -2692,7 +2704,18 @@ func (s *Server) handleMCPAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.cfg = cfg
+	updated, err := config.LoadConfig()
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	s.cfg = updated
+	if err := s.applyRuntimeMCPConfig(updated); err != nil {
+		if lg := logging.Get(); lg != nil && lg.Web != nil {
+			lg.Web.Printf("apply runtime MCP config failed after add: %v", err)
+		}
+	}
 	writeJSON(w, map[string]interface{}{
 		"ok":   true,
 		"name": req.Name,
@@ -2741,7 +2764,18 @@ func (s *Server) handleMCPUpdate(w http.ResponseWriter, r *http.Request, name st
 		return
 	}
 
-	s.cfg = cfg
+	updated, err := config.LoadConfig()
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	s.cfg = updated
+	if err := s.applyRuntimeMCPConfig(updated); err != nil {
+		if lg := logging.Get(); lg != nil && lg.Web != nil {
+			lg.Web.Printf("apply runtime MCP config failed after update: %v", err)
+		}
+	}
 	writeJSON(w, map[string]interface{}{
 		"ok":   true,
 		"name": name,
@@ -2767,7 +2801,18 @@ func (s *Server) handleMCPDelete(w http.ResponseWriter, r *http.Request, name st
 		return
 	}
 
-	s.cfg = cfg
+	updated, err := config.LoadConfig()
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	s.cfg = updated
+	if err := s.applyRuntimeMCPConfig(updated); err != nil {
+		if lg := logging.Get(); lg != nil && lg.Web != nil {
+			lg.Web.Printf("apply runtime MCP config failed after delete: %v", err)
+		}
+	}
 	writeJSON(w, map[string]interface{}{
 		"ok":   true,
 		"name": name,

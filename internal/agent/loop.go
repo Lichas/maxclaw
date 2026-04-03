@@ -296,6 +296,14 @@ func (a *AgentLoop) executionModeSnapshot() string {
 	return config.NormalizeExecutionMode(a.executionMode)
 }
 
+// ListToolNames returns the currently registered tool names.
+func (a *AgentLoop) ListToolNames() []string {
+	if a == nil || a.tools == nil {
+		return nil
+	}
+	return a.tools.List()
+}
+
 // HandleInterruption 处理插话请求
 // explicitMode 为可选参数，如果提供则直接使用，否则通过意图分析判断
 func (a *AgentLoop) HandleInterruption(msg *bus.InboundMessage, explicitMode ...InterruptMode) InterruptMode {
@@ -814,6 +822,37 @@ func (a *AgentLoop) UpdateRuntimeExecutionMode(mode string) {
 	defer a.runtimeMu.Unlock()
 	a.executionMode = config.NormalizeExecutionMode(mode)
 	a.context.SetExecutionMode(a.executionMode)
+}
+
+// UpdateRuntimeMCPServers refreshes MCP tools for the running agent loop.
+func (a *AgentLoop) UpdateRuntimeMCPServers(mcpServers map[string]config.MCPServerConfig) error {
+	a.runtimeMu.Lock()
+	defer a.runtimeMu.Unlock()
+
+	if a.tools != nil {
+		a.tools.RemoveByPrefix("mcp_")
+	}
+
+	if a.mcpConnector != nil {
+		_ = a.mcpConnector.Close()
+		a.mcpConnector = nil
+	}
+
+	a.MCPServers = cloneMCPServerConfigs(mcpServers)
+	a.mcpConnectOnce = sync.Once{}
+
+	if len(a.MCPServers) == 0 {
+		return nil
+	}
+
+	connector := tools.NewMCPConnector(convertMCPServers(a.MCPServers))
+	if err := connector.Connect(context.Background(), a.tools); err != nil {
+		a.mcpConnector = connector
+		return err
+	}
+
+	a.mcpConnector = connector
+	return nil
 }
 
 // ProcessDirect 直接处理消息（用于 CLI）
