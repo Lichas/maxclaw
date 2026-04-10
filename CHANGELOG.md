@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- **OpenRouter model ID parsing**: Fixed issue where provider prefix (e.g., `openrouter/`) was not being stripped from model IDs like `openrouter/nvidia/nemotron-3-super-120b-a12b:free` when calling OpenAI-compatible APIs. Now properly normalizes model names in both `Chat()` and `ChatStream()` methods.
+
 ### Added
 
 - **引入完整的 Agent 生命周期循环系统 (验证→反思→适应→持久化→进化)**：从 Hermes-Agent 迁移并适配到 Go 环境，实现五层循环机制，提升 Agent 的容错能力和自适应能力

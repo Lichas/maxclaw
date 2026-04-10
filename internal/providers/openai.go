@@ -74,7 +74,11 @@ func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, tools []m
 		model = p.defaultModel
 	}
 
-	reqBody := buildChatRequest(messages, tools, model, p.SupportsImageInput(model), false, p.maxTokens, p.temperature)
+	// Normalize model name by removing provider prefix (e.g., "openrouter/" for OpenRouter)
+	providerName := p.detectProvider(model)
+	normalizedModel := normalizeModelForProvider(providerName, model)
+
+	reqBody := buildChatRequest(messages, tools, normalizedModel, p.SupportsImageInput(model), false, p.maxTokens, p.temperature)
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode request: %w", err)
@@ -143,7 +147,11 @@ func (p *OpenAIProvider) ChatStream(ctx context.Context, messages []Message, too
 		model = p.defaultModel
 	}
 
-	reqBody := buildChatRequest(messages, tools, model, p.SupportsImageInput(model), true, p.maxTokens, p.temperature)
+	// Normalize model name by removing provider prefix (e.g., "openrouter/" for OpenRouter)
+	providerName := p.detectProvider(model)
+	normalizedModel := normalizeModelForProvider(providerName, model)
+
+	reqBody := buildChatRequest(messages, tools, normalizedModel, p.SupportsImageInput(model), true, p.maxTokens, p.temperature)
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		return fmt.Errorf("failed to encode request: %w", err)
