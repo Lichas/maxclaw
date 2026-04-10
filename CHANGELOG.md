@@ -4,6 +4,17 @@
 
 ### Added
 
+- **引入完整的 Agent 生命周期循环系统 (验证→反思→适应→持久化→进化)**：从 Hermes-Agent 迁移并适配到 Go 环境，实现五层循环机制，提升 Agent 的容错能力和自适应能力
+  - **验证层 (Verification Layer)**: 结构化错误分类 (`ErrorClassifier`)，支持 15+ 种错误类型识别，提供智能恢复策略建议
+  - **反思层 (Reflection Layer)**: 上下文压缩 (`ContextCompressor`) 自动管理长会话，迭代式摘要更新；会话洞察 (`InsightsEngine`) 提供 Token 使用、成本估算、工具使用分析
+  - **适应层 (Adaptation Layer)**: 多层级模型回退 (`AdaptationManager`)，上下文长度自适应调整，智能重试退避
+  - **持久化层 (Persistence Layer)**: 文件系统检查点 (`CheckpointManager`)，会话状态保存/恢复，工具结果持久化
+  - **进化层 (Evolution Layer)**: 错误模式识别 (`EvolutionTracker`)，恢复策略效果跟踪，模型性能历史记录
+  - 核心文件：`internal/agent/error_classifier.go`、`internal/agent/context_compressor.go`、`internal/agent/insights.go`、`internal/agent/adaptation.go`、`internal/agent/checkpoint.go`、`internal/agent/evolution.go`、`internal/agent/lifecycle.go`
+  - 集成：`internal/agent/loop.go` 集成 `AgentLifecycle` 到 `AgentLoop`
+  - 文档：`docs/agent_lifecycle.md`
+  - 验证：`go test ./internal/agent`、`make build`
+
 - **补充 MCP 热刷新问题的 BUGFIX 记录**：将“运行中的 app 新增 MCP server 后对话无法感知新工具”的现象、根因、修复方案和验证命令写入事故文档，便于后续排障与回溯
   - `BUGFIX.md`
   - 验证：`go test ./internal/agent ./internal/webui ./pkg/tools`、`./e2e_test/gateway_agent_regression.sh`、`make build`

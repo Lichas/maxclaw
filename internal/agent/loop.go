@@ -59,6 +59,9 @@ type AgentLoop struct {
 	icMu           sync.RWMutex
 
 	PlanManager *PlanManager // Task plan manager for multi-step execution
+
+	// Lifecycle management (verification→reflection→adaptation→persistence→evolution)
+	Lifecycle *AgentLifecycle
 }
 
 // StreamEvent is a structured event for UI streaming consumers.
@@ -129,6 +132,15 @@ func NewAgentLoop(
 	}
 
 	loop.registerDefaultTools()
+
+	// Initialize lifecycle management
+	primaryRuntime := RuntimeConfig{
+		Provider:      provider,
+		Model:         model,
+		MaxIterations: maxIterations,
+	}
+	loop.Lifecycle = NewAgentLifecycle(workspace, primaryRuntime)
+
 	return loop
 }
 
@@ -1342,4 +1354,151 @@ func cloneStringMap(in map[string]string) map[string]string {
 		out[k] = v
 	}
 	return out
+}
+
+// InitializeLifecycle initializes the lifecycle management with runtime configuration
+func (a *AgentLoop) InitializeLifecycle(baseURL, apiKey string) {
+	if a.Lifecycle == nil {
+		return
+	}
+
+	// Initialize compression with model info
+	providerName := ""
+	if a.Provider != nil {
+		providerName = a.Provider.GetDefaultModel()
+	}
+	
+	a.Lifecycle.InitializeCompression(
+		a.Model,
+		baseURL,
+		apiKey,
+		providerName,
+		0, // config context length - could be passed from config
+	)
+}
+
+// StartSessionLifecycle starts lifecycle tracking for a session
+func (a *AgentLoop) StartSessionLifecycle(sessionKey string) {
+	if a.Lifecycle != nil {
+		provider := ""
+		if a.Provider != nil {
+			provider = a.Provider.GetDefaultModel()
+		}
+		a.Lifecycle.StartSession(sessionKey, a.Model, provider)
+	}
+}
+
+// EndSessionLifecycle ends lifecycle tracking for a session
+func (a *AgentLoop) EndSessionLifecycle(sess *session.Session) {
+	if a.Lifecycle != nil {
+		history := sess.GetHistory(sessionContextWindow)
+		a.Lifecycle.EndSession(sess, history)
+	}
+}
+
+// HandleAPIErrorWithLifecycle handles API errors using the lifecycle management
+func (a *AgentLoop) HandleAPIErrorWithLifecycle(ctx context.Context, err error, approxTokens, numMessages int) (bool, error) {
+	if a.Lifecycle == nil {
+		return false, err
+	}
+
+	providerName := ""
+	if a.Provider != nil {
+		providerName = a.Provider.GetDefaultModel()
+	}
+
+	action, newRuntime, handleErr := a.Lifecycle.HandleAPIError(ctx, err, providerName, a.Model, approxTokens, numMessages)
+	
+	if action != nil {
+		switch *action {
+		case ActionFallback:
+			if newRuntime != nil && newRuntime.Provider != nil {
+				a.runtimeMu.Lock()
+				a.Provider = newRuntime.Provider
+				a.Model = newRuntime.Model
+				a.runtimeMu.Unlock()
+				return true, nil // Retry with new provider
+			}
+		case ActionRetry:
+			return true, nil // Retry with backoff
+		case ActionAdjustContext, ActionReduceOutput:
+			return true, nil // Retry after adjustment
+		case ActionCompress:
+			return false, fmt.Errorf("context compression required: %w", err)
+		}
+	}
+
+	return false, handleErr
+}
+
+// RecordAPICallSuccess records a successful API call for lifecycle tracking
+func (a *AgentLoop) RecordAPICallSuccess(tokens int, latency time.Duration) {
+	if a.Lifecycle != nil {
+		provider := ""
+		if a.Provider != nil {
+			provider = a.Provider.GetDefaultModel()
+		}
+		a.Lifecycle.RecordSuccess(a.Model, provider, tokens, latency)
+	}
+}
+
+// RecordToolExecution records a tool execution for lifecycle tracking
+func (a *AgentLoop) RecordToolExecution(toolName string, success bool, executionTime time.Duration) {
+	if a.Lifecycle != nil {
+		a.Lifecycle.RecordToolExecution(toolName, success, executionTime)
+	}
+}
+
+// GetLifecycleStats returns lifecycle statistics
+func (a *AgentLoop) GetLifecycleStats() map[string]interface{} {
+	if a.Lifecycle == nil {
+		return map[string]interface{}{"enabled": false}
+	}
+	return a.Lifecycle.GetStats()
+}
+
+// ShouldCompressContext checks if context compression is needed
+func (a *AgentLoop) ShouldCompressContext(promptTokens int) bool {
+	if a.Lifecycle == nil {
+		return false
+	}
+	return a.Lifecycle.ShouldCompress(promptTokens)
+}
+
+// GetCompressionStatus returns the current compression status
+func (a *AgentLoop) GetCompressionStatus() map[string]interface{} {
+	if a.Lifecycle == nil {
+		return map[string]interface{}{"enabled": false}
+	}
+	return a.Lifecycle.GetCompressionStatus()
+}
+
+// SaveCheckpoint saves a checkpoint for the current session
+func (a *AgentLoop) SaveCheckpoint(sessionKey string, messages []session.Message, systemPrompt string, iteration int) {
+	if a.Lifecycle != nil {
+		a.Lifecycle.SaveCheckpoint(sessionKey, messages, systemPrompt, iteration)
+	}
+}
+
+// IsFallbackActive returns true if a fallback provider is currently active
+func (a *AgentLoop) IsFallbackActive() bool {
+	if a.Lifecycle == nil {
+		return false
+	}
+	return a.Lifecycle.IsFallbackActive()
+}
+
+// RestorePrimaryRuntime restores the primary runtime after fallback
+func (a *AgentLoop) RestorePrimaryRuntime() {
+	if a.Lifecycle == nil {
+		return
+	}
+	
+	config := a.Lifecycle.RestorePrimaryRuntime()
+	if config.Provider != nil {
+		a.runtimeMu.Lock()
+		a.Provider = config.Provider
+		a.Model = config.Model
+		a.runtimeMu.Unlock()
+	}
 }
