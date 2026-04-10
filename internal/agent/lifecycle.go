@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	
+	"github.com/Lichas/maxclaw/internal/providers"
 	"github.com/Lichas/maxclaw/internal/session"
 )
 
@@ -18,6 +18,8 @@ type AgentLifecycle struct {
 	AdaptationManager *AdaptationManager
 	CheckpointManager *CheckpointManager
 	EvolutionTracker  *EvolutionTracker
+	FeedbackDetector  *FeedbackDetector  // NEW: Detect user feedback sentiment
+	FeedbackLearner   *FeedbackLearner   // NEW: Learn from user feedback
 
 	// Configuration
 	Enabled           bool
@@ -25,6 +27,7 @@ type AgentLifecycle struct {
 	EnableFallbacks   bool
 	EnableCheckpoints bool
 	EnableEvolution   bool
+	EnableFeedback    bool               // NEW: Enable feedback learning
 }
 
 // NewAgentLifecycle creates a new agent lifecycle manager
@@ -36,12 +39,19 @@ func NewAgentLifecycle(workspace string, config RuntimeConfig) *AgentLifecycle {
 		AdaptationManager: NewAdaptationManager(config, 3),
 		CheckpointManager: NewCheckpointManager(true, 50, workspace),
 		EvolutionTracker:  NewEvolutionTracker(workspace),
+		FeedbackLearner:   NewFeedbackLearner(workspace),
 		Enabled:           true,
 		EnableCompression: true,
 		EnableFallbacks:   true,
 		EnableCheckpoints: true,
 		EnableEvolution:   true,
+		EnableFeedback:    true,
 	}
+}
+
+// InitializeFeedback initializes the feedback detector with LLM provider
+func (al *AgentLifecycle) InitializeFeedback(llmProvider providers.LLMProvider, llmModel string) {
+	al.FeedbackDetector = NewFeedbackDetector(llmProvider, llmModel)
 }
 
 // InitializeCompression initializes the context compressor with model information
@@ -366,4 +376,65 @@ func ConvertCompressorMessagesToSession(messages []CompressorMessage) []session.
 		}
 	}
 	return result
+}
+
+
+// ==================== Feedback Learning Methods ====================
+
+// DetectUserFeedback analyzes user message for feedback sentiment
+func (al *AgentLifecycle) DetectUserFeedback(ctx context.Context, userMsg, agentOutput string) *FeedbackResult {
+	if !al.Enabled || !al.EnableFeedback || al.FeedbackDetector == nil {
+		return &FeedbackResult{Type: FeedbackNeutral, Confidence: 0.5}
+	}
+	return al.FeedbackDetector.Detect(ctx, userMsg, agentOutput)
+}
+
+// LearnFromFeedback records user feedback and extracts lesson
+func (al *AgentLifecycle) LearnFromFeedback(
+	result *FeedbackResult,
+	taskContext string,
+	agentOutput string,
+	userFeedback string,
+) *FeedbackLesson {
+	if !al.Enabled || !al.EnableFeedback || al.FeedbackLearner == nil {
+		return nil
+	}
+	return al.FeedbackLearner.RecordFeedback(result, taskContext, agentOutput, userFeedback)
+}
+
+// GetFeedbackLessons retrieves relevant lessons for a task
+func (al *AgentLifecycle) GetFeedbackLessons(taskType string, maxResults int) []*FeedbackLesson {
+	if !al.Enabled || !al.EnableFeedback || al.FeedbackLearner == nil {
+		return nil
+	}
+	return al.FeedbackLearner.GetRelevantLessons(taskType, maxResults)
+}
+
+// BuildFeedbackEnhancedPrompt generates system prompt with learned lessons
+func (al *AgentLifecycle) BuildFeedbackEnhancedPrompt(taskType string) string {
+	if !al.Enabled || !al.EnableFeedback || al.FeedbackLearner == nil {
+		return ""
+	}
+	return al.FeedbackLearner.BuildSystemPromptEnhancement(taskType)
+}
+
+// GetFeedbackStats returns feedback detection and learning statistics
+func (al *AgentLifecycle) GetFeedbackStats() map[string]interface{} {
+	if al.FeedbackDetector == nil && al.FeedbackLearner == nil {
+		return map[string]interface{}{"enabled": false}
+	}
+
+	stats := map[string]interface{}{
+		"enabled": al.EnableFeedback,
+	}
+
+	if al.FeedbackDetector != nil {
+		stats["detector"] = al.FeedbackDetector.GetStats()
+	}
+
+	if al.FeedbackLearner != nil {
+		stats["learner"] = al.FeedbackLearner.GetStats()
+	}
+
+	return stats
 }

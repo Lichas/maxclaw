@@ -1502,3 +1502,45 @@ func (a *AgentLoop) RestorePrimaryRuntime() {
 		a.runtimeMu.Unlock()
 	}
 }
+
+
+// ==================== Feedback Learning Methods ====================
+
+// DetectUserFeedback analyzes user message for feedback sentiment
+func (a *AgentLoop) DetectUserFeedback(ctx context.Context, userMsg, agentOutput string) *FeedbackResult {
+	if a.Lifecycle == nil {
+		return &FeedbackResult{Type: FeedbackNeutral, Confidence: 0.5}
+	}
+	return a.Lifecycle.DetectUserFeedback(ctx, userMsg, agentOutput)
+}
+
+// LearnFromFeedback records user feedback and extracts lesson
+func (a *AgentLoop) LearnFromFeedback(result *FeedbackResult, taskContext, agentOutput, userFeedback string) *FeedbackLesson {
+	if a.Lifecycle == nil {
+		return nil
+	}
+	return a.Lifecycle.LearnFromFeedback(result, taskContext, agentOutput, userFeedback)
+}
+
+// GetFeedbackLessons retrieves relevant lessons for a task
+func (a *AgentLoop) GetFeedbackLessons(taskType string, maxResults int) []*FeedbackLesson {
+	if a.Lifecycle == nil {
+		return nil
+	}
+	return a.Lifecycle.GetFeedbackLessons(taskType, maxResults)
+}
+
+// InitializeFeedbackDetector initializes the feedback detector
+func (a *AgentLoop) InitializeFeedbackDetector(llmProvider providers.LLMProvider, llmModel string) {
+	if a.Lifecycle != nil {
+		a.Lifecycle.InitializeFeedback(llmProvider, llmModel)
+	}
+}
+
+// GetFeedbackStats returns feedback detection statistics
+func (a *AgentLoop) GetFeedbackStats() map[string]interface{} {
+	if a.Lifecycle == nil {
+		return map[string]interface{}{"enabled": false}
+	}
+	return a.Lifecycle.GetFeedbackStats()
+}

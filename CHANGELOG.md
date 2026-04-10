@@ -15,6 +15,17 @@
   - 文档：`docs/agent_lifecycle.md`
   - 验证：`go test ./internal/agent`、`make build`
 
+- **新增用户反馈学习系统 (第六层循环)**：实现三层架构的用户反馈检测（规则引擎 → 上下文模式 → LLM 语义分析），自动从用户调教中提取教训并持久化到 MEMORY.md，实现"越用越懂你"
+  - **三层检测架构**: 规则引擎（中英双语正则，70% 覆盖率，零成本）→ 上下文模式（重复抱怨/回避确认检测）→ LLM 语义分析（模糊语义理解，成本控制 $0.1/天）
+  - **反馈类型**: Positive / Negative / Correction / Clarification / Question / Neutral
+  - **自动学习**: 从用户修正中提取具体教训（如"用户偏好 Promise.all 而非串行处理"）
+  - **持久化**: 自动写入 `MEMORY.md`，跨会话生效，用户可编辑
+  - **应用**: 下次类似任务前自动注入相关教训到 System Prompt
+  - 核心文件：`internal/agent/feedback_detector.go`、`internal/agent/feedback_learner.go`
+  - 集成：`internal/agent/lifecycle.go`、`internal/agent/loop.go`
+  - 文档：`docs/agent_lifecycle.md`（新增用户反馈学习章节）
+  - 验证：`make build`、`./e2e_test/gateway_agent_regression.sh`
+
 - **补充 MCP 热刷新问题的 BUGFIX 记录**：将“运行中的 app 新增 MCP server 后对话无法感知新工具”的现象、根因、修复方案和验证命令写入事故文档，便于后续排障与回溯
   - `BUGFIX.md`
   - 验证：`go test ./internal/agent ./internal/webui ./pkg/tools`、`./e2e_test/gateway_agent_regression.sh`、`make build`

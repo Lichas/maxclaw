@@ -279,3 +279,140 @@ maxclaw lifecycle fallback list
 - [ ] 分布式检查点存储
 - [ ] 进化数据的机器学习分析
 - [ ] 自适应阈值自动调优
+
+
+## 第六层：用户反馈学习 (User Feedback Loop)
+
+**文件**: 
+- `internal/agent/feedback_detector.go` - 反馈检测（三层架构）
+- `internal/agent/feedback_learner.go` - 反馈学习与持久化
+
+功能：
+- **三层检测架构**：规则引擎 → 上下文模式 → LLM 语义分析
+- **多语言支持**：中文 + 英文正则匹配
+- **自动提取教训**：从用户调教中提取可复用的知识
+- **持久化到 MEMORY.md**：长期记忆，跨会话生效
+
+### 三层反馈检测架构
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    User Feedback Detection                       │
+├─────────────────────────────────────────────────────────────────┤
+│  Layer 1: Rule Engine (100% 消息, 零成本)                        │
+│  ├── 直接否定: "不对"/"错了"/"wrong"/"incorrect"                 │
+│  ├── 修正信号: "应该用 X 而不是 Y"/"should use X instead of Y"    │
+│  ├── 肯定信号: "好的"/"完美"/"good"/"perfect"                    │
+│  └── 否定+肯定翻转: "not good" → 负面                            │
+├─────────────────────────────────────────────────────────────────┤
+│  Layer 2: Contextual Patterns (零成本)                           │
+│  ├── 重复抱怨检测: "还是不对" → 累积不满                         │
+│  ├── 回避确认: Agent问"可以吗?" → 用户说"但是..."               │
+│  ├── 教学模式: "你应该先...然后..." → 强烈不满                  │
+│  └── 质疑方式: "为什么不..." → 隐性不满                         │
+├─────────────────────────────────────────────────────────────────┤
+│  Layer 3: LLM Semantic Analysis (成本控制)                       │
+│  ├── 触发条件: 包含模糊词("感觉"/"seems")或对比词("但是"/"but")   │
+│  ├── 采样率: 30% 的模糊消息 + 10% 随机采样                       │
+│  ├── 成本: ~$0.1/天 (每小时最多 50 次调用)                      │
+│  └── 语义理解: "感觉性能会不会有问题" → 隐性不满                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 反馈类型
+
+```go
+type FeedbackType int
+
+const (
+    FeedbackPositive      // 用户满意
+    FeedbackNegative      // 用户不满
+    FeedbackCorrection    // 用户给出具体修正
+    FeedbackClarification // 用户澄清意图
+    FeedbackQuestion      // 用户提问（可能是困惑）
+    FeedbackNeutral       // 无明显情绪
+)
+```
+
+### 使用示例
+
+```go
+// 初始化反馈检测器（可选 LLM 增强）
+agentLoop.InitializeFeedbackDetector(llmProvider, "gpt-3.5-turbo")
+
+// 用户发送消息后检测反馈
+result := agentLoop.DetectUserFeedback(ctx, userMsg, lastAgentOutput)
+
+switch result.Type {
+case FeedbackNegative, FeedbackCorrection:
+    // 记录学习
+    lesson := agentLoop.LearnFromFeedback(result, taskContext, agentOutput, userMsg)
+    
+    //  lesson 会被写入 MEMORY.md:
+    //  ## User Feedback Lesson [lesson_ab12]
+    //  - **Task Type**: refactoring
+    //  - **Issue Type**: implementation
+    //  - **Lesson**: User prefers Promise.all over serial forEach
+    //  - **Occurrences**: 1
+    //  - **Learned**: 2024-01-15
+}
+
+// 下次类似任务前，自动注入学到的知识
+enhancedPrompt := agentLoop.BuildFeedbackEnhancedPrompt("refactoring")
+// 返回: "[Previous Feedback Lessons]\n1. implementation (3 times): User prefers Promise.all..."
+```
+
+### 实际工作流示例
+
+**第 1 次重构任务**:
+```
+Agent: "我按顺序用 forEach 重构了这些文件"
+User:  "不对，应该用 Promise.all 并行处理，这样太慢了"
+
+[FeedbackDetector] 
+- Layer 1: 匹配 "不对" + "应该...而不是" → FeedbackCorrection, 置信度 95%
+
+[FeedbackLearner]
+- 提取教训: "User prefers Promise.all over serial forEach for batch operations"
+- 写入 MEMORY.md
+```
+
+**第 2 次类似任务（一周后）**:
+```
+[BuildSystemPrompt] 自动读取 MEMORY.md，注入:
+"[Previous Feedback Lessons]
+1. implementation (1 time): User prefers Promise.all over serial forEach..."
+
+Agent: "我将使用 Promise.all 并行处理这些文件..."
+User:  "👍 完美"
+
+[FeedbackDetector] → FeedbackPositive
+```
+
+### 成本优化
+
+| 层级 | 覆盖率 | 成本 | 延迟 |
+|-----|-------|------|-----|
+| 规则引擎 | ~70% | $0 | <1ms |
+| 上下文模式 | ~15% | $0 | <1ms |
+| LLM 分析 | ~15% | ~$0.1/天 | ~500ms |
+
+### 配置
+
+```go
+lifecycle := NewAgentLifecycle(workspace, config)
+lifecycle.EnableFeedback = true
+
+// 可选：初始化 LLM 增强检测
+lifecycle.InitializeFeedback(llmProvider, "gpt-3.5-turbo")
+```
+
+### 与 Evolution 层的区别
+
+| 维度 | Evolution 层 | User Feedback Loop |
+|-----|-------------|-------------------|
+| **触发条件** | API 错误、工具失败 | 用户明确表达不满或修正 |
+| **学习内容** | 系统恢复策略 | 用户偏好和期望 |
+| **持久化** | evolution/state.json | MEMORY.md（用户可见） |
+| **应用时机** | 错误恢复时 | 任务开始前（预防） |
+| **数据隐私** | 系统内部 | 可编辑、可删除 |
