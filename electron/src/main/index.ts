@@ -80,7 +80,8 @@ async function openMainWindow(): Promise<void> {
     await mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
 
-  if (isDev && !mainWindow.webContents.isDevToolsOpened()) {
+  const shouldAutoOpenDevTools = process.env.MAXCLAW_OPEN_DEVTOOLS === '1';
+  if (isDev && shouldAutoOpenDevTools && !mainWindow.webContents.isDevToolsOpened()) {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
 
