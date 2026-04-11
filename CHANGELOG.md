@@ -4,6 +4,9 @@
 
 ### Fixed
 - **OpenRouter model ID parsing**: Fixed issue where provider prefix (e.g., `openrouter/`) was not being stripped from model IDs like `openrouter/nvidia/nemotron-3-super-120b-a12b:free` when calling OpenAI-compatible APIs. Now properly normalizes model names in both `Chat()` and `ChatStream()` methods.
+- **聊天输入框输入/删除响应卡顿修复**：修复输入框在触发 `@mention` / `/slash` 检测时提前返回导致 value 未及时写回的问题，并将消息渲染相关回调改为稳定引用，减少输入期间历史消息不必要重渲染，提升连续输入与删除的流畅度
+  - `electron/src/renderer/views/ChatView.tsx`
+  - 验证：`bash e2e_test/interrupt_test.sh`、`bash e2e_test/gateway_agent_regression.sh`、`cd electron && npm run build`、`make build`
 
 ### Added
 

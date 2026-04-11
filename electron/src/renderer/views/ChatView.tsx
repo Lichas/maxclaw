@@ -716,29 +716,29 @@ export function ChatView() {
     });
   };
 
-  const setPreviewModeForSession = (sessionKey: string, mode: 'tree' | 'file' | 'browser') => {
+  const setPreviewModeForSession = useCallback((sessionKey: string, mode: 'tree' | 'file' | 'browser') => {
     setPreviewModeBySession((prev) => {
       if (prev[sessionKey] === mode) {
         return prev;
       }
       return { ...prev, [sessionKey]: mode };
     });
-  };
+  }, []);
 
-  const setInputForSession = (sessionKey: string, value: string) => {
+  const setInputForSession = useCallback((sessionKey: string, value: string) => {
     setInputBySession((prev) => {
       if ((prev[sessionKey] || '') === value) {
         return prev;
       }
       return { ...prev, [sessionKey]: value };
     });
-  };
+  }, []);
 
-  const setInputForCurrentSession = (value: string) => {
+  const setInputForCurrentSession = useCallback((value: string) => {
     setInputForSession(currentSessionKey, value);
-  };
+  }, [currentSessionKey, setInputForSession]);
 
-  const clearInputForSession = (sessionKey: string) => {
+  const clearInputForSession = useCallback((sessionKey: string) => {
     setInputBySession((prev) => {
       if (!(sessionKey in prev)) {
         return prev;
@@ -747,7 +747,7 @@ export function ChatView() {
       delete next[sessionKey];
       return next;
     });
-  };
+  }, []);
 
   const setSessionGenerating = (sessionKey: string, value: boolean) => {
     setGeneratingSessions((prev) => {
@@ -1082,9 +1082,10 @@ export function ChatView() {
     inputRef.current?.focus();
   };
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleInputChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = event.target.value;
     const cursorPosition = event.target.selectionStart || 0;
+    setInputForCurrentSession(value);
 
     // Check for @mention
     const textBeforeCursor = value.slice(0, cursorPosition);
@@ -1122,8 +1123,7 @@ export function ChatView() {
 
     setMentionOpen(false);
     setSlashOpen(false);
-    setInputForCurrentSession(value);
-  };
+  }, [setInputForCurrentSession]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Handle mention navigation
@@ -1300,7 +1300,7 @@ export function ChatView() {
     });
   };
 
-  const getActivityLabel = (type: StreamActivity['type']) => {
+  const getActivityLabel = useCallback((type: StreamActivity['type']) => {
     if (type === 'status') {
       return t('chat.timeline.label.thinking');
     }
@@ -1311,7 +1311,7 @@ export function ChatView() {
       return t('chat.timeline.label.skill');
     }
     return t('chat.timeline.label.tool');
-  };
+  }, [t]);
 
   const normalizeStoredTimeline = (
     entries: Array<{
@@ -1579,7 +1579,256 @@ export function ChatView() {
     inputRef.current?.focus();
   };
 
-  const renderTimeline = (items: TimelineEntry[], streaming: boolean) => {
+  const handleModelChange = async (modelId: string) => {
+    if (!modelId || modelId === currentModel) {
+      return;
+    }
+
+    setCurrentModel(modelId);
+    setSessionModelBySession((prev) => ({ ...prev, [currentSessionKey]: modelId }));
+    savePreferredModel(modelId);
+
+    try {
+      await updateConfig({ model: modelId });
+    } catch (err) {
+      console.error('Failed to switch model:', err);
+    }
+  };
+
+  const fallbackReferenceFromPath = useCallback((pathHint: string): FileReference | null => {
+    const trimmed = pathHint.trim();
+    if (!trimmed || /^https?:\/\//i.test(trimmed) || /^mailto:/i.test(trimmed)) {
+      return null;
+    }
+    const cleaned = trimmed.replace(/^file:\/\//i, '');
+    const normalized = cleaned.split('?')[0].split('#')[0];
+    const slashIndex = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));
+    const filename = slashIndex >= 0 ? normalized.slice(slashIndex + 1) : normalized;
+    const dotIndex = filename.lastIndexOf('.');
+    if (dotIndex <= 0) {
+      return null;
+    }
+
+    return {
+      id: cleaned.toLowerCase(),
+      pathHint: cleaned,
+      displayName: filename,
+      extension: filename.slice(dotIndex).toLowerCase(),
+      kind: 'binary'
+    };
+  }, []);
+
+  const referenceFromHref = useCallback((href: string): FileReference | null => {
+    const parsed = extractFileReferences(`[preview](${href})`);
+    if (parsed.length > 0) {
+      return parsed[0];
+    }
+    return fallbackReferenceFromPath(href);
+  }, [fallbackReferenceFromPath]);
+
+  const previewReference = useCallback(async (reference: FileReference) => {
+    setPreviewModeForSession(currentSessionKey, 'file');
+    setPreviewSidebarCollapsed(false);
+    setSelectedFileRef(reference);
+    setPreviewLoading(true);
+    setPreviewData(null);
+
+    previewRequestRef.current += 1;
+    const requestID = previewRequestRef.current;
+    try {
+      const result = await window.electronAPI.system.previewFile(reference.pathHint, {
+        workspace: workspacePath,
+        sessionKey: currentSessionKey
+      });
+      if (requestID !== previewRequestRef.current) {
+        return;
+      }
+      setPreviewData(result as PreviewPayload);
+    } catch (error) {
+      if (requestID !== previewRequestRef.current) {
+        return;
+      }
+      setPreviewData({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    } finally {
+      if (requestID === previewRequestRef.current) {
+        setPreviewLoading(false);
+      }
+    }
+  }, [currentSessionKey, setPreviewModeForSession, workspacePath]);
+
+  const handleFileLinkPreview = useCallback((href: string): boolean => {
+    const reference = referenceFromHref(href);
+    if (!reference) {
+      return false;
+    }
+    void previewReference(reference);
+    return true;
+  }, [referenceFromHref, previewReference]);
+
+  const handleOpenSelectedFile = async () => {
+    if (!selectedFileRef) {
+      return;
+    }
+    const result = await window.electronAPI.system.openInFolder(selectedFileRef.pathHint, {
+      workspace: workspacePath,
+      sessionKey: currentSessionKey
+    });
+    if (!result.success) {
+      setPreviewData({
+        success: false,
+        error: result.error || '打开所在目录失败'
+      });
+    }
+  };
+
+  const handleOpenFilePath = async () => {
+    if (!selectedFileRef) {
+      return;
+    }
+    const result = await window.electronAPI.system.openPath(selectedFileRef.pathHint, {
+      workspace: workspacePath,
+      sessionKey: currentSessionKey
+    });
+    if (!result.success) {
+      setPreviewData({
+        success: false,
+        error: result.error || '打开文件失败'
+      });
+    }
+  };
+
+  const handleBrowserCopilotAction = async (params: Record<string, unknown>) => {
+    const requestSessionKey = currentSessionKey;
+    setPreviewModeForSession(requestSessionKey, 'browser');
+    setPreviewSidebarCollapsed(false);
+    setBrowserCopilotBusy(requestSessionKey, true);
+    setBrowserCopilotError(requestSessionKey, '');
+    try {
+      const result = await runBrowserAction(requestSessionKey, params);
+      const resultText = (result.result || '').trim();
+      setBrowserCopilotOutput(requestSessionKey, resultText);
+
+      const references = extractFileReferences(resultText);
+      if (references.length > 0) {
+        await previewReference(references[0]);
+      }
+    } catch (error) {
+      setBrowserCopilotError(requestSessionKey, error instanceof Error ? error.message : String(error));
+    } finally {
+      setBrowserCopilotBusy(requestSessionKey, false);
+    }
+  };
+
+  const handleBrowserImageClick = async ({ x, y }: { x: number; y: number }) => {
+    await handleBrowserCopilotAction({
+      action: 'act',
+      act: 'click_xy',
+      x,
+      y,
+      wait_ms: 900
+    });
+    await handleBrowserCopilotAction({
+      action: 'screenshot',
+      full_page: false
+    });
+  };
+
+  const renderFileActions = useCallback((content: string, keyPrefix: string) => {
+    const references = extractFileReferences(content).filter(
+      (reference) => existingFileRefs[fileReferenceCacheKey(currentSessionKey, reference.pathHint)] === true
+    );
+    if (references.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="mt-2 flex flex-wrap gap-2">
+        {references.map((reference, index) => (
+          <div
+            key={`${keyPrefix}-${reference.id}-${index}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-secondary/50 px-2 py-1 text-xs text-foreground/80"
+          >
+            <DocumentIcon className="h-3.5 w-3.5 text-foreground/60" />
+            <span className="max-w-[190px] truncate">{reference.displayName}</span>
+            <button
+              type="button"
+              onClick={() => void previewReference(reference)}
+              className="rounded border border-border/80 bg-background px-1.5 py-0.5 text-[11px] text-foreground/75 transition-colors hover:bg-secondary"
+            >
+              预览
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                void window.electronAPI.system.openInFolder(reference.pathHint, {
+                  workspace: workspacePath,
+                  sessionKey: currentSessionKey
+                })
+              }
+              className="rounded border border-border/80 bg-background px-1.5 py-0.5 text-[11px] text-foreground/65 transition-colors hover:bg-secondary"
+            >
+              打开目录
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  }, [currentSessionKey, existingFileRefs, previewReference, workspacePath]);
+
+  const renderMarkdownWithActions = useCallback((content: string, keyPrefix: string) => {
+    if (!renderThinkTags || !content.includes('<think>')) {
+      return (
+        <div className="space-y-1.5">
+          <MarkdownRenderer content={content} onFileLinkClick={handleFileLinkPreview} />
+          {renderFileActions(content, keyPrefix)}
+        </div>
+      );
+    }
+
+    const segments = splitThinkSegments(content);
+    const thinkTitle = language === 'zh' ? '思考' : 'Thinking';
+    const contentForFileActions = stripThinkTags(content);
+
+    return (
+      <div className="space-y-1.5">
+        {segments.map((segment, index) => {
+          if (!segment.content.trim()) {
+            return null;
+          }
+
+          if (segment.kind === 'think') {
+            return (
+              <details
+                key={`${keyPrefix}-think-${index}`}
+                className="overflow-hidden rounded-xl border border-border/70 bg-secondary/35"
+              >
+                <summary className="cursor-pointer list-none px-3 py-2 text-sm font-medium text-foreground/80">
+                  {thinkTitle}
+                </summary>
+                <div className="border-t border-border/60 px-3 py-2">
+                  <MarkdownRenderer content={segment.content} onFileLinkClick={handleFileLinkPreview} />
+                </div>
+              </details>
+            );
+          }
+
+          return (
+            <MarkdownRenderer
+              key={`${keyPrefix}-text-${index}`}
+              content={segment.content}
+              onFileLinkClick={handleFileLinkPreview}
+            />
+          );
+        })}
+        {renderFileActions(contentForFileActions, keyPrefix)}
+      </div>
+    );
+  }, [handleFileLinkPreview, language, renderFileActions, renderThinkTags]);
+
+  const renderTimeline = useCallback((items: TimelineEntry[], streaming: boolean) => {
     const openIndex =
       streaming && items.length > 0 && items[items.length - 1].kind === 'activity' ? items.length - 1 : -1;
     const activityItems = items.filter(
@@ -1657,256 +1906,7 @@ export function ChatView() {
         </div>
       </div>
     );
-  };
-
-  const handleModelChange = async (modelId: string) => {
-    if (!modelId || modelId === currentModel) {
-      return;
-    }
-
-    setCurrentModel(modelId);
-    setSessionModelBySession((prev) => ({ ...prev, [currentSessionKey]: modelId }));
-    savePreferredModel(modelId);
-
-    try {
-      await updateConfig({ model: modelId });
-    } catch (err) {
-      console.error('Failed to switch model:', err);
-    }
-  };
-
-  const fallbackReferenceFromPath = (pathHint: string): FileReference | null => {
-    const trimmed = pathHint.trim();
-    if (!trimmed || /^https?:\/\//i.test(trimmed) || /^mailto:/i.test(trimmed)) {
-      return null;
-    }
-    const cleaned = trimmed.replace(/^file:\/\//i, '');
-    const normalized = cleaned.split('?')[0].split('#')[0];
-    const slashIndex = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));
-    const filename = slashIndex >= 0 ? normalized.slice(slashIndex + 1) : normalized;
-    const dotIndex = filename.lastIndexOf('.');
-    if (dotIndex <= 0) {
-      return null;
-    }
-
-    return {
-      id: cleaned.toLowerCase(),
-      pathHint: cleaned,
-      displayName: filename,
-      extension: filename.slice(dotIndex).toLowerCase(),
-      kind: 'binary'
-    };
-  };
-
-  const referenceFromHref = (href: string): FileReference | null => {
-    const parsed = extractFileReferences(`[preview](${href})`);
-    if (parsed.length > 0) {
-      return parsed[0];
-    }
-    return fallbackReferenceFromPath(href);
-  };
-
-  const previewReference = async (reference: FileReference) => {
-    setPreviewModeForSession(currentSessionKey, 'file');
-    setPreviewSidebarCollapsed(false);
-    setSelectedFileRef(reference);
-    setPreviewLoading(true);
-    setPreviewData(null);
-
-    previewRequestRef.current += 1;
-    const requestID = previewRequestRef.current;
-    try {
-      const result = await window.electronAPI.system.previewFile(reference.pathHint, {
-        workspace: workspacePath,
-        sessionKey: currentSessionKey
-      });
-      if (requestID !== previewRequestRef.current) {
-        return;
-      }
-      setPreviewData(result as PreviewPayload);
-    } catch (error) {
-      if (requestID !== previewRequestRef.current) {
-        return;
-      }
-      setPreviewData({
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    } finally {
-      if (requestID === previewRequestRef.current) {
-        setPreviewLoading(false);
-      }
-    }
-  };
-
-  const handleFileLinkPreview = (href: string): boolean => {
-    const reference = referenceFromHref(href);
-    if (!reference) {
-      return false;
-    }
-    void previewReference(reference);
-    return true;
-  };
-
-  const handleOpenSelectedFile = async () => {
-    if (!selectedFileRef) {
-      return;
-    }
-    const result = await window.electronAPI.system.openInFolder(selectedFileRef.pathHint, {
-      workspace: workspacePath,
-      sessionKey: currentSessionKey
-    });
-    if (!result.success) {
-      setPreviewData({
-        success: false,
-        error: result.error || '打开所在目录失败'
-      });
-    }
-  };
-
-  const handleOpenFilePath = async () => {
-    if (!selectedFileRef) {
-      return;
-    }
-    const result = await window.electronAPI.system.openPath(selectedFileRef.pathHint, {
-      workspace: workspacePath,
-      sessionKey: currentSessionKey
-    });
-    if (!result.success) {
-      setPreviewData({
-        success: false,
-        error: result.error || '打开文件失败'
-      });
-    }
-  };
-
-  const handleBrowserCopilotAction = async (params: Record<string, unknown>) => {
-    const requestSessionKey = currentSessionKey;
-    setPreviewModeForSession(requestSessionKey, 'browser');
-    setPreviewSidebarCollapsed(false);
-    setBrowserCopilotBusy(requestSessionKey, true);
-    setBrowserCopilotError(requestSessionKey, '');
-    try {
-      const result = await runBrowserAction(requestSessionKey, params);
-      const resultText = (result.result || '').trim();
-      setBrowserCopilotOutput(requestSessionKey, resultText);
-
-      const references = extractFileReferences(resultText);
-      if (references.length > 0) {
-        await previewReference(references[0]);
-      }
-    } catch (error) {
-      setBrowserCopilotError(requestSessionKey, error instanceof Error ? error.message : String(error));
-    } finally {
-      setBrowserCopilotBusy(requestSessionKey, false);
-    }
-  };
-
-  const handleBrowserImageClick = async ({ x, y }: { x: number; y: number }) => {
-    await handleBrowserCopilotAction({
-      action: 'act',
-      act: 'click_xy',
-      x,
-      y,
-      wait_ms: 900
-    });
-    await handleBrowserCopilotAction({
-      action: 'screenshot',
-      full_page: false
-    });
-  };
-
-  const renderFileActions = (content: string, keyPrefix: string) => {
-    const references = extractFileReferences(content).filter(
-      (reference) => existingFileRefs[fileReferenceCacheKey(currentSessionKey, reference.pathHint)] === true
-    );
-    if (references.length === 0) {
-      return null;
-    }
-
-    return (
-      <div className="mt-2 flex flex-wrap gap-2">
-        {references.map((reference, index) => (
-          <div
-            key={`${keyPrefix}-${reference.id}-${index}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-secondary/50 px-2 py-1 text-xs text-foreground/80"
-          >
-            <DocumentIcon className="h-3.5 w-3.5 text-foreground/60" />
-            <span className="max-w-[190px] truncate">{reference.displayName}</span>
-            <button
-              type="button"
-              onClick={() => void previewReference(reference)}
-              className="rounded border border-border/80 bg-background px-1.5 py-0.5 text-[11px] text-foreground/75 transition-colors hover:bg-secondary"
-            >
-              预览
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                void window.electronAPI.system.openInFolder(reference.pathHint, {
-                  workspace: workspacePath,
-                  sessionKey: currentSessionKey
-                })
-              }
-              className="rounded border border-border/80 bg-background px-1.5 py-0.5 text-[11px] text-foreground/65 transition-colors hover:bg-secondary"
-            >
-              打开目录
-            </button>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const renderMarkdownWithActions = (content: string, keyPrefix: string) => {
-    if (!renderThinkTags || !content.includes('<think>')) {
-      return (
-        <div className="space-y-1.5">
-          <MarkdownRenderer content={content} onFileLinkClick={handleFileLinkPreview} />
-          {renderFileActions(content, keyPrefix)}
-        </div>
-      );
-    }
-
-    const segments = splitThinkSegments(content);
-    const thinkTitle = language === 'zh' ? '思考' : 'Thinking';
-    const contentForFileActions = stripThinkTags(content);
-
-    return (
-      <div className="space-y-1.5">
-        {segments.map((segment, index) => {
-          if (!segment.content.trim()) {
-            return null;
-          }
-
-          if (segment.kind === 'think') {
-            return (
-              <details
-                key={`${keyPrefix}-think-${index}`}
-                className="overflow-hidden rounded-xl border border-border/70 bg-secondary/35"
-              >
-                <summary className="cursor-pointer list-none px-3 py-2 text-sm font-medium text-foreground/80">
-                  {thinkTitle}
-                </summary>
-                <div className="border-t border-border/60 px-3 py-2">
-                  <MarkdownRenderer content={segment.content} onFileLinkClick={handleFileLinkPreview} />
-                </div>
-              </details>
-            );
-          }
-
-          return (
-            <MarkdownRenderer
-              key={`${keyPrefix}-text-${index}`}
-              content={segment.content}
-              onFileLinkClick={handleFileLinkPreview}
-            />
-          );
-        })}
-        {renderFileActions(contentForFileActions, keyPrefix)}
-      </div>
-    );
-  };
+  }, [getActivityLabel, renderFileActions, renderMarkdownWithActions]);
 
   const browserCopilotURL = browserActivityContext.latestURL || extractFirstURL(browserCopilotOutput);
   const browserCopilotVisible = Boolean(
