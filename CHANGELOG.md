@@ -39,6 +39,10 @@
   - `BUGFIX.md`
   - 验证：`go test ./internal/agent ./internal/webui ./pkg/tools`、`./e2e_test/gateway_agent_regression.sh`、`make build`
 
+- **补充聊天输入卡顿问题的 BUGFIX 记录**：将“聊天输入框连续输入/删除卡顿”的现象、根因、修复方案和验证命令写入 `BUGFIX.md`，便于后续排障与性能回归对照
+  - `BUGFIX.md`
+  - 验证：`bash e2e_test/interrupt_test.sh`、`bash e2e_test/gateway_agent_regression.sh`、`cd electron && npm run build`、`make build`
+
 - **聊天过程新增 Skill 调用可折叠展示**：显式 `selectedSkills` 与消息内自动命中（`@skill:` / `$skill`）都会触发 `skill_start` / `skill_result` 事件，并在聊天“执行过程”中以和 tools 一致的可折叠项展示具体 skill 与注入详情
   - `internal/agent/loop.go`、`internal/agent/skills.go`、`internal/agent/loop_test.go`、`electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`electron/src/renderer/i18n/index.ts`
   - 验证：`go test ./internal/agent`、`cd electron && npm run build`、`./e2e_test/gateway_agent_regression.sh`、`make build`

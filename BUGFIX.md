@@ -86,3 +86,30 @@ make build
 - `internal/webui/server.go`
 - `internal/webui/server_test.go`
 - `pkg/tools/registry.go`
+
+---
+
+## 2026-04-11 - 聊天输入框输入/删除卡顿
+
+**问题**：
+- 在聊天输入框里连续输入或连续删除时，光标与文本更新有明显迟滞，体感不够实时。
+- 输入 `@` 或 `/` 触发补全弹层时，卡顿更明显。
+
+**根因**：
+- `handleInputChange` 在 `@mention` / `/slash` 分支中会提前 `return`，导致部分按键路径没有及时写回受控 `value`。
+- 输入过程中 `ChatView` 的消息渲染相关回调引用频繁变化，触发历史消息区域不必要重渲染，放大输入延迟体感。
+
+**修复**：
+- 调整输入处理顺序：先执行 `setInputForCurrentSession(value)`，再处理 `@mention` / `/slash` 的弹层状态逻辑。
+- 将消息渲染链路相关函数改为稳定引用（`useCallback`），减少输入期间无关重渲染。
+
+**验证**：
+```bash
+bash e2e_test/interrupt_test.sh
+bash e2e_test/gateway_agent_regression.sh
+cd electron && npm run build
+make build
+```
+
+**修复文件**：
+- `electron/src/renderer/views/ChatView.tsx`
