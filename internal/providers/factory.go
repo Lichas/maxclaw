@@ -29,6 +29,12 @@ func ResolveProviderKind(model, apiBase, apiFormat string) string {
 		providerName = DetectProviderNameFromAPIBase(apiBase)
 	}
 
+	// Kimi For Coding API (api.kimi.com/coding) requires Anthropic Messages API format.
+	// See: https://www.kimi.com/coding/docs/third-party-agents.html
+	if strings.Contains(strings.ToLower(strings.TrimSpace(apiBase)), "api.kimi.com/coding") {
+		return providerKindAnthropic
+	}
+
 	switch providerName {
 	case "anthropic":
 		if strings.EqualFold(strings.TrimSpace(apiFormat), "anthropic") || apiFormat == "" {
@@ -88,6 +94,10 @@ func normalizeModelForProvider(providerName, model string) string {
 
 	parts := strings.SplitN(trimmed, "/", 2)
 	if len(parts) == 2 && strings.EqualFold(parts[0], providerName) {
+		return parts[1]
+	}
+	// 对于未知 provider（如自定义 provider），也去掉前缀（xiaomi/mimo-v2-flash → mimo-v2-flash）
+	if providerName == "unknown" && len(parts) == 2 {
 		return parts[1]
 	}
 	return trimmed

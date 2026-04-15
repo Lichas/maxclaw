@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -201,6 +202,69 @@ func TestLoadSaveConfig(t *testing.T) {
 	assert.Equal(t, "test-key", loaded.Providers.OpenRouter.APIKey)
 	assert.Equal(t, "test-model", loaded.Agents.Defaults.Model)
 	assert.Equal(t, "bridge-secret", loaded.Channels.WhatsApp.BridgeToken)
+}
+
+func TestCustomProviderModelResolution(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Providers.Custom = map[string]ProviderConfig{
+		"xiaomi": {
+			APIKey:    "sk-xiaomi-key",
+			APIBase:   "https://api.xiaomi.com/v1",
+			APIFormat: "openai",
+			Models: []ProviderModelConfig{
+				{ID: "mimo-v2-flash", Name: "MIMO V2 Flash", Enabled: true},
+			},
+		},
+	}
+
+	assert.Equal(t, "sk-xiaomi-key", cfg.GetAPIKey("mimo-v2-flash"))
+	assert.Equal(t, "https://api.xiaomi.com/v1", cfg.GetAPIBase("mimo-v2-flash"))
+	assert.Equal(t, "openai", cfg.GetAPIFormat("mimo-v2-flash"))
+
+	// 也支持带 provider 前缀的写法
+	assert.Equal(t, "sk-xiaomi-key", cfg.GetAPIKey("xiaomi/mimo-v2-flash"))
+	assert.Equal(t, "https://api.xiaomi.com/v1", cfg.GetAPIBase("xiaomi/mimo-v2-flash"))
+	assert.Equal(t, "openai", cfg.GetAPIFormat("xiaomi/mimo-v2-flash"))
+}
+
+func TestCustomProviderRoundTrip(t *testing.T) {
+	tmpDir := t.TempDir()
+	origHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", origHome)
+
+	cfg := DefaultConfig()
+	cfg.Providers.Custom = map[string]ProviderConfig{
+		"myprovider": {
+			APIKey: "sk-custom",
+			APIBase: "https://api.custom.com/v1",
+			APIFormat: "openai",
+			Models: []ProviderModelConfig{
+				{ID: "custom-model", Name: "Custom Model", Enabled: true},
+			},
+		},
+	}
+	err := SaveConfig(cfg)
+	require.NoError(t, err)
+
+	loaded, err := LoadConfig()
+	require.NoError(t, err)
+
+	// 自定义 provider 应该平铺在 providers 下，而不是嵌套在 custom 中
+	assert.Contains(t, loaded.Providers.Custom, "myprovider")
+	assert.Equal(t, "sk-custom", loaded.Providers.Custom["myprovider"].APIKey)
+	assert.Equal(t, "custom-model", loaded.Providers.Custom["myprovider"].Models[0].ID)
+
+	// 验证 JSON 文件中自定义 provider 是平铺的
+	data, err := os.ReadFile(GetConfigPath())
+	require.NoError(t, err)
+	var raw map[string]any
+	err = json.Unmarshal(data, &raw)
+	require.NoError(t, err)
+	providersObj, ok := raw["providers"].(map[string]any)
+	require.True(t, ok)
+	assert.Contains(t, providersObj, "myprovider")
+	assert.NotContains(t, providersObj, "custom")
 }
 
 func TestLoadConfigExpandsWorkspace(t *testing.T) {

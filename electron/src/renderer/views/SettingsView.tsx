@@ -108,13 +108,21 @@ export function SettingsView() {
         }
         // Convert gateway providers format to our format
         if (config.providers) {
+          const knownProviders = new Set([
+            'openrouter', 'anthropic', 'openai', 'deepseek', 'zhipu',
+            'groq', 'gemini', 'dashscope', 'moonshot', 'minimax', 'vllm'
+          ]);
           const loadedProviders: ProviderConfig[] = [];
           Object.entries(config.providers).forEach(([key, value]: [string, any]) => {
             if (value && (value.apiKey || value.apiBase)) {
+              const isKnown = knownProviders.has(key.toLowerCase());
+              const type = isKnown
+                ? (key === 'anthropic' ? 'anthropic' : 'openai')
+                : 'custom';
               loadedProviders.push({
                 id: key,
                 name: key.charAt(0).toUpperCase() + key.slice(1),
-                type: key === 'anthropic' ? 'anthropic' : 'openai',
+                type: type as 'openai' | 'anthropic' | 'custom',
                 apiKey: value.apiKey || '',
                 baseURL: value.apiBase || '',
                 apiFormat: value.apiFormat || (key === 'anthropic' ? 'anthropic' : 'openai'),
@@ -389,6 +397,29 @@ export function SettingsView() {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Connection failed',
+      };
+    }
+  };
+
+  const handleFetchModels = async (provider: ProviderConfig) => {
+    try {
+      const response = await fetch('http://127.0.0.1:18890/api/providers/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(provider),
+      });
+
+      if (response.ok) {
+        const data = await response.json() as { models?: Array<{ id: string; name: string }> };
+        return { success: true, models: data.models || [] };
+      } else {
+        const error = await response.text();
+        return { success: false, error };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Fetch failed',
       };
     }
   };
@@ -768,11 +799,12 @@ export function SettingsView() {
                     provider={editingProvider}
                     onSave={handleSaveProvider}
                     onTest={handleTestConnection}
+                    onFetchModels={handleFetchModels}
                     onCancel={() => setEditingProvider(null)}
                   />
                 ) : showAddProvider ? (
                   <div className="rounded-lg border border-border bg-card p-4">
-                    <h4 className="mb-3 text-sm font-medium">{t('settings.providers.add') || 'Select Provider'}</h4>
+                    <h4 className="mb-3 text-sm font-medium">{t('settings.providers.select')}</h4>
                     <div className="flex flex-wrap gap-2">
                       {PRESET_PROVIDERS.map((preset) => (
                         <button
@@ -842,7 +874,7 @@ export function SettingsView() {
                       onClick={() => setShowAddProvider(true)}
                       className="w-full rounded-lg border border-dashed border-border py-2 text-sm text-foreground/60 hover:bg-secondary hover:text-foreground"
                     >
-                      + {t('settings.providers.add') || 'Add Provider'}
+                      + {t('settings.providers.add')}
                     </button>
                   </div>
                 )}

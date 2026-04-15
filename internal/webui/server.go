@@ -125,6 +125,7 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	mux.HandleFunc("/api/notifications/pending", s.handleGetPendingNotifications)
 	mux.HandleFunc("/api/notifications/", s.handleMarkNotificationDelivered)
 	mux.HandleFunc("/api/providers/test", s.handleTestProvider)
+	mux.HandleFunc("/api/providers/models", s.handleFetchProviderModels)
 	mux.HandleFunc("/api/channels/senders", s.handleChannelSenders)
 	mux.HandleFunc("/api/channels/", s.handleTestChannel)
 	mux.HandleFunc("/api/channels/whatsapp/status", s.handleWhatsAppStatus)
@@ -1933,6 +1934,128 @@ func (s *Server) handleTestProvider(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]bool{"ok": true})
+}
+
+func (s *Server) handleFetchProviderModels(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req ProviderTestRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.APIKey == "" {
+		http.Error(w, "API key is required", http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+
+	models := make([]map[string]string, 0)
+
+	switch providers.ResolveProviderKind(req.Name, req.BaseURL, req.APIFormat) {
+	case "anthropic":
+		baseURL := strings.TrimRight(strings.TrimSpace(req.BaseURL), "/")
+		if baseURL == "" {
+			baseURL = "https://api.anthropic.com"
+		}
+		if strings.HasSuffix(baseURL, "/v1") {
+			baseURL = strings.TrimSuffix(baseURL, "/v1")
+		}
+		client := anthropic.NewClient(
+			anthropicoption.WithAPIKey(req.APIKey),
+			anthropicoption.WithBaseURL(baseURL),
+			anthropicoption.WithHTTPClient(&http.Client{Timeout: 10 * time.Second}),
+		)
+		list, err := client.Models.List(ctx, anthropic.ModelListParams{})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		for _, m := range list.Data {
+			models = append(models, map[string]string{"id": string(m.ID), "name": string(m.ID)})
+		}
+	case "openai":
+		baseURL := strings.TrimRight(strings.TrimSpace(req.BaseURL), "/")
+		if baseURL == "" {
+			baseURL = "https://api.openai.com/v1"
+		}
+		client := openai.NewClient(
+			openaioption.WithAPIKey(req.APIKey),
+			openaioption.WithBaseURL(baseURL),
+			openaioption.WithHTTPClient(&http.Client{Timeout: 10 * time.Second}),
+		)
+		list, err := client.Models.List(ctx)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		for _, m := range list.Data {
+			models = append(models, map[string]string{"id": m.ID, "name": m.ID})
+		}
+	default:
+		fetched, err := s.fetchCompatibleModels(ctx, req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		models = fetched
+	}
+
+	writeJSON(w, map[string]interface{}{"models": models})
+}
+
+func (s *Server) fetchCompatibleModels(ctx context.Context, req ProviderTestRequest) ([]map[string]string, error) {
+	client := &http.Client{Timeout: 10 * time.Second}
+	baseURL := req.BaseURL
+	if baseURL == "" {
+		baseURL = "https://api.openai.com/v1"
+	}
+
+	// 对 Kimi / Anthropic 兼容端点，/models 通常也在 baseURL 下（已带 /v1 或不带）
+	modelsURL := strings.TrimRight(baseURL, "/") + "/models"
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, modelsURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Authorization", "Bearer "+req.APIKey)
+
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result struct {
+		Data []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	models := make([]map[string]string, 0, len(result.Data))
+	for _, m := range result.Data {
+		name := m.Name
+		if name == "" {
+			name = m.ID
+		}
+		models = append(models, map[string]string{"id": m.ID, "name": name})
+	}
+	return models, nil
 }
 
 func (s *Server) testCompatibleProvider(ctx context.Context, req ProviderTestRequest) error {

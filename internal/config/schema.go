@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"reflect"
 	"strings"
 
@@ -211,22 +212,23 @@ type GatewayConfig struct {
 
 // ProvidersConfig 所有 LLM 提供商配置
 type ProvidersConfig struct {
-	OpenRouter ProviderConfig `json:"openrouter" mapstructure:"openrouter"`
-	Anthropic  ProviderConfig `json:"anthropic" mapstructure:"anthropic"`
-	OpenAI     ProviderConfig `json:"openai" mapstructure:"openai"`
-	DeepSeek   ProviderConfig `json:"deepseek" mapstructure:"deepseek"`
-	Zhipu      ProviderConfig `json:"zhipu" mapstructure:"zhipu"`
-	Groq       ProviderConfig `json:"groq" mapstructure:"groq"`
-	Gemini     ProviderConfig `json:"gemini" mapstructure:"gemini"`
-	DashScope  ProviderConfig `json:"dashscope" mapstructure:"dashscope"`
-	Moonshot   ProviderConfig `json:"moonshot" mapstructure:"moonshot"`
-	MiniMax    ProviderConfig `json:"minimax" mapstructure:"minimax"`
-	VLLM       ProviderConfig `json:"vllm" mapstructure:"vllm"`
+	OpenRouter ProviderConfig            `json:"openrouter" mapstructure:"openrouter"`
+	Anthropic  ProviderConfig            `json:"anthropic" mapstructure:"anthropic"`
+	OpenAI     ProviderConfig            `json:"openai" mapstructure:"openai"`
+	DeepSeek   ProviderConfig            `json:"deepseek" mapstructure:"deepseek"`
+	Zhipu      ProviderConfig            `json:"zhipu" mapstructure:"zhipu"`
+	Groq       ProviderConfig            `json:"groq" mapstructure:"groq"`
+	Gemini     ProviderConfig            `json:"gemini" mapstructure:"gemini"`
+	DashScope  ProviderConfig            `json:"dashscope" mapstructure:"dashscope"`
+	Moonshot   ProviderConfig            `json:"moonshot" mapstructure:"moonshot"`
+	MiniMax    ProviderConfig            `json:"minimax" mapstructure:"minimax"`
+	VLLM       ProviderConfig            `json:"vllm" mapstructure:"vllm"`
+	Custom     map[string]ProviderConfig `json:"-" mapstructure:"custom"`
 }
 
 // ToMap 将 ProvidersConfig 转换为 map[string]ProviderConfig
 func (p ProvidersConfig) ToMap() map[string]ProviderConfig {
-	return map[string]ProviderConfig{
+	out := map[string]ProviderConfig{
 		"openrouter": p.OpenRouter,
 		"anthropic":  p.Anthropic,
 		"openai":     p.OpenAI,
@@ -239,10 +241,33 @@ func (p ProvidersConfig) ToMap() map[string]ProviderConfig {
 		"minimax":    p.MiniMax,
 		"vllm":       p.VLLM,
 	}
+	for k, v := range p.Custom {
+		out[k] = v
+	}
+	return out
 }
 
 // ProvidersConfigFromMap 从 map 创建 ProvidersConfig
 func ProvidersConfigFromMap(m map[string]ProviderConfig) ProvidersConfig {
+	custom := make(map[string]ProviderConfig)
+	known := map[string]bool{
+		"openrouter": true,
+		"anthropic":  true,
+		"openai":     true,
+		"deepseek":   true,
+		"zhipu":      true,
+		"groq":       true,
+		"gemini":     true,
+		"dashscope":  true,
+		"moonshot":   true,
+		"minimax":    true,
+		"vllm":       true,
+	}
+	for k, v := range m {
+		if !known[k] {
+			custom[k] = v
+		}
+	}
 	return ProvidersConfig{
 		OpenRouter: m["openrouter"],
 		Anthropic:  m["anthropic"],
@@ -255,7 +280,24 @@ func ProvidersConfigFromMap(m map[string]ProviderConfig) ProvidersConfig {
 		Moonshot:   m["moonshot"],
 		MiniMax:    m["minimax"],
 		VLLM:       m["vllm"],
+		Custom:     custom,
 	}
+}
+
+// MarshalJSON 将 ProvidersConfig 平铺序列化（自定义 provider 直接展开到 providers 下）
+func (p ProvidersConfig) MarshalJSON() ([]byte, error) {
+	m := p.ToMap()
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON 从平铺的 providers JSON 反序列化，未知 key 归入 Custom
+func (p *ProvidersConfig) UnmarshalJSON(data []byte) error {
+	var m map[string]ProviderConfig
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+	*p = ProvidersConfigFromMap(m)
+	return nil
 }
 
 // Config 根配置
@@ -393,6 +435,11 @@ func (c *Config) GetAPIKey(model string) string {
 		}
 	}
 
+	// 自定义 provider：检查哪个自定义 provider 的 models 列表包含当前 model
+	if cfg, _, ok := c.findCustomProviderForModel(model); ok && cfg.APIKey != "" {
+		return cfg.APIKey
+	}
+
 	// Fallback: 按 ProviderSpecs 声明顺序返回第一个可用 key
 	for _, spec := range providers.ProviderSpecs {
 		if cfg, ok := providerMap[spec.Name]; ok && cfg.APIKey != "" {
@@ -422,6 +469,13 @@ func (c *Config) GetAPIBase(model string) string {
 		}
 		if spec.DefaultAPIBase != "" {
 			return normalizeProviderAPIBase(spec.Name, model, spec.DefaultAPIBase)
+		}
+	}
+
+	// 自定义 provider
+	if !matchedProvider {
+		if cfg, _, ok := c.findCustomProviderForModel(model); ok && cfg.APIBase != "" {
+			return cfg.APIBase
 		}
 	}
 
@@ -456,6 +510,11 @@ func (c *Config) GetAPIFormat(model string) string {
 			return "anthropic"
 		}
 		return "openai"
+	}
+
+	// 自定义 provider
+	if cfg, _, ok := c.findCustomProviderForModel(model); ok && strings.TrimSpace(cfg.APIFormat) != "" {
+		return strings.ToLower(strings.TrimSpace(cfg.APIFormat))
 	}
 
 	return "openai"
@@ -513,7 +572,41 @@ func (c *Config) providerConfigMap() map[string]ProviderConfig {
 		}
 		out[name] = cfg
 	}
+	for k, v := range c.Providers.Custom {
+		out[k] = v
+	}
 	return out
+}
+
+// findCustomProviderForModel 查找包含指定模型的自定义 provider 配置
+func (c *Config) findCustomProviderForModel(model string) (ProviderConfig, string, bool) {
+	model = strings.ToLower(strings.TrimSpace(model))
+	if model == "" {
+		return ProviderConfig{}, "", false
+	}
+
+	providerMap := c.providerConfigMap()
+	known := make(map[string]bool)
+	for _, spec := range providers.ProviderSpecs {
+		known[spec.Name] = true
+	}
+
+	for providerName, cfg := range providerMap {
+		if known[providerName] {
+			continue
+		}
+		for _, m := range cfg.Models {
+			id := strings.ToLower(strings.TrimSpace(m.ID))
+			if id == model {
+				return cfg, providerName, true
+			}
+			// 支持 providerName/model 或 model 带前缀的写法
+			if id == providerName+"/"+model || model == providerName+"/"+id {
+				return cfg, providerName, true
+			}
+		}
+	}
+	return ProviderConfig{}, "", false
 }
 
 func looksLikeRawModelID(model string) bool {

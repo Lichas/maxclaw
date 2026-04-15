@@ -67,7 +67,31 @@ const zh: Translations = {
   'settings.notifications.enable': '启用系统通知',
   'settings.providers': '模型提供商',
   'settings.providers.add': '添加提供商',
+  'settings.providers.select': '选择提供商',
   'settings.providers.empty': '暂无配置的提供商',
+  'settings.providerEditor.title': '{{name}} 配置',
+  'settings.providerEditor.apiKey': 'API Key',
+  'settings.providerEditor.apiKeyPlaceholder': 'sk-...',
+  'settings.providerEditor.baseUrl': 'Base URL（可选）',
+  'settings.providerEditor.baseUrlPlaceholder': 'https://api.example.com/v1',
+  'settings.providerEditor.apiFormat': 'API 格式',
+  'settings.providerEditor.apiFormatOpenAI': 'OpenAI 兼容',
+  'settings.providerEditor.apiFormatAnthropic': 'Anthropic',
+  'settings.providerEditor.models': '模型',
+  'settings.providerEditor.fetchModels': '获取模型列表',
+  'settings.providerEditor.fetching': '获取中...',
+  'settings.providerEditor.addModel': '添加模型',
+  'settings.providerEditor.modelIdPlaceholder': '模型 ID',
+  'settings.providerEditor.modelNamePlaceholder': '显示名称',
+  'settings.providerEditor.enable': '启用',
+  'settings.providerEditor.multimodal': '多模态',
+  'settings.providerEditor.testConnection': '测试连接',
+  'settings.providerEditor.testing': '测试中...',
+  'settings.providerEditor.testSuccess': '✓ 连接成功！延迟：{{latency}}ms',
+  'settings.providerEditor.testFailed': '✗ 连接失败：{{error}}',
+  'settings.providerEditor.fetchSuccess': '✓ 成功获取 {{count}} 个模型',
+  'settings.providerEditor.fetchFailed': '✗ 获取失败：{{error}}',
+  'settings.providerEditor.noModelsFound': '未找到模型',
   'settings.category.general': '通用',
   'settings.category.general.desc': '界面偏好、语言与系统行为',
   'settings.category.providers': '模型配置',
@@ -378,7 +402,31 @@ const en: Translations = {
   'settings.notifications.enable': 'Enable System Notifications',
   'settings.providers': 'Model Providers',
   'settings.providers.add': 'Add Provider',
+  'settings.providers.select': 'Select Provider',
   'settings.providers.empty': 'No providers configured',
+  'settings.providerEditor.title': '{{name}} Configuration',
+  'settings.providerEditor.apiKey': 'API Key',
+  'settings.providerEditor.apiKeyPlaceholder': 'sk-...',
+  'settings.providerEditor.baseUrl': 'Base URL (optional)',
+  'settings.providerEditor.baseUrlPlaceholder': 'https://api.example.com/v1',
+  'settings.providerEditor.apiFormat': 'API Format',
+  'settings.providerEditor.apiFormatOpenAI': 'OpenAI Compatible',
+  'settings.providerEditor.apiFormatAnthropic': 'Anthropic',
+  'settings.providerEditor.models': 'Models',
+  'settings.providerEditor.fetchModels': 'Fetch Models',
+  'settings.providerEditor.fetching': 'Fetching...',
+  'settings.providerEditor.addModel': 'Add Model',
+  'settings.providerEditor.modelIdPlaceholder': 'Model ID',
+  'settings.providerEditor.modelNamePlaceholder': 'Display Name',
+  'settings.providerEditor.enable': 'Enable',
+  'settings.providerEditor.multimodal': 'Multimodal',
+  'settings.providerEditor.testConnection': 'Test Connection',
+  'settings.providerEditor.testing': 'Testing...',
+  'settings.providerEditor.testSuccess': '✓ Connection successful! Latency: {{latency}}ms',
+  'settings.providerEditor.testFailed': '✗ Connection failed: {{error}}',
+  'settings.providerEditor.fetchSuccess': '✓ Fetched {{count}} models',
+  'settings.providerEditor.fetchFailed': '✗ Fetch failed: {{error}}',
+  'settings.providerEditor.noModelsFound': 'No models found',
   'settings.category.general': 'General',
   'settings.category.general.desc': 'Appearance, language, and system behavior',
   'settings.category.providers': 'Model Config',
@@ -643,11 +691,17 @@ export function useTranslation() {
   const { language } = useSelector((state: RootState) => state.ui);
 
   const t = useCallback(
-    (key: string): string => {
+    (key: string, params?: Record<string, string | number>): string => {
       const currentTranslations =
         translations[language as Language] || translations.zh;
-      const value = currentTranslations[key];
-      return typeof value === 'string' ? value : key;
+      let value = currentTranslations[key];
+      let text = typeof value === 'string' ? value : key;
+      if (params) {
+        Object.entries(params).forEach(([k, v]) => {
+          text = text.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v));
+        });
+      }
+      return text;
     },
     [language],
   );
@@ -655,7 +709,13 @@ export function useTranslation() {
   return { t, language };
 }
 
-export function getTranslation(lang: Language, key: string): string {
-  const value = translations[lang]?.[key];
-  return typeof value === 'string' ? value : key;
+export function getTranslation(lang: Language, key: string, params?: Record<string, string | number>): string {
+  let value = translations[lang]?.[key];
+  let text = typeof value === 'string' ? value : key;
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      text = text.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v));
+    });
+  }
+  return text;
 }

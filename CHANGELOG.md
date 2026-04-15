@@ -3,6 +3,18 @@
 ## [Unreleased]
 
 ### Fixed
+- **自定义模型/provider 无法持久化保存与在对话框中选择**: 修复了 `ProvidersConfig` 仅支持预定义 provider 的问题。新增 `Custom` 字段存储未知 provider，并通过自定义 `MarshalJSON`/`UnmarshalJSON` 使其在 `config.json` 中平铺保存；同时修复前端 Settings 页面加载自定义 provider 时 `type='custom'` 丢失的问题，确保自定义模型能正确显示在对话框模型选择器中
+  - `internal/config/schema.go`、`internal/config/config_test.go`、`electron/src/renderer/views/SettingsView.tsx`
+  - 验证：`go test ./internal/config/...`、`cd electron && npm run build`、`make build`
+- **自定义 provider 的 API key / base URL / format 解析错误**: 修复 `GetAPIKey`、`GetAPIBase`、`GetAPIFormat` 在模型不属于已知 provider 时 fallback 到错误 provider 配置的问题。现在会优先在自定义 provider 的 models 列表中查找匹配，确保使用自定义 provider 自己的 API key、base URL 和 apiFormat
+  - `internal/config/schema.go`、`internal/config/config_test.go`
+  - 验证：`go test ./internal/config/...`、`make build`
+- **自定义 provider 模型名带前缀导致 403**: 当 provider 被识别为 `unknown`（自定义 provider）时，`normalizeModelForProvider` 现在会自动去掉前缀（如 `xiaomi/mimo-v2-flash` → `mimo-v2-flash`），避免将带前缀的模型 ID 发送给不兼容的 API endpoint
+  - `internal/providers/factory.go`、`internal/providers/factory_test.go`
+  - 验证：`go test ./internal/providers/...`、`make build`
+- **Moonshot/Kimi API 403 错误修复**: Kimi For Coding API (`api.kimi.com/coding`) 要求使用 Anthropic Messages API 格式。当检测到该 API Base 时，maxclaw 自动切换到 Anthropic Provider，并将 base URL 修正为 `https://api.kimi.com/coding`（去掉 `/v1`），从而兼容 Claude Code 风格的集成方式，避免 403 访问限制
+  - `internal/providers/factory.go`、`internal/providers/factory_test.go`
+  - 验证：`go test ./internal/providers/...`、`make build`
 - **OpenRouter model ID parsing**: Fixed issue where provider prefix (e.g., `openrouter/`) was not being stripped from model IDs like `openrouter/nvidia/nemotron-3-super-120b-a12b:free` when calling OpenAI-compatible APIs. Now properly normalizes model names in both `Chat()` and `ChatStream()` methods.
 - **聊天输入框输入/删除响应卡顿修复**：修复输入框在触发 `@mention` / `/slash` 检测时提前返回导致 value 未及时写回的问题，并将消息渲染相关回调改为稳定引用，减少输入期间历史消息不必要重渲染，提升连续输入与删除的流畅度
   - `electron/src/renderer/views/ChatView.tsx`
@@ -13,6 +25,12 @@
 
 ### Added
 
+- **模型提供商编辑页面支持 i18n 国际化**：`ProviderEditor` 和 `SettingsView` 中的模型配置相关文本全部接入 `useTranslation`，新增 `settings.providerEditor.*` 系列翻译 key；`useTranslation` 的 `t` 函数扩展支持 `{{var}}` 变量替换，中文显示中文 UI，英文显示英文 UI
+  - `electron/src/renderer/i18n/index.ts`、`electron/src/renderer/components/ProviderEditor.tsx`、`electron/src/renderer/views/SettingsView.tsx`
+  - 验证：`cd electron && npm run build`
+- **Settings 页面支持一键获取模型列表 (Fetch Models)**：在 Provider 编辑界面新增 "Fetch Models" 按钮，后端新增 `/api/providers/models` 接口，自动调用 OpenAI/Anthropic 兼容的 `/models` API 拉取可用模型并填充列表，省去手动输入模型 ID 的麻烦
+  - `internal/webui/server.go`、`electron/src/renderer/components/ProviderEditor.tsx`、`electron/src/renderer/views/SettingsView.tsx`
+  - 验证：`go test ./internal/webui/...`、`cd electron && npm run build`、`make build`
 - **引入完整的 Agent 生命周期循环系统 (验证→反思→适应→持久化→进化)**：从 Hermes-Agent 迁移并适配到 Go 环境，实现五层循环机制，提升 Agent 的容错能力和自适应能力
   - **验证层 (Verification Layer)**: 结构化错误分类 (`ErrorClassifier`)，支持 15+ 种错误类型识别，提供智能恢复策略建议
   - **反思层 (Reflection Layer)**: 上下文压缩 (`ContextCompressor`) 自动管理长会话，迭代式摘要更新；会话洞察 (`InsightsEngine`) 提供 Token 使用、成本估算、工具使用分析
