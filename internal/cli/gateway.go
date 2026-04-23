@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -285,6 +286,36 @@ var gatewayCmd = &cobra.Command{
 				if lg := logging.Get(); lg != nil && lg.Web != nil {
 					lg.Web.Printf("webui error: %v", err)
 				}
+			}
+		}()
+
+		// READY protocol: poll TCP port and announce readiness to parent process
+		go func() {
+			const (
+				readyPollInterval = 50 * time.Millisecond
+				readyDialTimeout  = 50 * time.Millisecond
+				readyMaxAttempts  = 200 // 10s total
+			)
+			addr := fmt.Sprintf("127.0.0.1:%d", gatewayPort)
+			for i := 0; i < readyMaxAttempts; i++ {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+				conn, err := net.DialTimeout("tcp", addr, readyDialTimeout)
+				if err == nil {
+					_ = conn.Close()
+					fmt.Printf("READY:%s\n", addr)
+					if lg := logging.Get(); lg != nil && lg.Gateway != nil {
+						lg.Gateway.Printf("ready protocol sent: %s", addr)
+					}
+					return
+				}
+				time.Sleep(readyPollInterval)
+			}
+			if lg := logging.Get(); lg != nil && lg.Gateway != nil {
+				lg.Gateway.Printf("ready protocol timeout: port %d not reachable after 10s", gatewayPort)
 			}
 		}()
 
