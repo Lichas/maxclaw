@@ -27,6 +27,15 @@ export class GatewayManager {
       return;
     }
 
+    // Ensure port is free before starting
+    try {
+      await this.cleanupPortLock(this.status.port);
+    } catch (error) {
+      log.error('Failed to cleanup port lock:', error);
+      this.status = { state: 'error', port: this.status.port, error: 'Port cleanup failed: ' + (error as Error).message };
+      throw error;
+    }
+
     if (await this.healthCheck()) {
       log.info('Detected existing healthy Gateway on port 18890, reusing it');
       this.status = { state: 'running', port: 18890 };
@@ -126,11 +135,6 @@ export class GatewayManager {
   async startFresh(): Promise<void> {
     log.info('Starting Gateway with fresh restart...');
     await this.stop();
-    if (!(await this.healthCheck())) {
-      await this.terminateExistingGatewayProcesses();
-    } else {
-      log.info('Healthy Gateway already available, skipping external cleanup');
-    }
     await this.start();
   }
 
@@ -276,6 +280,154 @@ export class GatewayManager {
     return maxclawConfigPath;
   }
 
+  private async cleanupPortLock(port: number): Promise<void> {
+    const pids = await this.findPidsForPort(port);
+    const excludedPids = new Set<number>();
+    excludedPids.add(process.pid);
+    if (this.process?.pid) {
+      excludedPids.add(this.process.pid);
+    }
+
+    const targetPids = pids.filter(pid => !excludedPids.has(pid));
+    if (targetPids.length === 0) {
+      return;
+    }
+
+    log.warn(`Cleaning up port ${port} by terminating PIDs: ${targetPids.join(', ')}`);
+
+    // Phase 1: SIGTERM
+    for (const pid of targetPids) {
+      try {
+        process.kill(pid, 'SIGTERM');
+      } catch (error) {
+        log.warn(`SIGTERM failed for PID ${pid}:`, error);
+      }
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Phase 2: SIGKILL survivors
+    const survivors = await this.findPidsForPort(port);
+    for (const pid of survivors) {
+      if (excludedPids.has(pid)) continue;
+      try {
+        process.kill(pid, 0); // probe if alive
+        try {
+          process.kill(pid, 'SIGKILL');
+          log.info(`SIGKILL sent to PID ${pid}`);
+        } catch (error) {
+          log.warn(`SIGKILL failed for PID ${pid}:`, error);
+        }
+      } catch {
+        // already dead
+      }
+    }
+  }
+
+  private async findPidsForPort(port: number): Promise<number[]> {
+    const platform = os.platform();
+    if (platform === 'darwin') {
+      return this.findPidsDarwin(port);
+    }
+    if (platform === 'linux') {
+      return this.findPidsLinux(port);
+    }
+    if (platform === 'win32') {
+      return this.findPidsWindows(port);
+    }
+    return [];
+  }
+
+  private findPidsDarwin(port: number): number[] {
+    try {
+      const result = spawnSync('lsof', ['-iTCP:' + port, '-sTCP:LISTEN', '-t', '-P'], {
+        encoding: 'utf8',
+        timeout: 5000
+      });
+      if (result.status !== 0 || !result.stdout.trim()) {
+        return [];
+      }
+      return result.stdout.split('\n')
+        .map(s => parseInt(s.trim(), 10))
+        .filter(n => Number.isFinite(n) && n > 0);
+    } catch (error) {
+      log.error('Failed to find PIDs on macOS:', error);
+      return [];
+    }
+  }
+
+  private findPidsLinux(port: number): number[] {
+    // Try fuser first
+    try {
+      const result = spawnSync('fuser', [port + '/tcp'], {
+        encoding: 'utf8',
+        timeout: 5000
+      });
+      if (result.status === 0 && result.stdout.trim()) {
+        return result.stdout.trim().split(/\s+/)
+          .map(s => parseInt(s.trim(), 10))
+          .filter(n => Number.isFinite(n) && n > 0);
+      }
+    } catch {
+      // fuser not available, fall through
+    }
+
+    // Fallback: ss
+    try {
+      const result = spawnSync('ss', ['-tlnp', 'sport = :' + port], {
+        encoding: 'utf8',
+        timeout: 5000
+      });
+      if (result.status !== 0 || !result.stdout.trim()) {
+        return [];
+      }
+      const pids: number[] = [];
+      for (const line of result.stdout.split('\n')) {
+        const match = line.match(/pid=(\d+)/);
+        if (match) {
+          const pid = parseInt(match[1], 10);
+          if (Number.isFinite(pid) && pid > 0) {
+            pids.push(pid);
+          }
+        }
+      }
+      return pids;
+    } catch (error) {
+      log.error('Failed to find PIDs on Linux:', error);
+      return [];
+    }
+  }
+
+  private findPidsWindows(port: number): number[] {
+    try {
+      const result = spawnSync('cmd.exe', ['/c', `netstat -ano | findstr :${port}`], {
+        encoding: 'utf8',
+        timeout: 5000
+      });
+      if (result.status !== 0 || !result.stdout.trim()) {
+        return [];
+      }
+      const pids: number[] = [];
+      for (const line of result.stdout.split('\n')) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 5) {
+          const state = parts[3]?.toUpperCase();
+          if (state !== 'LISTENING' && state !== 'ESTABLISHED') {
+            continue;
+          }
+          const pid = parseInt(parts[parts.length - 1], 10);
+          if (Number.isFinite(pid) && pid > 0) {
+            pids.push(pid);
+          }
+        }
+      }
+      return [...new Set(pids)];
+    } catch (error) {
+      log.error('Failed to find PIDs on Windows:', error);
+      return [];
+    }
+  }
+
   private attemptRestart(): void {
     if (this.restartAttempts >= this.maxRestartAttempts) {
       log.error(`Max restart attempts (${this.maxRestartAttempts}) reached`);
@@ -299,55 +451,4 @@ export class GatewayManager {
     }, delay);
   }
 
-  private async terminateExistingGatewayProcesses(): Promise<void> {
-    if (process.platform === 'win32') {
-      log.info('Skip external gateway cleanup on Windows');
-      return;
-    }
-
-    const pgrepResult = spawnSync('pgrep', ['-f', 'maxclaw(-gateway)?( gateway)? -p 18890'], {
-      encoding: 'utf8'
-    });
-
-    if (pgrepResult.status !== 0 || !pgrepResult.stdout.trim()) {
-      return;
-    }
-
-    const pids = pgrepResult.stdout
-      .split('\n')
-      .map((pid) => pid.trim())
-      .filter(Boolean)
-      .map((pid) => Number(pid))
-      .filter((pid) => Number.isFinite(pid) && pid > 0 && pid !== process.pid && pid !== this.process?.pid);
-
-    if (pids.length === 0) {
-      return;
-    }
-
-    log.warn(`Terminating existing gateway processes on startup: ${pids.join(', ')}`);
-
-    for (const pid of pids) {
-      try {
-        process.kill(pid, 'SIGTERM');
-      } catch (error) {
-        log.warn(`Failed to SIGTERM process ${pid}:`, error);
-      }
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    for (const pid of pids) {
-      try {
-        process.kill(pid, 0);
-      } catch {
-        continue;
-      }
-
-      try {
-        process.kill(pid, 'SIGKILL');
-      } catch (error) {
-        log.warn(`Failed to SIGKILL process ${pid}:`, error);
-      }
-    }
-  }
 }
