@@ -25,6 +25,15 @@
 
 ### Added
 
+- **Gateway 生命周期增强 — 端口独占启动与 READY 协议**
+  - Go Gateway 在 HTTP server 成功监听后输出 `READY:host:port` 到 stdout，Electron 主进程通过解析该协议精确判断 Gateway 就绪时机
+  - Electron 启动 Gateway 前通过跨平台工具（macOS `lsof`、Linux `fuser`/`ss`、Windows `netstat`）检测并终止占用端口 18890 的进程，解决端口冲突导致的启动失败
+  - Gateway 崩溃自动重启前同样执行端口清理，避免重启时因端口被占用而循环失败
+  - `GatewayManager.start()` 超时从 10 秒延长至 30 秒，兼容配置加载较慢的场景
+  - 保留旧版 Gateway 的兼容启动逻辑（stdout 关键字回退 + health check 回退）
+  - `internal/cli/gateway.go`、`electron/src/main/gateway.ts`、`electron/src/main/index.ts`
+  - 验证：`make build`、`./build/maxclaw-gateway maxclaw-gateway --port 18892`（确认 READY 输出）、`lsof` PID 检测测试、`cd electron && npm run build:main`
+
 - **模型提供商编辑页面支持 i18n 国际化**：`ProviderEditor` 和 `SettingsView` 中的模型配置相关文本全部接入 `useTranslation`，新增 `settings.providerEditor.*` 系列翻译 key；`useTranslation` 的 `t` 函数扩展支持 `{{var}}` 变量替换，中文显示中文 UI，英文显示英文 UI
   - `electron/src/renderer/i18n/index.ts`、`electron/src/renderer/components/ProviderEditor.tsx`、`electron/src/renderer/views/SettingsView.tsx`
   - 验证：`cd electron && npm run build`
