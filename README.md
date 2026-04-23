@@ -76,6 +76,56 @@ make dev-electron
 make electron-restart
 ```
 
+## Desktop App (Electron)
+
+maxclaw ships with an Electron desktop app that embeds the Go Gateway as a child process.
+
+**Architecture:**
+
+```
+Electron Main Process
+  ├─ spawns Go Gateway (build/maxclaw-gateway)
+  ├─ waits for READY:127.0.0.1:18890 on stdout
+  └─ health checks + auto-restart on crash
+        ↓ HTTP/WebSocket
+Renderer (React)
+```
+
+**Gateway lifecycle:**
+
+| Feature | Behavior |
+|---------|----------|
+| **Port cleanup** | On startup, Electron detects any process on port 18890 (via `lsof`/`fuser`/`ss`/`netstat`) and terminates it before spawning Gateway |
+| **READY protocol** | Gateway prints `READY:127.0.0.1:18890` once its HTTP server is listening; Electron waits for this signal before showing the main window |
+| **Crash recovery** | If Gateway exits unexpectedly, Electron auto-restarts it with exponential backoff, cleaning the port before each retry |
+| **Graceful shutdown** | On app quit, Electron sends SIGTERM to Gateway and waits up to 5s |
+
+**Run the desktop app:**
+
+```bash
+make build                    # build Go binaries first
+cd electron
+npm install
+npm run build                 # build main + preload + renderer
+npm run start                 # launch Electron
+```
+
+**Dev mode (hot reload):**
+
+```bash
+cd electron
+npm run dev                   # runs Vite watchers + Electron simultaneously
+```
+
+**Packaging:**
+
+```bash
+cd electron
+npm run dist:mac              # macOS .dmg + .zip
+npm run dist:win              # Windows .exe installer
+npm run dist:linux            # Linux AppImage + .deb
+```
+
 ## One-Command Install (Linux / macOS)
 
 ```bash
