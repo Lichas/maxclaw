@@ -55,7 +55,6 @@ export class GatewayManager {
       throw new Error(message);
     }
 
-    // Ensure config exists
     if (!fs.existsSync(configPath)) {
       log.warn('Config not found, Gateway may fail to start');
     }
@@ -74,14 +73,31 @@ export class GatewayManager {
       });
 
       let startupTimeout: NodeJS.Timeout;
+      let readyResolved = false;
 
-      // Handle stdout
+      // READY protocol listener
       this.process.stdout?.on('data', (data: Buffer) => {
-        const output = data.toString().trim();
-        log.info('[Gateway]', output);
+        const output = data.toString();
+        log.info('[Gateway]', output.trim());
 
-        // Check for successful startup indicators
-        if (output.includes('Gateway started') || output.includes('listening on')) {
+        if (!readyResolved) {
+          const readyMatch = output.match(/^READY:(.+):(\d+)$/m);
+          if (readyMatch) {
+            const host = readyMatch[1];
+            const port = parseInt(readyMatch[2], 10);
+            readyResolved = true;
+            this.status = { state: 'running', port };
+            this.restartAttempts = 0;
+            clearTimeout(startupTimeout);
+            log.info(`Gateway ready at ${host}:${port}`);
+            resolve();
+            return;
+          }
+        }
+
+        // Fallback: legacy keyword detection
+        if (!readyResolved && (output.includes('Gateway started') || output.includes('listening on'))) {
+          readyResolved = true;
           this.status = { state: 'running', port: 18890 };
           this.restartAttempts = 0;
           clearTimeout(startupTimeout);
@@ -89,17 +105,15 @@ export class GatewayManager {
         }
       });
 
-      // Handle stderr
       this.process.stderr?.on('data', (data: Buffer) => {
         log.error('[Gateway]', data.toString().trim());
       });
 
-      // Handle process exit
       this.process.on('exit', (code) => {
         log.warn(`Gateway exited with code ${code}`);
         this.process = null;
 
-        if (this.status.state === 'starting') {
+        if (!readyResolved && this.status.state === 'starting') {
           clearTimeout(startupTimeout);
           reject(new Error(`Gateway failed to start (exit code: ${code})`));
         } else if (this.status.state === 'running') {
@@ -108,7 +122,6 @@ export class GatewayManager {
         }
       });
 
-      // Handle errors
       this.process.on('error', (error) => {
         log.error('Gateway process error:', error);
         this.status = { state: 'error', port: 18890, error: error.message };
@@ -116,19 +129,21 @@ export class GatewayManager {
         reject(error);
       });
 
-      // Timeout for startup
+      // 30-second timeout with health check fallback
       startupTimeout = setTimeout(() => {
-        // Try health check as fallback
-        this.healthCheck().then(healthy => {
-          if (healthy) {
-            this.status = { state: 'running', port: 18890 };
-            this.restartAttempts = 0;
-            resolve();
-          } else {
-            reject(new Error('Gateway startup timeout'));
-          }
-        });
-      }, 10000);
+        if (!readyResolved) {
+          this.healthCheck().then(healthy => {
+            if (healthy && !readyResolved) {
+              readyResolved = true;
+              this.status = { state: 'running', port: 18890 };
+              this.restartAttempts = 0;
+              resolve();
+            } else if (!readyResolved) {
+              reject(new Error('Gateway startup timeout: READY protocol not received'));
+            }
+          });
+        }
+      }, 30000);
     });
   }
 
