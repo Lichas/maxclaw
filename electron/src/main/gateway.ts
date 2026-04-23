@@ -459,7 +459,13 @@ export class GatewayManager {
 
     log.info(`Attempting Gateway restart ${this.restartAttempts}/${this.maxRestartAttempts} in ${delay}ms`);
 
-    setTimeout(() => {
+    setTimeout(async () => {
+      try {
+        await this.cleanupPortLock(this.status.port);
+      } catch (error) {
+        log.error('Port cleanup before restart failed:', error);
+      }
+
       this.start().catch(error => {
         log.error('Restart failed:', error);
       });
