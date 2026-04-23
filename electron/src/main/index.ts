@@ -169,16 +169,24 @@ async function initializeApp(): Promise<void> {
   // Initialize Gateway Manager
   gatewayManager = new GatewayManager();
 
-  // Start Gateway before creating window
+  // Start Gateway before creating window (waits for READY protocol)
   try {
-    await gatewayManager.startFresh();
+    await gatewayManager.start();
     log.info('Gateway started successfully');
   } catch (error) {
     log.error('Failed to start Gateway:', error);
-    // Continue anyway - will show error in UI
+    // Continue to create window so user sees error state
   }
 
   await ensureMainWindow();
+
+  // Notify renderer of gateway status if startup failed
+  if (mainWindow && gatewayManager) {
+    const status = gatewayManager.getStatus();
+    if (status.state === 'error') {
+      mainWindow.webContents.send('gateway:status', status);
+    }
+  }
 
   // Initialize tray
   initializeTray(mainWindow);
