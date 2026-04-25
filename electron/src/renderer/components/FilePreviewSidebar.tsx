@@ -73,34 +73,7 @@ export function FilePreviewSidebar({
   };
 
   if (collapsed) {
-    return (
-      <aside className="hidden h-full w-11 border-l border-border bg-background/60 md:flex md:flex-col md:items-center md:pt-3">
-        <button
-          onClick={() => {
-            onModeChange?.('tree');
-            onToggle();
-          }}
-          className="rounded-md border border-border bg-background p-1.5 text-muted transition-colors hover:bg-secondary hover:text-foreground"
-          title="展开预览栏"
-          aria-label="Expand preview sidebar"
-        >
-          <SidebarToggleIcon className="h-4 w-4" collapsed />
-        </button>
-        {browserAvailable && onModeChange && (
-          <button
-            onClick={() => {
-              onModeChange('browser');
-              onToggle();
-            }}
-            className="mt-2 rounded-md border border-border bg-background p-1.5 text-muted transition-colors hover:bg-secondary hover:text-foreground"
-            title="打开 Browser Co-Pilot"
-            aria-label="Open browser copilot sidebar"
-          >
-            <BrowserCopilotIcon className="h-4 w-4" />
-          </button>
-        )}
-      </aside>
-    );
+    return null;
   }
 
   return (
@@ -370,13 +343,3 @@ function SidebarToggleIcon({ className, collapsed = false }: { className?: strin
   );
 }
 
-function BrowserCopilotIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <rect x={4} y={6} width={16} height={12} rx={2.5} strokeWidth={1.7} />
-      <circle cx={9} cy={12} r={1.2} strokeWidth={1.4} />
-      <circle cx={15} cy={12} r={1.2} strokeWidth={1.4} />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M12 6V3m-3 15h6" />
-    </svg>
-  );
-}

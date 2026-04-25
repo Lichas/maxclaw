@@ -2343,6 +2343,50 @@ export function ChatView() {
           <div className="relative z-30 ml-auto flex items-center gap-2 no-drag">
             <button
               type="button"
+              onClick={() => {
+                if (!previewSidebarCollapsed && previewSidebarMode !== 'browser') {
+                  setPreviewSidebarCollapsed(true);
+                } else {
+                  setPreviewModeForSession(currentSessionKey, 'tree');
+                  setPreviewSidebarCollapsed(false);
+                }
+              }}
+              className={`flex h-10 items-center gap-2 rounded-full border px-4 text-xs font-medium uppercase tracking-[0.18em] transition-colors ${
+                !previewSidebarCollapsed && previewSidebarMode !== 'browser'
+                  ? 'border-primary/30 bg-accent text-primary'
+                  : 'border-border bg-secondary text-muted hover:bg-secondary hover:text-foreground'
+              }`}
+              aria-label="Toggle file preview"
+              title="Toggle file preview"
+            >
+              <FolderIcon className="h-3.5 w-3.5" />
+              <span>{language === 'zh' ? '文件' : 'Files'}</span>
+            </button>
+            {browserCopilotVisible && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!previewSidebarCollapsed && previewSidebarMode === 'browser') {
+                    setPreviewSidebarCollapsed(true);
+                  } else {
+                    setPreviewModeForSession(currentSessionKey, 'browser');
+                    setPreviewSidebarCollapsed(false);
+                  }
+                }}
+                className={`flex h-10 items-center gap-2 rounded-full border px-4 text-xs font-medium uppercase tracking-[0.18em] transition-colors ${
+                  !previewSidebarCollapsed && previewSidebarMode === 'browser'
+                    ? 'border-primary/30 bg-accent text-primary'
+                    : 'border-border bg-secondary text-muted hover:bg-secondary hover:text-foreground'
+                }`}
+                aria-label="Toggle browser copilot"
+                title="Toggle browser copilot"
+              >
+                <BrowserIcon className="h-3.5 w-3.5" />
+                <span>Browser</span>
+              </button>
+            )}
+            <button
+              type="button"
               onClick={() => dispatch(toggleTerminal())}
               className={`flex h-10 items-center gap-2 rounded-full border px-4 text-xs font-medium uppercase tracking-[0.18em] transition-colors ${
                 terminalVisible
@@ -2557,6 +2601,17 @@ function TerminalIcon({ className }: { className?: string }) {
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <rect x={3} y={5} width={18} height={14} rx={2.5} strokeWidth={1.8} />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 9l3 3-3 3m5 0h5" />
+    </svg>
+  );
+}
+
+function BrowserIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x={4} y={6} width={16} height={12} rx={2.5} strokeWidth={1.7} />
+      <circle cx={9} cy={12} r={1.2} strokeWidth={1.4} />
+      <circle cx={15} cy={12} r={1.2} strokeWidth={1.4} />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M12 6V3m-3 15h6" />
     </svg>
   );
 }

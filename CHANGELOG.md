@@ -107,6 +107,9 @@
 - **移除 ChatView 欢迎卡片**：删除空对话状态下的 "READY TO WORK" 图标与提示文字卡片，让 composer 和任务模板更直接地呈现
   - `electron/src/renderer/views/ChatView.tsx`
   - 验证：`cd electron && npm run build`、`make build`
+- **文件预览按钮移至 Terminal 右侧**：将文件预览侧边栏的展开按钮从右侧边缘移到顶部操作栏 Terminal 按钮旁边，与 Terminal 保持一致的 pill 按钮样式；Browser Copilot 按钮（如有）也一并排列；折叠状态的侧边栏不再单独渲染展开按钮
+  - `electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/components/FilePreviewSidebar.tsx`
+  - 验证：`cd electron && npm run build`、`make build`
 
 ### Fixed
 
