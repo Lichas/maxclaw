@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { RootState, setCurrentSessionKey, toggleTerminal } from '../store';
+import { RootState, setCurrentSessionKey, setSessionRunning, toggleTerminal } from '../store';
 import { GatewayStreamEvent, SkillSummary, useGateway } from '../hooks/useGateway';
 import { wsClient } from '../services/websocket';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
@@ -147,6 +147,11 @@ function formatWorkspaceLabel(path: string): string {
   const normalized = trimmed.replace(/[\\/]+$/, '');
   const segments = normalized.split(/[/\\]/).filter(Boolean);
   return segments[segments.length - 1] || normalized;
+}
+
+function copyMessageContent(content: string, language: 'zh' | 'en', showToast: (message: string) => void): void {
+  void navigator.clipboard.writeText(content);
+  showToast(language === 'zh' ? '已复制到剪贴板' : 'Copied to clipboard');
 }
 
 function fileReferenceCacheKey(sessionKey: string, pathHint: string): string {
@@ -329,20 +334,17 @@ const MemoizedMessageItem = memo(function MemoizedMessageItem({
           )}
           <div className="group relative rounded-xl bg-primary px-5 py-4 text-sm leading-7 text-primary-foreground">
             <pre className="whitespace-pre-wrap break-all font-sans selection:bg-primary-foreground/30">{message.content}</pre>
+          </div>
+          <div className="flex items-center justify-end gap-3 px-1 text-[11px] uppercase tracking-[0.12em] text-muted">
+            <span>{formatMessageTimestamp(message.timestamp)}</span>
             <button
               type="button"
-              onClick={() => {
-                void navigator.clipboard.writeText(message.content);
-                showToast(language === 'zh' ? '已复制到剪贴板' : 'Copied to clipboard');
-              }}
-              className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-background text-foreground shadow-md opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary"
+              onClick={() => copyMessageContent(message.content, language, showToast)}
+              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-muted transition-colors hover:bg-secondary hover:text-foreground"
               title={language === 'zh' ? '复制内容' : 'Copy content'}
             >
               <CopyIcon className="h-3.5 w-3.5" />
             </button>
-          </div>
-          <div className="px-1 text-right text-[11px] uppercase tracking-[0.12em] text-muted">
-            {formatMessageTimestamp(message.timestamp)}
           </div>
         </div>
       </div>
@@ -358,17 +360,6 @@ const MemoizedMessageItem = memo(function MemoizedMessageItem({
           </div>
         )}
         <div className="rounded-xl border border-border bg-card px-5 py-4">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground">
-              AI
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">MaxClaw</p>
-              <p className="text-[11px] uppercase tracking-[0.14em] text-muted">
-                {formatMessageTimestamp(message.timestamp)}
-              </p>
-            </div>
-          </div>
           {renderMarkdownWithActions(message.content, message.id)}
           <div className="mt-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.12em] text-muted">
             <span>{formatMessageTimestamp(message.timestamp)}</span>
@@ -384,6 +375,14 @@ const MemoizedMessageItem = memo(function MemoizedMessageItem({
                 </span>
               </>
             )}
+            <button
+              type="button"
+              onClick={() => copyMessageContent(message.content, language, showToast)}
+              className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-muted transition-colors hover:bg-secondary hover:text-foreground"
+              title={language === 'zh' ? '复制内容' : 'Copy content'}
+            >
+              <CopyIcon className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
       </div>
@@ -1497,9 +1496,11 @@ export function ChatView() {
       return;
     }
     const requestSessionKey = currentSessionKey;
+    let waitingForBackgroundResult = false;
     setPreviewSidebarCollapsed(true);
     setSessionGenerating(requestSessionKey, true);
     setSessionInterruptHint(requestSessionKey, true);
+    dispatch(setSessionRunning({ sessionKey: requestSessionKey, running: true }));
 
     const userMessage: Message = {
       id: `${Date.now()}`,
@@ -1531,6 +1532,9 @@ export function ChatView() {
           appendTextToTimeline(requestSessionKey, delta);
         },
         (event) => {
+          if (event.type === 'tool_result' && event.toolName === 'spawn') {
+            waitingForBackgroundResult = true;
+          }
           const activity = toStreamActivity(event);
           if (!activity) {
             return;
@@ -1588,6 +1592,9 @@ export function ChatView() {
     } finally {
       setSessionGenerating(requestSessionKey, false);
       setSessionInterruptHint(requestSessionKey, false);
+      if (!waitingForBackgroundResult) {
+        dispatch(setSessionRunning({ sessionKey: requestSessionKey, running: false }));
+      }
     }
   };
 
@@ -2554,16 +2561,8 @@ export function ChatView() {
                 <div className="flex justify-start">
                   <div className="w-full text-sm leading-7 text-foreground">
                     <div className="rounded-xl border border-border bg-card px-5 py-4">
-                      <div className="mb-4 flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground">
-                          AI
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">MaxClaw</p>
-                          <p className="text-[11px] uppercase tracking-[0.14em] text-muted">
-                            {language === 'zh' ? '执行中' : 'Running'}
-                          </p>
-                        </div>
+                      <div className="mb-4 text-[11px] uppercase tracking-[0.14em] text-muted">
+                        {language === 'zh' ? '执行中' : 'Running'}
                       </div>
                       {renderTimeline(streamingTimeline, true)}
                       <span className="ml-1 mt-4 inline-block h-4 w-2 animate-pulse bg-primary" />

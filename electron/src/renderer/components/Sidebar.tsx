@@ -35,7 +35,7 @@ const menuItems = [
 export function Sidebar() {
   const dispatch = useDispatch();
   const { t, language } = useTranslation();
-  const { activeTab, sidebarCollapsed, currentSessionKey } = useSelector((state: RootState) => state.ui);
+  const { activeTab, sidebarCollapsed, currentSessionKey, runningSessionKeys } = useSelector((state: RootState) => state.ui);
   const { status } = useSelector((state: RootState) => state.gateway);
   const { getSessions, deleteSession, renameSession } = useGateway();
   const isMac = window.electronAPI.platform.isMac;
@@ -553,6 +553,7 @@ export function Sidebar() {
               const isEditing = editingSession === session.key;
               const isMenuOpen = openMenuKey === session.key;
               const preview = getSessionPreview(session);
+              const isRunning = runningSessionKeys.includes(session.key);
 
               if (isEditing) {
                 return (
@@ -598,9 +599,17 @@ export function Sidebar() {
                     }}
                     className="min-w-0 flex-1 text-left"
                   >
-                    <p className={`truncate text-[14px] font-medium leading-5 ${isCurrent ? 'text-foreground' : 'text-foreground'}`}>
-                      {getSessionDisplayTitle(session)}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className={`min-w-0 flex-1 truncate text-[14px] font-medium leading-5 ${isCurrent ? 'text-foreground' : 'text-foreground'}`}>
+                        {getSessionDisplayTitle(session)}
+                      </p>
+                      {isRunning && (
+                        <span
+                          className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-warning shadow-[0_0_0_2px_var(--card)]"
+                          title={language === 'zh' ? '任务仍在运行中' : 'Task still running'}
+                        />
+                      )}
+                    </div>
                     {preview && (
                       <p className={`truncate text-[11px] leading-4 ${isCurrent ? 'text-muted' : 'text-muted'}`}>
                         {preview}

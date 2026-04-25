@@ -7,7 +7,8 @@ import {
   setTheme,
   setLanguage,
   setRenderThinkTags,
-  setCurrentSessionKey
+  setCurrentSessionKey,
+  setSessionRunning
 } from './store';
 import { Sidebar } from './components/Sidebar';
 import { ChatView } from './views/ChatView';
@@ -76,6 +77,14 @@ function App() {
       // Could trigger session refresh here if needed
     });
 
+    const unsubscribeChat = wsClient.on('chat', (payload: { sessionKey?: string }) => {
+      const sessionKey = payload?.sessionKey?.trim();
+      if (!sessionKey) {
+        return;
+      }
+      dispatch(setSessionRunning({ sessionKey, running: false }));
+    });
+
     // Listen for tray events
     const unsubscribeNewChat = window.electronAPI.tray.onNewChat(() => {
       dispatch(setActiveTab('chat'));
@@ -91,6 +100,7 @@ function App() {
       unsubscribeNewChat();
       unsubscribeSettings();
       unsubscribeWS();
+      unsubscribeChat();
       wsClient.disconnect();
     };
   }, [dispatch]);

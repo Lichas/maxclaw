@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **聊天界面去掉 assistant 黑色头像，并补会话运行态橙点与消息复制按钮**：左侧历史任务列表会为当前仍在运行的 session 显示橙色状态点；聊天消息卡片移除 `MaxClaw/AI` 黑色头像头部；每条消息在时间戳最右侧新增复制按钮，便于直接复制用户或 assistant 内容
+  - `electron/src/renderer/store/index.ts`、`electron/src/renderer/App.tsx`、`electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build`、`make build`
 - **激活 Agent 生命周期初始化与基础持久化链路**：在 `agent`、`gateway`、`cron` 三个入口补上 `InitializeLifecycle()`，并同步精简生命周期压缩器的参数签名，移除无效的 `baseURL`/`apiKey` 透传；同时修复 `insights` 里非法 `fmt.Sprintf` 格式串，避免生命周期代码因编译错误或未初始化而处于“存在但不生效”的状态
   - `internal/cli/agent.go`、`internal/cli/gateway.go`、`internal/cli/cron.go`、`internal/agent/lifecycle.go`、`internal/agent/context_compressor.go`、`internal/agent/adaptation.go`、`internal/agent/insights.go`、`BUGFIX.md`
   - 验证：`go test ./internal/agent ./internal/cli`、`bash e2e_test/gateway_agent_regression.sh`、`make build`

@@ -48,6 +48,7 @@ interface UIState {
   terminalVisible: boolean;
   activeTab: 'chat' | 'sessions' | 'scheduled' | 'skills' | 'mcp' | 'settings';
   currentSessionKey: string;
+  runningSessionKeys: string[];
 }
 
 const gatewaySlice = createSlice({
@@ -72,7 +73,8 @@ const uiSlice = createSlice({
     sidebarCollapsed: false,
     terminalVisible: false,
     activeTab: 'chat',
-    currentSessionKey: 'desktop:default'
+    currentSessionKey: 'desktop:default',
+    runningSessionKeys: []
   } as UIState,
   reducers: {
     setTheme: (state, action: PayloadAction<'light' | 'dark' | 'system'>) => {
@@ -98,6 +100,19 @@ const uiSlice = createSlice({
     },
     setCurrentSessionKey: (state, action: PayloadAction<string>) => {
       state.currentSessionKey = action.payload;
+    },
+    setSessionRunning: (state, action: PayloadAction<{ sessionKey: string; running: boolean }>) => {
+      const sessionKey = action.payload.sessionKey.trim();
+      if (!sessionKey) {
+        return;
+      }
+      const current = new Set(state.runningSessionKeys);
+      if (action.payload.running) {
+        current.add(sessionKey);
+      } else {
+        current.delete(sessionKey);
+      }
+      state.runningSessionKeys = Array.from(current);
     }
   }
 });
@@ -111,7 +126,8 @@ export const {
   toggleTerminal,
   setTerminalVisible,
   setActiveTab,
-  setCurrentSessionKey
+  setCurrentSessionKey,
+  setSessionRunning
 } = uiSlice.actions;
 
 export const store = configureStore({
