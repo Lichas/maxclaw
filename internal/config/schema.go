@@ -435,8 +435,8 @@ func (c *Config) GetAPIKey(model string) string {
 		}
 	}
 
-	// 自定义 provider：检查哪个自定义 provider 的 models 列表包含当前 model
-	if cfg, _, ok := c.findCustomProviderForModel(model); ok && cfg.APIKey != "" {
+	// 在所有已配置 provider（已知+自定义）的 models 列表中精确匹配
+	if cfg, _, ok := c.findProviderForModel(model); ok && cfg.APIKey != "" {
 		return cfg.APIKey
 	}
 
@@ -472,10 +472,10 @@ func (c *Config) GetAPIBase(model string) string {
 		}
 	}
 
-	// 自定义 provider
+	// 在所有已配置 provider（已知+自定义）的 models 列表中精确匹配
 	if !matchedProvider {
-		if cfg, _, ok := c.findCustomProviderForModel(model); ok && cfg.APIBase != "" {
-			return cfg.APIBase
+		if cfg, providerName, ok := c.findProviderForModel(model); ok && cfg.APIBase != "" {
+			return normalizeProviderAPIBase(providerName, model, cfg.APIBase)
 		}
 	}
 
@@ -522,8 +522,8 @@ func (c *Config) GetAPIFormat(model string) string {
 		return "openai"
 	}
 
-	// 自定义 provider
-	if cfg, _, ok := c.findCustomProviderForModel(model); ok && strings.TrimSpace(cfg.APIFormat) != "" {
+	// 在所有已配置 provider（已知+自定义）的 models 列表中精确匹配
+	if cfg, _, ok := c.findProviderForModel(model); ok && strings.TrimSpace(cfg.APIFormat) != "" {
 		return strings.ToLower(strings.TrimSpace(cfg.APIFormat))
 	}
 
@@ -588,23 +588,17 @@ func (c *Config) providerConfigMap() map[string]ProviderConfig {
 	return out
 }
 
-// findCustomProviderForModel 查找包含指定模型的自定义 provider 配置
-func (c *Config) findCustomProviderForModel(model string) (ProviderConfig, string, bool) {
+// findProviderForModel 在所有已配置 provider（已知+自定义）的 models 列表中查找指定模型。
+// 返回匹配到的 provider 配置、provider 名称和是否找到。
+func (c *Config) findProviderForModel(model string) (ProviderConfig, string, bool) {
 	model = strings.ToLower(strings.TrimSpace(model))
 	if model == "" {
 		return ProviderConfig{}, "", false
 	}
 
 	providerMap := c.providerConfigMap()
-	known := make(map[string]bool)
-	for _, spec := range providers.ProviderSpecs {
-		known[spec.Name] = true
-	}
 
 	for providerName, cfg := range providerMap {
-		if known[providerName] {
-			continue
-		}
 		for _, m := range cfg.Models {
 			id := strings.ToLower(strings.TrimSpace(m.ID))
 			if id == model {
@@ -617,6 +611,21 @@ func (c *Config) findCustomProviderForModel(model string) (ProviderConfig, strin
 		}
 	}
 	return ProviderConfig{}, "", false
+}
+
+// findCustomProviderForModel 查找包含指定模型的自定义 provider 配置（向后兼容）。
+func (c *Config) findCustomProviderForModel(model string) (ProviderConfig, string, bool) {
+	cfg, name, ok := c.findProviderForModel(model)
+	if !ok {
+		return ProviderConfig{}, "", false
+	}
+	// 过滤掉已知 provider，只保留真正的自定义 provider
+	for _, spec := range providers.ProviderSpecs {
+		if strings.EqualFold(spec.Name, name) {
+			return ProviderConfig{}, "", false
+		}
+	}
+	return cfg, name, true
 }
 
 func looksLikeRawModelID(model string) bool {

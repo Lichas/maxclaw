@@ -49,6 +49,68 @@ func TestGetAPIBaseVLLMTakesPriorityOverFallback(t *testing.T) {
 	}
 }
 
+func TestGetAPIBaseRoutesViaKnownProviderModelRegistry(t *testing.T) {
+	// When a known provider (e.g. openrouter) registers a model in its
+	// models list, the system should route to that provider directly
+	// instead of relying on model name keyword guessing.
+	cfg := &Config{
+		Agents: AgentsConfig{
+			Defaults: AgentDefaults{Model: "tencent/hy3-preview:free"},
+		},
+		Providers: ProvidersConfig{
+			OpenRouter: ProviderConfig{
+				APIKey:  "sk-or-v1-test",
+				APIBase: "https://openrouter.ai/api/v1",
+				Models: []ProviderModelConfig{
+					{ID: "tencent/hy3-preview:free", Enabled: true},
+				},
+			},
+		},
+	}
+
+	// apiKey
+	key := cfg.GetAPIKey("tencent/hy3-preview:free")
+	if key != "sk-or-v1-test" {
+		t.Fatalf("expected OpenRouter apiKey, got %q", key)
+	}
+
+	// apiBase
+	base := cfg.GetAPIBase("tencent/hy3-preview:free")
+	if base != "https://openrouter.ai/api/v1" {
+		t.Fatalf("expected OpenRouter apiBase, got %q", base)
+	}
+
+	// apiFormat (defaults to openai when not explicitly set)
+	format := cfg.GetAPIFormat("tencent/hy3-preview:free")
+	if format != "openai" {
+		t.Fatalf("expected openai format, got %q", format)
+	}
+}
+
+func TestGetAPIKeyRoutesViaKnownProviderModelRegistry(t *testing.T) {
+	// DeepSeek provider is a known provider. If user explicitly registers
+	// a model in its models list, the system should still find it.
+	cfg := &Config{
+		Agents: AgentsConfig{
+			Defaults: AgentDefaults{Model: "my-custom-deepseek-model"},
+		},
+		Providers: ProvidersConfig{
+			DeepSeek: ProviderConfig{
+				APIKey:  "sk-deepseek-test",
+				APIBase: "https://api.deepseek.com/v1",
+				Models: []ProviderModelConfig{
+					{ID: "my-custom-deepseek-model", Enabled: true},
+				},
+			},
+		},
+	}
+
+	key := cfg.GetAPIKey("my-custom-deepseek-model")
+	if key != "sk-deepseek-test" {
+		t.Fatalf("expected DeepSeek apiKey, got %q", key)
+	}
+}
+
 func TestSupportsImageInputUsesExplicitModelCapability(t *testing.T) {
 	enabled := true
 	cfg := &Config{

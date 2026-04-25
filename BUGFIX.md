@@ -14,18 +14,18 @@
 - OpenRouter 的 key 被发送到了 OpenAI 原生端点
 
 **根因**：
-- `config.GetAPIKey()` 对无法识别的模型 ID fallback 到 ProviderSpecs 中第一个配置了 key 的 provider（openrouter 排第一）
-- `config.GetAPIBase()` 对无法识别的模型 ID 却 fallback 到 vllm 或返回空字符串，导致使用默认的 `https://api.openai.com/v1`
-- 两者 fallback 逻辑不一致：key 拿到了 OpenRouter 的，base URL 却用了 OpenAI 的
+- 系统优先根据模型名字符串关键词猜测 provider，而不是优先使用用户在 provider 配置中显式登记的模型列表
+- 对于 OpenRouter 这类聚合平台，模型 ID 前缀（如 `tencent/`）不是 provider 名称，导致关键词匹配失败
+- `GetAPIKey` 和 `GetAPIBase` 的 fallback 逻辑不一致：key 拿到了 OpenRouter 的，base URL 却默认到 OpenAI
 
-**修复**：
-- 在 `GetAPIBase()` 的 `looksLikeRawModelID` fallback 路径中，当 vllm 未配置时，按 ProviderSpecs 顺序返回第一个配置了 apiBase 的 provider
-- 这样 `GetAPIBase` 和 `GetAPIKey` 的 fallback 行为保持一致
+**修复（两阶段）**：
+1. **对齐 fallback**：在 `GetAPIBase()` 的 `looksLikeRawModelID` fallback 路径中，当 vLLM 未配置时，按 ProviderSpecs 顺序返回第一个配置了 apiBase 的 provider，与 `GetAPIKey` 保持一致
+2. **重构路由优先级**：新增 `findProviderForModel()`，在 **所有已配置 provider（已知+自定义）的 models 列表中精确匹配模型**。`GetAPIKey`、`GetAPIBase`、`GetAPIFormat` 在 ProviderSpecs 关键词匹配之后、全局 fallback 之前，优先查询 models 列表。这样用户在 Web UI 的 provider 配置里登记的模型会被优先使用，而不是靠模型名字符串猜测
 - vLLM 显式配置时仍优先保留（不影响现有 vLLM 用户）
 
 **验证**：
 ```bash
-go test ./internal/config/ -v -run "TestGetAPIBaseFallsBack|TestGetAPIBaseVLLM"
+go test ./internal/config/ -v -run "TestGetAPIBase|TestGetAPIKey|TestCustomProvider"
 make build
 ```
 
@@ -96,12 +96,12 @@ cd electron && npm run build  # 构建成功无报错
 **根因**：
 - 运行中的 `AgentLoop` 只在 gateway 启动时读取一次 `cfg.Tools.MCPServers` 并创建 `MCPConnector`。
 - `/api/mcp` 的增删改接口只负责保存配置和更新 `Server.cfg`，没有把新的 MCP 配置同步到运行中的 `AgentLoop`。
-- 因此磁盘配置和运行态工具注册发生了分离，导致“配置已保存，但当前会话看不到新 MCP”。
+- 因此磁盘配置和运行态工具注册发生了分离，导致"配置已保存，但当前会话看不到新 MCP"。
 
 **修复**：
 - 为 `AgentLoop` 增加运行态 MCP 刷新能力：关闭旧连接、移除旧 `mcp_` 工具、按最新配置重新连接并注册。
 - 在 `/api/mcp` 的新增、更新、删除，以及 `/api/config` 的整体配置更新后，立即调用运行态 MCP 刷新逻辑。
-- 增加回归测试，覆盖“新增 MCP 后立即可见工具”和“删除 MCP 后工具立即移除”。
+- 增加回归测试，覆盖"新增 MCP 后立即可见工具"和"删除 MCP 后工具立即移除"。
 
 **验证**：
 ```bash
