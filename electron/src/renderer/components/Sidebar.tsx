@@ -367,7 +367,81 @@ export function Sidebar() {
           : 'Offline';
 
   if (sidebarCollapsed) {
-    return null;
+    return (
+      <aside
+        className={`relative z-10 flex h-full w-[52px] shrink-0 flex-col items-center overflow-hidden border-r border-border bg-background ${isMac ? 'pt-10' : 'pt-3'}`}
+      >
+        {/* Top: expand + new task */}
+        <div className="flex flex-col items-center gap-2 py-3">
+          <button
+            onClick={() => dispatch(toggleSidebar())}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-foreground"
+            title="Expand sidebar"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="16" rx="2" strokeWidth={1.5} />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 4v16" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 9l3 3-3 3" />
+            </svg>
+          </button>
+          <button
+            onClick={handleNewTask}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-foreground"
+            title={t('sidebar.newTask')}
+          >
+            <EditIcon className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Nav icons */}
+        <nav className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto py-2">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            const showFailedBadge = item.id === 'scheduled' && hasFailedCronJobs && !isActive;
+            return (
+              <button
+                key={item.id}
+                onClick={() => dispatch(setActiveTab(item.id))}
+                className={`relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors ${
+                  isActive
+                    ? 'bg-hover text-foreground'
+                    : 'text-muted hover:bg-hover hover:text-foreground'
+                }`}
+                title={t(item.labelKey)}
+              >
+                <Icon className="h-5 w-5" />
+                {showFailedBadge && (
+                  <span
+                    className="absolute right-1 top-1 h-2 w-2 rounded-full bg-danger"
+                    title={language === 'zh' ? '有任务执行失败' : 'Some tasks have failed'}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Settings */}
+        <div className="mt-auto w-full border-t border-border py-3">
+          <div className="flex justify-center">
+            <button
+              onClick={() => dispatch(setActiveTab('settings'))}
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hover hover:text-foreground"
+              title={t('nav.settings')}
+            >
+              <SettingsIcon className="h-4 w-4" />
+              <span
+                className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full"
+                style={{
+                  background: status === 'running' ? 'var(--success)' : status === 'error' ? 'var(--danger)' : 'var(--warning)'
+                }}
+              />
+            </button>
+          </div>
+        </div>
+      </aside>
+    );
   }
 
   return (

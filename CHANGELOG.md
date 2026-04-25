@@ -101,6 +101,9 @@
 - **Sidebar 顶部区域精简布局**：移除 "Desktop Agent" 标签，将在线状态（● 在线/Offline）移至 MaxClaw 标题右侧同行显示，右上角新增折叠边栏按钮；移除下方的任务数和当前渠道统计卡片，减少视觉噪音
   - `electron/src/renderer/components/Sidebar.tsx`
   - 验证：`cd electron && npm run build`、`make build`
+- **Sidebar 折叠状态改为图标窄条（ChatGPT 风格）**：折叠后不再完全隐藏，而是显示 52px 宽的垂直图标栏，包含展开按钮、新建任务按钮、四个导航图标（搜索任务/定时任务/技能市场/MCP管理）及设置图标，每个图标均可点击切换视图；同时移除 App.tsx 左上角浮动的侧边栏伸缩按钮，折叠/展开操作完全由 Sidebar 内部控制
+  - `electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/App.tsx`
+  - 验证：`cd electron && npm run build`、`make build`
 
 ### Fixed
 
