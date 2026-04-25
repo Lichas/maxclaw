@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { preprocessMarkdown } from './MarkdownRenderer';
 
 interface ExecutionRecord {
   id: string;
@@ -254,7 +255,7 @@ export function ExecutionHistory({ jobId, jobTitle }: ExecutionHistoryProps) {
                         },
                       }}
                     >
-                      {selectedRecord.output}
+                      {preprocessMarkdown(selectedRecord.output)}
                     </ReactMarkdown>
                   </div>
                 </div>

@@ -13,6 +13,21 @@ interface MarkdownRendererProps {
   onFileLinkClick?: (href: string) => boolean;
 }
 
+/**
+ * Pre-process markdown content to fix common formatting issues produced by LLMs,
+ * especially tables compressed into a single line without newlines.
+ */
+export function preprocessMarkdown(content: string): string {
+  // Only process content that looks like it contains a table delimiter row
+  if (!/\|[-\s:|]+\|/.test(content)) {
+    return content;
+  }
+
+  // Fix compressed table rows: insert newline between | followed immediately by |
+  // e.g. "|header1|header2||------|" → "|header1|header2|\n|------|"
+  return content.replace(/\|(\|[ \t]*[^|\s])/g, '|\n$1');
+}
+
 interface CodeBlockCardProps {
   code: string;
   language: string;
@@ -142,7 +157,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
 
   // Memoize processed content to avoid re-processing
   const processedContent = useMemo(() => {
-    return content;
+    return preprocessMarkdown(content);
   }, [content]);
 
   return (
