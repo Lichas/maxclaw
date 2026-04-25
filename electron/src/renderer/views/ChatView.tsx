@@ -319,15 +319,15 @@ const MemoizedMessageItem = memo(function MemoizedMessageItem({
               {message.attachments.map((file) => (
                 <div
                   key={file.id}
-                  className="flex items-center gap-1.5 rounded-full border border-white/70 bg-white/82 px-3 py-1.5 text-xs text-foreground shadow-[0_10px_24px_rgba(28,36,50,0.06)] dark:bg-white/10"
+                  className="flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1.5 text-xs text-foreground"
                 >
-                  <DocumentIcon className="h-3.5 w-3.5 text-foreground/60" />
+                  <DocumentIcon className="h-3.5 w-3.5 text-muted" />
                   <span className="max-w-[150px] truncate">{file.filename}</span>
                 </div>
               ))}
             </div>
           )}
-          <div className="group relative rounded-[26px] bg-[#192233] px-5 py-4 text-sm leading-7 text-white shadow-[0_22px_48px_rgba(25,34,51,0.2)]">
+          <div className="group relative rounded-xl bg-primary px-5 py-4 text-sm leading-7 text-primary-foreground">
             <pre className="whitespace-pre-wrap break-all font-sans selection:bg-primary-foreground/30">{message.content}</pre>
             <button
               type="button"
@@ -335,13 +335,13 @@ const MemoizedMessageItem = memo(function MemoizedMessageItem({
                 void navigator.clipboard.writeText(message.content);
                 showToast(language === 'zh' ? '已复制到剪贴板' : 'Copied to clipboard');
               }}
-              className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white text-foreground shadow-md opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary"
+              className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-background text-foreground shadow-md opacity-0 transition-opacity group-hover:opacity-100 hover:bg-secondary"
               title={language === 'zh' ? '复制内容' : 'Copy content'}
             >
               <CopyIcon className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="px-1 text-right text-[11px] uppercase tracking-[0.12em] text-foreground/38">
+          <div className="px-1 text-right text-[11px] uppercase tracking-[0.12em] text-muted">
             {formatMessageTimestamp(message.timestamp)}
           </div>
         </div>
@@ -357,20 +357,20 @@ const MemoizedMessageItem = memo(function MemoizedMessageItem({
             {renderTimeline(message.timeline, false)}
           </div>
         )}
-        <div className="rounded-[28px] border border-white/72 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(248,244,238,0.82))] px-5 py-4 shadow-[0_22px_52px_rgba(28,36,50,0.06)] dark:bg-[linear-gradient(180deg,rgba(24,31,45,0.94),rgba(20,27,39,0.9))]">
+        <div className="rounded-xl border border-border bg-card px-5 py-4">
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#192233] text-xs font-semibold uppercase tracking-[0.18em] text-white">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground">
               AI
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">MaxClaw</p>
-              <p className="text-[11px] uppercase tracking-[0.14em] text-foreground/42">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-muted">
                 {formatMessageTimestamp(message.timestamp)}
               </p>
             </div>
           </div>
           {renderMarkdownWithActions(message.content, message.id)}
-          <div className="mt-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.12em] text-foreground/40">
+          <div className="mt-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.12em] text-muted">
             <span>{formatMessageTimestamp(message.timestamp)}</span>
             {message.durationMs !== undefined && message.durationMs > 0 && (
               <>
@@ -645,18 +645,18 @@ export function ChatView() {
     if (gatewayStatus === 'running') {
       return {
         label: language === 'zh' ? 'Gateway 在线' : 'Gateway online',
-        tone: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+        tone: 'border-success/20 bg-success-bg text-success'
       };
     }
     if (gatewayStatus === 'starting') {
       return {
         label: language === 'zh' ? 'Gateway 启动中' : 'Gateway starting',
-        tone: 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+        tone: 'border-warning/20 bg-warning-bg text-warning'
       };
     }
     return {
       label: language === 'zh' ? 'Gateway 离线' : 'Gateway offline',
-      tone: 'border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+      tone: 'border-danger/20 bg-danger-bg text-danger'
     };
   }, [gatewayStatus, language]);
   const selectedSkillSummaries = useMemo(
@@ -1749,14 +1749,14 @@ export function ChatView() {
         {references.map((reference, index) => (
           <div
             key={`${keyPrefix}-${reference.id}-${index}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-secondary/50 px-2 py-1 text-xs text-foreground/80"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-secondary px-2 py-1 text-xs text-secondary-foreground"
           >
-            <DocumentIcon className="h-3.5 w-3.5 text-foreground/60" />
+            <DocumentIcon className="h-3.5 w-3.5 text-muted" />
             <span className="max-w-[190px] truncate">{reference.displayName}</span>
             <button
               type="button"
               onClick={() => void previewReference(reference)}
-              className="rounded border border-border/80 bg-background px-1.5 py-0.5 text-[11px] text-foreground/75 transition-colors hover:bg-secondary"
+              className="rounded border border-border bg-background px-1.5 py-0.5 text-[11px] text-muted transition-colors hover:bg-secondary"
             >
               预览
             </button>
@@ -1768,7 +1768,7 @@ export function ChatView() {
                   sessionKey: currentSessionKey
                 })
               }
-              className="rounded border border-border/80 bg-background px-1.5 py-0.5 text-[11px] text-foreground/65 transition-colors hover:bg-secondary"
+              className="rounded border border-border bg-background px-1.5 py-0.5 text-[11px] text-muted transition-colors hover:bg-secondary"
             >
               打开目录
             </button>
@@ -1803,9 +1803,9 @@ export function ChatView() {
             return (
               <details
                 key={`${keyPrefix}-think-${index}`}
-                className="overflow-hidden rounded-xl border border-border/70 bg-secondary/35"
+                className="overflow-hidden rounded-lg border border-border bg-secondary"
               >
-                <summary className="cursor-pointer list-none px-3 py-2 text-sm font-medium text-foreground/80">
+                <summary className="cursor-pointer list-none px-3 py-2 text-sm font-medium text-secondary-foreground">
                   {thinkTitle}
                 </summary>
                 <div className="border-t border-border/60 px-3 py-2">
@@ -1845,20 +1845,20 @@ export function ChatView() {
         <details
           key={entry.id}
           open={defaultOpen}
-          className="overflow-hidden rounded-[20px] border border-white/70 bg-white/82 shadow-[0_14px_34px_rgba(28,36,50,0.06)] dark:bg-white/5"
+          className="overflow-hidden rounded-lg border border-border bg-secondary"
         >
           <summary className="cursor-pointer list-none px-4 py-3">
-            <div className="flex items-center gap-2 text-sm text-foreground/80">
+            <div className="flex items-center gap-2 text-sm text-secondary-foreground">
               <ActivityTypeIcon type={entry.activity.type} className="h-4 w-4 flex-shrink-0" />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-foreground/45">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
                 {getActivityLabel(entry.activity.type)}
               </span>
               <span className="truncate">{entry.activity.summary}</span>
-              <ChevronDownIcon className="ml-auto h-3.5 w-3.5 flex-shrink-0 text-foreground/40" />
+              <ChevronDownIcon className="ml-auto h-3.5 w-3.5 flex-shrink-0 text-muted" />
             </div>
           </summary>
           {entry.activity.detail && (
-            <pre className="whitespace-pre-wrap break-all border-t border-border/60 px-4 py-3 font-sans text-sm text-foreground/62">
+            <pre className="whitespace-pre-wrap break-all border-t border-border px-4 py-3 font-sans text-sm text-muted">
               {entry.activity.detail}
             </pre>
           )}
@@ -1875,16 +1875,16 @@ export function ChatView() {
       return (
         <div className="space-y-3">
           {activityItems.length > 0 && (
-            <details className="overflow-hidden rounded-[22px] border border-white/70 bg-white/78 shadow-[0_18px_38px_rgba(28,36,50,0.06)] dark:bg-white/5">
+            <details className="overflow-hidden rounded-lg border border-border bg-secondary">
               <summary className="cursor-pointer list-none px-4 py-3">
-                <div className="flex items-center gap-2 text-sm text-foreground/80">
+                <div className="flex items-center gap-2 text-sm text-secondary-foreground">
                   <WorkflowIcon className="h-4 w-4 flex-shrink-0" />
                   <span className="font-medium">执行过程（{activityItems.length} 步）</span>
-                  <span className="text-xs text-foreground/45">默认折叠，点击展开</span>
-                  <ChevronDownIcon className="ml-auto h-3.5 w-3.5 flex-shrink-0 text-foreground/40" />
+                  <span className="text-xs text-muted">默认折叠，点击展开</span>
+                  <ChevronDownIcon className="ml-auto h-3.5 w-3.5 flex-shrink-0 text-muted" />
                 </div>
               </summary>
-              <div className="space-y-2 border-t border-border/60 px-3 py-3">
+              <div className="space-y-2 border-t border-border px-3 py-3">
                 {activityItems.map((entry) => renderActivityItem(entry))}
               </div>
             </details>
@@ -1937,11 +1937,11 @@ export function ChatView() {
     }
 
     return (
-      <div className="rounded-xl border border-border/70 bg-card/70 p-3">
+      <div className="rounded-xl border border-border bg-card p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-foreground/55">Browser Co-Pilot</p>
-            <p className="text-sm text-foreground/80">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Browser Co-Pilot</p>
+            <p className="text-sm text-secondary-foreground">
               {browserCopilotNeedsManualIntervention
                 ? '检测到登录/验证拦截，需要你在真实浏览器介入后再继续同步。'
                 : '默认自动执行；仅在检测到登录/验证时才需要你手动介入。'}
@@ -1957,7 +1957,7 @@ export function ChatView() {
                 })
               }
               disabled={browserCopilotBusy || isGenerating}
-              className="rounded-md border border-border/80 bg-background px-2 py-1 text-xs text-foreground/75 transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md border border-border bg-background px-2 py-1 text-xs text-muted transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
             >
               用当前Profile打开页面
             </button>
@@ -1969,7 +1969,7 @@ export function ChatView() {
             type="button"
             onClick={() => void handleBrowserCopilotAction({ action: 'screenshot', full_page: false })}
             disabled={browserCopilotBusy}
-            className="rounded-md border border-border/80 bg-background px-3 py-1.5 text-xs text-foreground/80 transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-md border border-border bg-background px-3 py-1.5 text-xs text-secondary-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
           >
             {browserCopilotBusy ? '同步中...' : '同步截图'}
           </button>
@@ -1977,7 +1977,7 @@ export function ChatView() {
             type="button"
             onClick={() => void handleBrowserCopilotAction({ action: 'snapshot', max_chars: 12000 })}
             disabled={browserCopilotBusy}
-            className="rounded-md border border-border/80 bg-background px-3 py-1.5 text-xs text-foreground/80 transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-md border border-border bg-background px-3 py-1.5 text-xs text-secondary-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
           >
             抓取结构快照
           </button>
@@ -1987,14 +1987,14 @@ export function ChatView() {
               setInputForCurrentSession('我已在真实浏览器完成手动操作，请基于当前页面状态继续执行任务。');
               inputRef.current?.focus();
             }}
-            className="rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs text-primary transition-colors hover:bg-primary/15"
+            className="rounded-md border border-primary/40 bg-accent px-3 py-1.5 text-xs text-primary transition-colors hover:bg-accent"
           >
             插入继续指令
           </button>
         </div>
 
         {browserScreenshotInteractive && (
-          <p className="mt-2 text-[11px] text-foreground/55">
+          <p className="mt-2 text-[11px] text-muted">
             当前预览为浏览器截图，可直接在右侧预览图点击位置，系统会把坐标回传给浏览器执行点击并自动刷新截图。
           </p>
         )}
@@ -2006,7 +2006,7 @@ export function ChatView() {
         )}
 
         {browserCopilotOutput && (
-          <div className="mt-2 rounded-lg border border-border/70 bg-background/65 px-2 py-2 text-xs text-foreground/75">
+          <div className="mt-2 rounded-lg border border-border bg-secondary px-2 py-2 text-xs text-muted">
             {renderMarkdownWithActions(browserCopilotOutput, `${currentSessionKey}-browser-copilot-output`)}
           </div>
         )}
@@ -2017,19 +2017,16 @@ export function ChatView() {
   const renderComposer = (landing: boolean) => (
     <form
       onSubmit={handleSubmit}
-      className={`relative overflow-visible rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(252,248,242,0.82))] shadow-[0_24px_64px_rgba(28,36,50,0.12)] backdrop-blur-xl dark:bg-[linear-gradient(180deg,rgba(24,31,45,0.94),rgba(20,27,39,0.9))] ${
+      className={`relative overflow-visible rounded-xl border border-border bg-card ${
         landing ? 'p-6' : 'p-5'
       }`}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-8 overflow-hidden rounded-t-[30px]">
-        <div className="h-px bg-white/90" />
-      </div>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground/42">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
             {landing ? (language === 'zh' ? 'Task Brief' : 'Task Brief') : language === 'zh' ? 'Thread Composer' : 'Thread Composer'}
           </p>
-          <p className="mt-2 text-sm text-foreground/58">
+          <p className="mt-2 text-sm text-muted">
             {landing
               ? language === 'zh'
                 ? '把目标、限制和验收条件一次说清楚，剩下的交给 MaxClaw。'
@@ -2042,23 +2039,23 @@ export function ChatView() {
         <div className="flex flex-wrap gap-2">
           {!landing && (
             <>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/72 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-foreground/56 dark:bg-white/10">
+              <span className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-muted">
                 <FolderIcon className="h-3.5 w-3.5" />
                 {workspaceLabel}
               </span>
-              <span className="inline-flex items-center rounded-full border border-white/80 bg-white/72 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-foreground/56 dark:bg-white/10">
+              <span className="inline-flex items-center rounded-full border border-border bg-secondary px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-muted">
                 {currentModel || (language === 'zh' ? '自动模型' : 'Auto model')}
               </span>
             </>
           )}
           {selectedSkills.length > 0 && (
-            <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-primary">
+            <span className="inline-flex items-center rounded-full border border-primary/20 bg-accent px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-primary">
               {selectedSkills.length} {language === 'zh' ? '个技能已激活' : 'skills active'}
             </span>
           )}
         </div>
       </div>
-      <div className="rounded-[24px] border border-white/75 bg-white/68 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] dark:bg-white/5">
+      <div className="rounded-lg border border-border bg-secondary px-3 py-3">
       <textarea
         ref={inputRef}
         value={input}
@@ -2072,7 +2069,7 @@ export function ChatView() {
         onKeyDown={handleKeyDown}
         placeholder={language === 'zh' ? '描述你的任务目标、上下文和输出要求...' : 'Describe the goal, context, and expected output...'}
         rows={landing ? 6 : 4}
-        className={`w-full resize-none border-none bg-transparent px-2 py-1 leading-7 text-foreground placeholder:text-foreground/32 focus:outline-none ${
+        className={`w-full resize-none border-none bg-transparent px-2 py-1 leading-7 text-foreground placeholder:text-muted focus:outline-none ${
           landing ? 'text-[15px]' : 'text-sm'
         }`}
       />
@@ -2084,7 +2081,7 @@ export function ChatView() {
           ref={mentionRef}
           className="absolute left-4 bottom-24 z-40 w-64 rounded-xl border border-border bg-background p-2 shadow-xl"
         >
-          <div className="mb-1 px-2 py-1 text-xs text-foreground/50">选择技能</div>
+          <div className="mb-1 px-2 py-1 text-xs text-muted">选择技能</div>
           <div className="max-h-48 overflow-y-auto">
             {mentionSkills.map((skill, index) => (
               <button
@@ -2092,17 +2089,17 @@ export function ChatView() {
                 type="button"
                 onClick={() => insertMention(skill.name)}
                 className={`w-full rounded-lg px-2 py-2 text-left text-xs transition-colors ${
-                  index === mentionIndex ? 'bg-primary/15 text-primary' : 'hover:bg-secondary'
+                  index === mentionIndex ? 'bg-accent text-primary' : 'hover:bg-secondary'
                 }`}
               >
                 <div className="font-medium">@{skill.displayName || skill.name}</div>
                 {skill.description && (
-                  <div className="truncate text-foreground/50">{skill.description}</div>
+                  <div className="truncate text-muted">{skill.description}</div>
                 )}
               </button>
             ))}
           </div>
-          <div className="mt-1 border-t border-border/50 px-2 pt-1 text-[10px] text-foreground/40">
+          <div className="mt-1 border-t border-border px-2 pt-1 text-[10px] text-muted">
             ↑↓ 选择 · Enter/Tab 确认 · Esc 关闭
           </div>
         </div>
@@ -2114,7 +2111,7 @@ export function ChatView() {
           ref={slashRef}
           className="absolute left-4 bottom-24 z-40 w-56 rounded-xl border border-border bg-background p-2 shadow-xl"
         >
-          <div className="mb-1 px-2 py-1 text-xs text-foreground/50">快捷命令</div>
+          <div className="mb-1 px-2 py-1 text-xs text-muted">快捷命令</div>
           <div className="max-h-48 overflow-y-auto">
             {filteredSlashCommands.map((cmd, index) => (
               <button
@@ -2126,21 +2123,21 @@ export function ChatView() {
                   setSlashOpen(false);
                 }}
                 className={`w-full rounded-lg px-2 py-2 text-left transition-colors ${
-                  index === slashIndex ? 'bg-primary/15 text-primary' : 'hover:bg-secondary'
+                  index === slashIndex ? 'bg-accent text-primary' : 'hover:bg-secondary'
                 }`}
               >
                 <div className="font-medium text-sm">{cmd.label}</div>
-                <div className="text-xs text-foreground/50">{cmd.description}</div>
+                <div className="text-xs text-muted">{cmd.description}</div>
               </button>
             ))}
           </div>
-          <div className="mt-1 border-t border-border/50 px-2 pt-1 text-[10px] text-foreground/40">
+          <div className="mt-1 border-t border-border px-2 pt-1 text-[10px] text-muted">
             ↑↓ 选择 · Enter/Tab 确认 · Esc 关闭
           </div>
         </div>
       )}
 
-      <div className="mt-5 flex items-end justify-between gap-3 border-t border-border/55 pt-4">
+      <div className="mt-5 flex items-end justify-between gap-3 border-t border-border pt-4">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <CustomSelect
             value={currentModel}
@@ -2150,12 +2147,12 @@ export function ChatView() {
             disabled={modelsLoading || isGenerating}
             size="sm"
             className="w-[220px] max-w-full"
-            triggerClassName="rounded-full border-white/70 bg-white/80 dark:bg-white/10"
-            menuClassName="border-white/70 bg-white/95 dark:bg-[#151d2b]"
+            triggerClassName="rounded-full border-border bg-secondary"
+            menuClassName="border-border bg-background"
           />
-          {modelsLoading && <span className="text-xs text-foreground/50">加载中...</span>}
-          <div ref={skillsPickerRef} className="relative flex items-center gap-2 text-xs text-foreground/55">
-            <span className="inline-flex items-center gap-1 rounded-full border border-white/70 bg-white/80 px-2.5 py-1.5 dark:bg-white/10">
+          {modelsLoading && <span className="text-xs text-muted">加载中...</span>}
+          <div ref={skillsPickerRef} className="relative flex items-center gap-2 text-xs text-muted">
+            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1.5">
               <FolderIcon className="h-3.5 w-3.5" />
               {workspaceLabel}
             </span>
@@ -2170,8 +2167,8 @@ export function ChatView() {
               onClick={() => setSkillsPickerOpen((prev) => !prev)}
               className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 transition-colors ${
                 selectedSkills.length > 0 || skillsPickerOpen
-                  ? 'bg-primary/15 text-primary shadow-[0_8px_20px_rgba(184,103,63,0.16)]'
-                  : 'border border-white/70 bg-white/80 text-foreground/70 hover:bg-white dark:bg-white/10'
+                  ? 'bg-accent text-primary shadow-sm'
+                  : 'border border-border bg-secondary text-muted hover:bg-secondary'
               }`}
             >
               <PuzzleIcon className="h-3.5 w-3.5" />
@@ -2181,19 +2178,19 @@ export function ChatView() {
               <button
                 type="button"
                 onClick={() => setSelectedSkills([])}
-                className="rounded-md border border-border px-1.5 py-1 text-[11px] text-foreground/55 hover:bg-secondary"
+                className="rounded-md border border-border px-1.5 py-1 text-[11px] text-muted hover:bg-secondary"
               >
                 清空
               </button>
             )}
 
             {skillsPickerOpen && (
-              <div className="absolute bottom-10 left-0 z-30 w-80 rounded-[22px] border border-white/75 bg-white/96 p-3 shadow-[0_22px_54px_rgba(28,36,50,0.16)] dark:bg-[#151d2b]">
+              <div className="absolute bottom-10 left-0 z-30 w-80 rounded-lg border border-border bg-background p-3 shadow-lg">
                 <input
                   value={skillsQuery}
                   onChange={(event) => setSkillsQuery(event.target.value)}
                   placeholder="搜索技能"
-                  className="mb-2 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                  className="mb-2 w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                 />
                 <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
                   {filteredSkills.map((skill) => {
@@ -2212,20 +2209,20 @@ export function ChatView() {
                         <span className="min-w-0">
                           <span className="block truncate font-medium text-foreground">{skill.displayName || skill.name}</span>
                           {skill.description && (
-                            <span className="block truncate text-foreground/55">{skill.description}</span>
+                            <span className="block truncate text-muted">{skill.description}</span>
                           )}
                         </span>
                       </label>
                     );
                   })}
                   {filteredSkills.length === 0 && (
-                    <div className="px-2 py-1 text-xs text-foreground/45">没有匹配的技能</div>
+                    <div className="px-2 py-1 text-xs text-muted">没有匹配的技能</div>
                   )}
                 </div>
                 {skillsLoadError && (
                   <p className="mt-2 text-xs text-red-500">技能加载失败: {skillsLoadError}</p>
                 )}
-                <p className="mt-2 text-[11px] text-foreground/45">
+                <p className="mt-2 text-[11px] text-muted">
                   已选择 {selectedSkills.length} 个技能。未选择时按系统默认策略加载。
                 </p>
               </div>
@@ -2240,7 +2237,7 @@ export function ChatView() {
               onClick={() => handleInterrupt('append')}
               disabled={!input.trim()}
               title="Enter 补充上下文"
-              className="inline-flex h-10 items-center gap-1.5 rounded-full border border-white/70 bg-white/82 px-4 text-sm font-medium text-foreground shadow-[0_10px_24px_rgba(28,36,50,0.08)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/10"
+              className="inline-flex h-10 items-center gap-1.5 rounded-full border border-border bg-secondary px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
             >
               <PlusIcon className="h-4 w-4" />
               补充
@@ -2249,7 +2246,7 @@ export function ChatView() {
               type="button"
               onClick={() => handleInterrupt('cancel')}
               title="Shift+Enter 打断并重试"
-              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-destructive px-4 text-sm font-medium text-destructive-foreground shadow-[0_12px_30px_rgba(194,79,77,0.24)] transition-colors hover:bg-destructive/90"
+              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-destructive px-4 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90"
             >
               <StopIcon className="h-4 w-4" />
               打断
@@ -2259,14 +2256,14 @@ export function ChatView() {
           <button
             type="submit"
             disabled={!input.trim() || isGenerating}
-            className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_16px_36px_rgba(184,103,63,0.28)] transition-transform duration-150 hover:-translate-y-0.5 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors duration-150 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <SendIcon className="h-4 w-4" />
           </button>
         )}
       </div>
       {interruptHintVisible && isGenerating && (
-        <div className="mt-2 flex items-center justify-center gap-4 text-xs text-foreground/50">
+        <div className="mt-2 flex items-center justify-center gap-4 text-xs text-muted">
           <span className="flex items-center gap-1">
             <kbd className="rounded bg-secondary px-1.5 py-0.5 text-[10px]">Enter</kbd>
             补充上下文
@@ -2282,13 +2279,13 @@ export function ChatView() {
 
   const renderThreadHeader = () => (
     <div
-      className={`relative z-20 border-b border-white/60 bg-white/54 backdrop-blur-xl ${
+      className={`relative z-20 border-b border-border bg-background ${
         isMac && sidebarCollapsed ? 'pl-44 pr-7' : 'px-7'
       }`}
     >
       <div className="flex min-h-[88px] flex-wrap items-center justify-between gap-4 py-5">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground/42">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
             {isStarterMode ? 'Control Room' : 'Active Thread'}
           </p>
           <h1 className="mt-2 truncate text-[20px] font-semibold tracking-[-0.04em] text-foreground">{sessionTitle}</h1>
@@ -2297,13 +2294,13 @@ export function ChatView() {
               <span className={`status-dot ${gatewayStatus}`} />
               {gatewayStatusMeta.label}
             </span>
-            <span className="inline-flex items-center rounded-full border border-white/75 bg-white/72 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-foreground/55 dark:bg-white/10">
+            <span className="inline-flex items-center rounded-full border border-border bg-secondary px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-muted">
               {workspaceLabel}
             </span>
-            <span className="inline-flex items-center rounded-full border border-white/75 bg-white/72 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-foreground/55 dark:bg-white/10">
+            <span className="inline-flex items-center rounded-full border border-border bg-secondary px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-muted">
               {currentModel || (language === 'zh' ? '自动模型' : 'Auto model')}
             </span>
-            <span className="inline-flex items-center rounded-full border border-white/75 bg-white/72 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-foreground/55 dark:bg-white/10">
+            <span className="inline-flex items-center rounded-full border border-border bg-secondary px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-muted">
               {messages.length} {language === 'zh' ? '条消息' : 'messages'}
             </span>
             {selectedSkills.length > 0 && (
@@ -2311,25 +2308,25 @@ export function ChatView() {
                 <button
                   type="button"
                   onClick={() => setHeaderSkillsOpen((prev) => !prev)}
-                  className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-primary transition-colors hover:bg-primary/15"
+                  className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-accent px-3 py-1.5 text-[11px] font-medium tracking-[0.14em] text-primary transition-colors hover:bg-accent"
                 >
                   <span>{language === 'zh' ? `技能 ${selectedSkills.length}` : `Skills ${selectedSkills.length}`}</span>
                   <ChevronDownIcon className={`h-3.5 w-3.5 transition-transform ${headerSkillsOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {headerSkillsOpen && (
-                  <div className="absolute left-0 top-[calc(100%+0.45rem)] z-40 w-72 overflow-hidden rounded-[20px] border border-white/75 bg-white/96 p-2 shadow-[0_22px_54px_rgba(28,36,50,0.14)] dark:bg-[#151d2b]">
-                    <div className="px-2 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-foreground/45">
+                  <div className="absolute left-0 top-[calc(100%+0.45rem)] z-40 w-72 overflow-hidden rounded-lg border border-border bg-background p-2 shadow-md">
+                    <div className="px-2 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
                       {language === 'zh' ? '本次任务技能' : 'Task skills'}
                     </div>
                     <div className="space-y-1">
                       {selectedSkillSummaries.map((skill) => (
                         <div
                           key={skill.name}
-                          className="rounded-2xl border border-white/70 bg-white/72 px-3 py-2 dark:border-white/10 dark:bg-white/5"
+                          className="rounded-lg border border-border bg-secondary px-3 py-2"
                         >
                           <div className="text-sm font-medium text-foreground">{skill.displayName}</div>
                           {skill.description && (
-                            <div className="mt-0.5 line-clamp-2 text-xs leading-5 text-foreground/55">
+                            <div className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted">
                               {skill.description}
                             </div>
                           )}
@@ -2347,10 +2344,10 @@ export function ChatView() {
             <button
               type="button"
               onClick={() => dispatch(toggleTerminal())}
-              className={`flex h-10 items-center gap-2 rounded-full border px-4 text-xs font-medium uppercase tracking-[0.18em] shadow-[0_10px_28px_rgba(31,41,55,0.08)] transition-colors ${
+              className={`flex h-10 items-center gap-2 rounded-full border px-4 text-xs font-medium uppercase tracking-[0.18em] transition-colors ${
                 terminalVisible
-                  ? 'border-primary/30 bg-primary/12 text-primary'
-                  : 'border-white/70 bg-white/82 text-foreground/68 hover:bg-white hover:text-foreground dark:bg-white/10'
+                  ? 'border-primary/30 bg-accent text-primary'
+                  : 'border-border bg-secondary text-muted hover:bg-secondary hover:text-foreground'
               }`}
               aria-label="Toggle terminal"
               title="Toggle terminal"
@@ -2451,9 +2448,9 @@ export function ChatView() {
         <div className="flex min-h-0 flex-1">
           <div className="flex-1 overflow-y-auto px-8 py-8 md:px-10 md:py-10">
             <div className="mx-auto max-w-4xl">
-              <section className="rounded-[34px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(250,244,236,0.82))] p-5 shadow-[0_28px_70px_rgba(28,36,50,0.1)] dark:bg-[linear-gradient(180deg,rgba(24,31,45,0.92),rgba(20,27,39,0.9))] md:p-6">
-                <div className="flex flex-wrap items-center gap-4 rounded-[26px] border border-white/70 bg-white/46 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] dark:bg-white/5">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-[#192233] shadow-[0_14px_28px_rgba(25,34,51,0.16)]">
+              <section className="rounded-xl border border-border bg-card p-5 md:p-6">
+                <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-secondary px-4 py-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
                     <img
                       src="./icon.png"
                       alt="maxclaw"
@@ -2461,7 +2458,7 @@ export function ChatView() {
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground/42">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
                       {language === 'zh' ? 'Ready to Work' : 'Ready to Work'}
                     </p>
                     <p className="mt-1 text-[15px] font-medium tracking-[-0.02em] text-foreground">
@@ -2477,18 +2474,18 @@ export function ChatView() {
 
               <section className="mt-6">
                 <div className="mb-4 flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-foreground/45">{t('chat.starter.templates')}</p>
-                  <div className="hidden h-px flex-1 bg-white/50 md:ml-4 md:block" />
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">{t('chat.starter.templates')}</p>
+                  <div className="hidden h-px flex-1 bg-border md:ml-4 md:block" />
                 </div>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {starterCards.map((card) => (
                     <button
                       key={card.title}
                       onClick={() => applyTemplate(card.prompt)}
-                      className="group rounded-[24px] border border-white/70 bg-white/74 px-5 py-5 text-left shadow-[0_18px_42px_rgba(28,36,50,0.06)] transition-all duration-150 hover:-translate-y-1 hover:border-primary/28 hover:bg-white dark:bg-white/5"
+                      className="group rounded-lg border border-border bg-card px-5 py-5 text-left transition-all duration-150 hover:border-primary/30 hover:bg-secondary"
                     >
                       <p className="text-[18px] font-semibold tracking-[-0.03em] text-foreground">{card.title}</p>
-                      <p className="mt-2 text-sm leading-6 text-foreground/55">{card.description}</p>
+                      <p className="mt-2 text-sm leading-6 text-muted">{card.description}</p>
                       <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
                         {language === 'zh' ? '使用模板' : 'Use template'}
                       </p>
@@ -2515,14 +2512,14 @@ export function ChatView() {
               {streamingTimeline.length > 0 && (
                 <div className="flex justify-start">
                   <div className="w-full text-sm leading-7 text-foreground">
-                    <div className="rounded-[28px] border border-white/72 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(248,244,238,0.82))] px-5 py-4 shadow-[0_22px_52px_rgba(28,36,50,0.06)] dark:bg-[linear-gradient(180deg,rgba(24,31,45,0.94),rgba(20,27,39,0.9))]">
+                    <div className="rounded-xl border border-border bg-card px-5 py-4">
                       <div className="mb-4 flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#192233] text-xs font-semibold uppercase tracking-[0.18em] text-white">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground">
                           AI
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-foreground">MaxClaw</p>
-                          <p className="text-[11px] uppercase tracking-[0.14em] text-foreground/42">
+                          <p className="text-[11px] uppercase tracking-[0.14em] text-muted">
                             {language === 'zh' ? '执行中' : 'Running'}
                           </p>
                         </div>
@@ -2538,13 +2535,13 @@ export function ChatView() {
             </div>
           </div>
 
-          <div className="border-t border-white/60 px-6 py-5">
+          <div className="border-t border-border px-6 py-5">
             <div className="mx-auto max-w-[980px]">
               {renderComposer(false)}
               {terminalVisible && (
                 <Suspense
                   fallback={
-                    <div className="mt-3 rounded-[22px] border border-border/70 bg-background/70 px-4 py-4 text-xs text-foreground/55">
+                    <div className="mt-3 rounded-lg border border-border bg-secondary px-4 py-4 text-xs text-muted">
                       Loading terminal...
                     </div>
                   }
