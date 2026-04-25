@@ -11,6 +11,10 @@ type MessageBus struct {
 	outbound chan *OutboundMessage
 	mu       sync.RWMutex
 	closed   bool
+
+	listenerMu        sync.RWMutex
+	nextListenerID    int
+	outboundListeners map[int]func(*OutboundMessage)
 }
 
 // NewMessageBus 创建消息总线
@@ -19,8 +23,9 @@ func NewMessageBus(bufferSize int) *MessageBus {
 		bufferSize = 100
 	}
 	return &MessageBus{
-		inbound:  make(chan *InboundMessage, bufferSize),
-		outbound: make(chan *OutboundMessage, bufferSize),
+		inbound:           make(chan *InboundMessage, bufferSize),
+		outbound:          make(chan *OutboundMessage, bufferSize),
+		outboundListeners: make(map[int]func(*OutboundMessage)),
 	}
 }
 
@@ -44,14 +49,23 @@ func (b *MessageBus) PublishInbound(msg *InboundMessage) error {
 // PublishOutbound 发布出站消息
 func (b *MessageBus) PublishOutbound(msg *OutboundMessage) error {
 	b.mu.RLock()
-	defer b.mu.RUnlock()
-
 	if b.closed {
+		b.mu.RUnlock()
 		return ErrBusClosed
 	}
+	b.mu.RUnlock()
 
 	select {
 	case b.outbound <- msg:
+		b.listenerMu.RLock()
+		listeners := make([]func(*OutboundMessage), 0, len(b.outboundListeners))
+		for _, listener := range b.outboundListeners {
+			listeners = append(listeners, listener)
+		}
+		b.listenerMu.RUnlock()
+		for _, listener := range listeners {
+			listener(msg)
+		}
 		return nil
 	default:
 		return ErrBufferFull
@@ -138,4 +152,22 @@ func (b *MessageBus) IsClosed() bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	return b.closed
+}
+
+func (b *MessageBus) SubscribeOutbound(listener func(*OutboundMessage)) func() {
+	if listener == nil {
+		return func() {}
+	}
+
+	b.listenerMu.Lock()
+	id := b.nextListenerID
+	b.nextListenerID++
+	b.outboundListeners[id] = listener
+	b.listenerMu.Unlock()
+
+	return func() {
+		b.listenerMu.Lock()
+		delete(b.outboundListeners, id)
+		b.listenerMu.Unlock()
+	}
 }

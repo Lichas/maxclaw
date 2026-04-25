@@ -46,6 +46,7 @@ type Server struct {
 	skillsStateMgr    *workspaceSkills.StateManager
 	notificationStore *NotificationStore
 	wsHub             *WebSocketHub
+	outboundUnsub     func()
 }
 
 type channelSenderStat struct {
@@ -92,6 +93,32 @@ func NewServer(cfg *config.Config, agentLoop *agent.AgentLoop, cronService *cron
 		skillsStateMgr:    workspaceSkills.NewStateManager(filepath.Join(cfg.Agents.Defaults.Workspace, ".skills_state.json")),
 		notificationStore: NewNotificationStore(),
 		wsHub:             NewWebSocketHub(),
+	}
+
+	if agentLoop != nil && agentLoop.Bus != nil {
+		s.outboundUnsub = agentLoop.Bus.SubscribeOutbound(func(msg *bus.OutboundMessage) {
+			if msg == nil {
+				return
+			}
+			channel := strings.ToLower(strings.TrimSpace(msg.Channel))
+			if channel != "desktop" && channel != "webui" {
+				return
+			}
+			if strings.HasPrefix(strings.TrimSpace(msg.Content), "[Spawn] ") {
+				return
+			}
+
+			sessionKey := strings.TrimSpace(msg.ChatID)
+			if sessionKey == "" {
+				sessionKey = fmt.Sprintf("%s:%s", channel, strings.TrimSpace(msg.ChatID))
+			}
+			s.wsHub.Broadcast("chat", map[string]interface{}{
+				"sessionKey": sessionKey,
+				"channel":    channel,
+				"chatId":     msg.ChatID,
+				"content":    msg.Content,
+			})
+		})
 	}
 
 	// Start WebSocket hub
@@ -210,6 +237,10 @@ func (s *Server) handleChannelSenders(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) Stop(ctx context.Context) error {
+	if s.outboundUnsub != nil {
+		s.outboundUnsub()
+		s.outboundUnsub = nil
+	}
 	if s.server == nil {
 		return nil
 	}

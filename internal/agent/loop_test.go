@@ -233,6 +233,84 @@ func TestAgentLoopProcessMessageInjectsRuntimeContextForCron(t *testing.T) {
 	assert.Equal(t, "Ping me", jobs[0].Payload.Message)
 }
 
+func TestAgentLoopInternalMessageDoesNotPersistVisibleUserMessage(t *testing.T) {
+	workspace := t.TempDir()
+	messageBus := bus.NewMessageBus(10)
+	provider := &staticProvider{}
+
+	loop := NewAgentLoop(
+		messageBus,
+		provider,
+		workspace,
+		"test-model",
+		3,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		nil,
+		nil,
+		false,
+	)
+
+	msg := bus.NewInboundMessage("desktop", "subagent", "desktop:parent", "[Subagent Callback]\nResult:\nok")
+	msg.SessionKey = "desktop:parent"
+	msg.Internal = true
+
+	resp, err := loop.ProcessMessage(context.Background(), msg)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "ok", resp.Content)
+
+	sess := loop.sessions.GetOrCreate("desktop:parent")
+	require.Len(t, sess.Messages, 1)
+	assert.Equal(t, "assistant", sess.Messages[0].Role)
+	assert.Equal(t, "ok", sess.Messages[0].Content)
+}
+
+func TestAgentLoopExecuteSpawnRequestPublishesInternalCallback(t *testing.T) {
+	workspace := t.TempDir()
+	messageBus := bus.NewMessageBus(10)
+	provider := &staticProvider{}
+
+	loop := NewAgentLoop(
+		messageBus,
+		provider,
+		workspace,
+		"test-model",
+		3,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		nil,
+		nil,
+		false,
+	)
+
+	result, err := loop.executeSpawnRequest(context.Background(), tools.SpawnRequest{
+		Task:             "research something",
+		Label:            "research",
+		NotifyParent:     true,
+		Channel:          "desktop",
+		ChatID:           "desktop:parent",
+		ParentSessionKey: "desktop:parent",
+	})
+	require.NoError(t, err)
+	assert.Contains(t, result.Message, "ok")
+
+	callback, ok := messageBus.TryConsumeInbound()
+	require.True(t, ok)
+	require.NotNil(t, callback)
+	assert.True(t, callback.Internal)
+	assert.Equal(t, "desktop:parent", callback.SessionKey)
+	assert.Equal(t, "desktop", callback.Channel)
+	assert.Equal(t, "desktop:parent", callback.ChatID)
+	assert.Contains(t, callback.Content, internalSpawnCallbackPrefix)
+	assert.Contains(t, callback.Content, "Status: completed")
+	assert.Contains(t, callback.Content, "Result:\nok")
+}
+
 func TestAgentLoopProviderIdentityUsesProviderTypeNotDefaultModel(t *testing.T) {
 	workspace := t.TempDir()
 	messageBus := bus.NewMessageBus(10)

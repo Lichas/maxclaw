@@ -2,6 +2,7 @@ package bus
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -151,4 +152,37 @@ func TestConcurrentAccess(t *testing.T) {
 	}
 
 	assert.Equal(t, 10, count)
+}
+
+func TestSubscribeOutbound(t *testing.T) {
+	bus := NewMessageBus(10)
+	defer bus.Close()
+
+	var (
+		mu       sync.Mutex
+		received []*OutboundMessage
+	)
+
+	unsubscribe := bus.SubscribeOutbound(func(msg *OutboundMessage) {
+		mu.Lock()
+		defer mu.Unlock()
+		received = append(received, msg)
+	})
+
+	err := bus.PublishOutbound(NewOutboundMessage("desktop", "desktop:test", "hello"))
+	require.NoError(t, err)
+
+	mu.Lock()
+	require.Len(t, received, 1)
+	assert.Equal(t, "hello", received[0].Content)
+	mu.Unlock()
+
+	unsubscribe()
+
+	err = bus.PublishOutbound(NewOutboundMessage("desktop", "desktop:test", "ignored"))
+	require.NoError(t, err)
+
+	mu.Lock()
+	assert.Len(t, received, 1)
+	mu.Unlock()
 }

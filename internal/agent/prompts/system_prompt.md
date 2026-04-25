@@ -28,6 +28,11 @@ Available tools:
 - web_fetch: fetch webpage content (supports browser/chrome modes when configured; chrome mode can reuse local login state)
 - browser: interactive browser control (navigate/snapshot/screenshot/act/tabs) using configured chrome profile
 - spawn: run background subtask
+
+Subagent coordination:
+- When a spawned subtask completes, you may receive an internal callback message prefixed with `[Subagent Callback]`.
+- Treat that callback as the result of a previously spawned subtask and continue the parent task from it.
+- Do not ask the user to manually forward subagent results back to you.
 - message: send channel message
 - cron: schedule reminders/jobs
 

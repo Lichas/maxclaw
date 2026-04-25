@@ -27,6 +27,7 @@ const (
 	sessionContextWindow         = 500
 	sessionConsolidateKeepRecent = 40
 	autoModeIterationMultiplier  = 5
+	internalSpawnCallbackPrefix  = "[Subagent Callback]"
 )
 
 var skillSelectorPattern = regexp.MustCompile(`(?i)@skill:[a-z0-9_.-]+|\$[a-zA-Z][a-zA-Z0-9_.-]*`)
@@ -357,6 +358,28 @@ func convertCompressorMessagesToProvider(messages []CompressorMessage) []provide
 	return result
 }
 
+func formatSpawnCallbackContent(label, task, childSessionKey, resultText string, runErr error) string {
+	var b strings.Builder
+	b.WriteString(internalSpawnCallbackPrefix)
+	b.WriteString("\nTask: ")
+	b.WriteString(defaultSpawnLabel(label, task))
+	b.WriteString("\nSub-session: ")
+	b.WriteString(strings.TrimSpace(childSessionKey))
+	if runErr != nil {
+		b.WriteString("\nStatus: failed\nError:\n")
+		b.WriteString(runErr.Error())
+		return b.String()
+	}
+
+	b.WriteString("\nStatus: completed")
+	trimmed := strings.TrimSpace(resultText)
+	if trimmed != "" {
+		b.WriteString("\nResult:\n")
+		b.WriteString(trimmed)
+	}
+	return b.String()
+}
+
 func (a *AgentLoop) runtimeSnapshot() (providers.LLMProvider, string, int) {
 	a.runtimeMu.RLock()
 	defer a.runtimeMu.RUnlock()
@@ -561,10 +584,12 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 
 	// Persist user input before long-running model execution so session list
 	// can reflect in-flight conversations immediately.
-	sess.AddMessage("user", msg.Content)
-	if err := a.sessions.Save(sess); err != nil {
-		if lg := logging.Get(); lg != nil && lg.Session != nil {
-			lg.Session.Printf("save user message failed: %v", err)
+	if !msg.Internal {
+		sess.AddMessage("user", msg.Content)
+		if err := a.sessions.Save(sess); err != nil {
+			if lg := logging.Get(); lg != nil && lg.Session != nil {
+				lg.Session.Printf("save user message failed: %v", err)
+			}
 		}
 	}
 
@@ -1103,6 +1128,9 @@ func (a *AgentLoop) executeSpawnRequest(ctx context.Context, request tools.Spawn
 		request.Model,
 	)
 	if err != nil {
+		if a.enqueueSpawnCallback(request, childSessionKey, "", err) {
+			return tools.SpawnResult{SessionKey: childSessionKey}, err
+		}
 		if request.NotifyParent && a.Bus != nil && channel != "" && chatID != "" {
 			_ = a.Bus.PublishOutbound(bus.NewOutboundMessage(
 				channel,
@@ -1113,7 +1141,7 @@ func (a *AgentLoop) executeSpawnRequest(ctx context.Context, request tools.Spawn
 		return tools.SpawnResult{SessionKey: childSessionKey}, err
 	}
 
-	if request.NotifyParent && a.Bus != nil && channel != "" && chatID != "" {
+	if request.NotifyParent && !a.enqueueSpawnCallback(request, childSessionKey, resultText, nil) && a.Bus != nil && channel != "" && chatID != "" {
 		preview := truncateEventText(strings.TrimSpace(resultText), 220)
 		_ = a.Bus.PublishOutbound(bus.NewOutboundMessage(
 			channel,
@@ -1126,6 +1154,24 @@ func (a *AgentLoop) executeSpawnRequest(ctx context.Context, request tools.Spawn
 		SessionKey: childSessionKey,
 		Message:    resultText,
 	}, nil
+}
+
+func (a *AgentLoop) enqueueSpawnCallback(request tools.SpawnRequest, childSessionKey, resultText string, runErr error) bool {
+	if !request.NotifyParent || a.Bus == nil {
+		return false
+	}
+
+	parentSessionKey := strings.TrimSpace(request.ParentSessionKey)
+	channel := strings.TrimSpace(request.Channel)
+	chatID := strings.TrimSpace(request.ChatID)
+	if parentSessionKey == "" || channel == "" || chatID == "" {
+		return false
+	}
+
+	callback := bus.NewInboundMessage(channel, "subagent", chatID, formatSpawnCallbackContent(request.Label, request.Task, childSessionKey, resultText, runErr))
+	callback.SessionKey = parentSessionKey
+	callback.Internal = true
+	return a.Bus.PublishInbound(callback) == nil
 }
 
 func defaultSpawnLabel(label, task string) string {

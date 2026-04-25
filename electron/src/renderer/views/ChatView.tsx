@@ -1381,6 +1381,53 @@ export function ChatView() {
     return formatSessionTitle(firstMessage?.content);
   };
 
+  const reloadSession = useCallback(async (sessionKey: string) => {
+    setPreviewSidebarCollapsed(true);
+    setSelectedFileRef(null);
+    setPreviewData(null);
+    setPreviewLoading(false);
+
+    const session = await getSession(sessionKey);
+
+    const sessionModel = extractModelFromSessionDetail(session);
+    if (sessionModel) {
+      setSessionModelBySession((prev) => {
+        if (prev[sessionKey] === sessionModel) {
+          return prev;
+        }
+        return { ...prev, [sessionKey]: sessionModel };
+      });
+      setCurrentModel(sessionModel);
+    }
+
+    const restored = (session.messages || [])
+      .filter((message) => message.role === 'user' || message.role === 'assistant')
+      .map((message, index) => ({
+        id: `${sessionKey}-${index}`,
+        role: message.role as 'user' | 'assistant',
+        content: message.content,
+        timestamp: new Date(message.timestamp),
+        timeline: normalizeStoredTimeline(message.timeline, `${sessionKey}-${index}`)
+      }));
+
+    setMessages(restored);
+    const fallbackTitle = resolveTitleFromMessages(restored);
+    setSessionTitle(fallbackTitle);
+    setPreviewSidebarCollapsed(true);
+
+    try {
+      const sessions = await getSessions();
+      const matched = sessions.find((item) => item.key === sessionKey);
+      if (matched) {
+        setSessionTitle(resolveSessionTitleFromSummary(matched, fallbackTitle));
+      } else {
+        setSessionTitle(fallbackTitle);
+      }
+    } catch {
+      setSessionTitle(fallbackTitle);
+    }
+  }, [getSession, getSessions]);
+
   useEffect(() => {
     let cancelled = false;
     setPreviewSidebarCollapsed(true);
@@ -1390,54 +1437,10 @@ export function ChatView() {
 
     const loadSession = async () => {
       try {
-        const session = await getSession(currentSessionKey);
+        await reloadSession(currentSessionKey);
         if (cancelled) {
           return;
         }
-
-        const sessionModel = extractModelFromSessionDetail(session);
-        if (sessionModel) {
-          setSessionModelBySession((prev) => {
-            if (prev[currentSessionKey] === sessionModel) {
-              return prev;
-            }
-            return { ...prev, [currentSessionKey]: sessionModel };
-          });
-          setCurrentModel(sessionModel);
-        }
-
-        const restored = (session.messages || [])
-          .filter((message) => message.role === 'user' || message.role === 'assistant')
-          .map((message, index) => ({
-            id: `${currentSessionKey}-${index}`,
-            role: message.role as 'user' | 'assistant',
-            content: message.content,
-            timestamp: new Date(message.timestamp),
-            timeline: normalizeStoredTimeline(message.timeline, `${currentSessionKey}-${index}`)
-          }));
-
-        setMessages(restored);
-        const fallbackTitle = resolveTitleFromMessages(restored);
-        setSessionTitle(fallbackTitle);
-        setPreviewSidebarCollapsed(true);
-
-        try {
-          const sessions = await getSessions();
-          if (cancelled) {
-            return;
-          }
-          const matched = sessions.find((item) => item.key === currentSessionKey);
-          if (matched) {
-            setSessionTitle(resolveSessionTitleFromSummary(matched, fallbackTitle));
-          } else {
-            setSessionTitle(fallbackTitle);
-          }
-        } catch {
-          if (!cancelled) {
-            setSessionTitle(fallbackTitle);
-          }
-        }
-
       } catch {
         if (!cancelled) {
           setMessages([]);
@@ -1452,7 +1455,21 @@ export function ChatView() {
     return () => {
       cancelled = true;
     };
-  }, [currentSessionKey, getSession, getSessions]);
+  }, [currentSessionKey, reloadSession]);
+
+  useEffect(() => {
+    const unsubscribe = wsClient.on('chat', (payload: { sessionKey?: string }) => {
+      const sessionKey = payload?.sessionKey || '';
+      if (!sessionKey || sessionKey !== currentSessionKeyRef.current) {
+        return;
+      }
+      void reloadSession(sessionKey);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [reloadSession]);
 
   const handleInterrupt = (mode: 'cancel' | 'append') => {
     if (!isGenerating || !currentSessionKey) {

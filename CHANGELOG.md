@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **spawn 子任务完成后会自动唤醒父 agent 继续迭代**：子任务结束时不再只发一条 `[Spawn] Completed` 文本通知，而是向父会话投递内部 callback 消息，驱动主 agent 基于 subagent 结果继续生成；同时给 MessageBus 增加 outbound 监听并通过 WebSocket 刷新桌面聊天页，让后台回流结果能真正出现在当前对话里
+  - `internal/agent/loop.go`、`internal/agent/loop_test.go`、`internal/agent/prompts/system_prompt.md`、`internal/bus/events.go`、`internal/bus/queue.go`、`internal/bus/bus_test.go`、`internal/webui/server.go`、`electron/src/renderer/views/ChatView.tsx`
+  - 验证：`go test ./internal/agent ./internal/bus ./internal/webui`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
 - **中英文 README 同步 Agent 生命周期说明**：更新 `README.md` 与 `README.zh.md` 的生命周期介绍，明确当前已接通的会话钩子、上下文压缩重试链路与 provider 归因方式，并顺手把中文 README 的 Go 版本徽章同步到 `1.24+`
   - `README.md`、`README.zh.md`
   - 验证：`make build`

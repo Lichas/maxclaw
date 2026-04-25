@@ -19,6 +19,7 @@ type InboundMessage struct {
 	SelectedSkills []string         `json:"selectedSkills,omitempty"` // optional explicit skill filters
 	Media          *MediaAttachment `json:"media,omitempty"`
 	SessionKey     string           `json:"sessionKey"` // channel:chatId
+	Internal       bool             `json:"internal,omitempty"`
 }
 
 // NewInboundMessage 创建入站消息
