@@ -353,16 +353,16 @@ const MemoizedMessageItem = memo(function MemoizedMessageItem({
 
   return (
     <div className={`flex justify-start`}>
-      <div className="w-full text-foreground">
+      <div className="w-full space-y-3 text-foreground">
+        <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+          MaxClaw:
+        </div>
         {message.timeline && message.timeline.length > 0 && (
-          <div className="mb-3">
+          <div>
             {renderTimeline(message.timeline, false)}
           </div>
         )}
         <div className="rounded-xl border border-border bg-card px-5 py-4">
-          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-            MaxClaw:
-          </div>
           {renderMarkdownWithActions(message.content, message.id)}
           <div className="mt-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.12em] text-muted">
             <span>{formatMessageTimestamp(message.timestamp)}</span>
@@ -2562,11 +2562,11 @@ export function ChatView() {
 
               {streamingTimeline.length > 0 && (
                 <div className="flex justify-start">
-                  <div className="w-full text-sm leading-7 text-foreground">
+                  <div className="w-full space-y-3 text-sm leading-7 text-foreground">
+                    <div className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                      MaxClaw:
+                    </div>
                     <div className="rounded-xl border border-border bg-card px-5 py-4">
-                      <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-                        MaxClaw:
-                      </div>
                       <div className="mb-4 text-[11px] uppercase tracking-[0.14em] text-muted">
                         {language === 'zh' ? '执行中' : 'Running'}
                       </div>

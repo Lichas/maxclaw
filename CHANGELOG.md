@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **调整 assistant 顶部 `MaxClaw:` 的对齐位置**：将 `MaxClaw:` 从回复卡片内部移到 assistant 整个消息块顶部，与执行过程条和正文卡片左边界对齐，避免标签显得缩进过深
+  - `electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
 - **左上角品牌区去掉多余背景卡片**：侧边栏顶部的 `MaxClaw` 与“新建任务”区域移除外层灰色背景块，保留标题、在线状态与按钮本身，让信息层级更轻、更干净
   - `electron/src/renderer/components/Sidebar.tsx`
   - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
