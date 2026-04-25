@@ -2449,27 +2449,7 @@ export function ChatView() {
           <div className="flex-1 overflow-y-auto px-8 py-8 md:px-10 md:py-10">
             <div className="mx-auto max-w-4xl">
               <section className="rounded-xl border border-border bg-card p-5 md:p-6">
-                <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-secondary px-4 py-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
-                    <img
-                      src="./icon.png"
-                      alt="maxclaw"
-                      className="h-8 w-8 object-contain"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
-                      {language === 'zh' ? 'Ready to Work' : 'Ready to Work'}
-                    </p>
-                    <p className="mt-1 text-[15px] font-medium tracking-[-0.02em] text-foreground">
-                      {language === 'zh' ? '交代目标、限制和输出要求，MaxClaw 会继续往前推进。' : 'Describe the goal, constraints, and expected output. MaxClaw will take it forward.'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5">
-                  {renderComposer(true)}
-                </div>
+                {renderComposer(true)}
               </section>
 
               <section className="mt-6">

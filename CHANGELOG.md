@@ -104,6 +104,9 @@
 - **Sidebar 折叠状态改为图标窄条（ChatGPT 风格）**：折叠后不再完全隐藏，而是显示 52px 宽的垂直图标栏，包含展开按钮、新建任务按钮、四个导航图标（搜索任务/定时任务/技能市场/MCP管理）及设置图标，每个图标均可点击切换视图；同时移除 App.tsx 左上角浮动的侧边栏伸缩按钮，折叠/展开操作完全由 Sidebar 内部控制
   - `electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/App.tsx`
   - 验证：`cd electron && npm run build`、`make build`
+- **移除 ChatView 欢迎卡片**：删除空对话状态下的 "READY TO WORK" 图标与提示文字卡片，让 composer 和任务模板更直接地呈现
+  - `electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build`、`make build`
 
 ### Fixed
 
