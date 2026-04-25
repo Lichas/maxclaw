@@ -451,7 +451,7 @@ export function Sidebar() {
       className={`relative z-10 flex h-full w-[280px] shrink-0 flex-col overflow-hidden border-r border-border bg-background ${isMac ? 'pt-10' : 'pt-3'}`}
     >
       <div className="px-4 pb-3">
-        <div className="rounded-xl border border-border bg-secondary px-4 py-4 text-foreground">
+        <div className="px-2 py-3 text-foreground">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <h2 className="text-[22px] font-semibold tracking-[-0.04em]">MaxClaw</h2>
@@ -475,7 +475,7 @@ export function Sidebar() {
           </div>
           <button
             onClick={handleNewTask}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition-all duration-150 hover:bg-hover dark:hover:bg-hover"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition-all duration-150 hover:bg-hover dark:hover:bg-hover"
           >
             <EditIcon className="h-5 w-5 flex-shrink-0" />
             <span>{t('sidebar.newTask')}</span>

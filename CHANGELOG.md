@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **左上角品牌区去掉多余背景卡片**：侧边栏顶部的 `MaxClaw` 与“新建任务”区域移除外层灰色背景块，保留标题、在线状态与按钮本身，让信息层级更轻、更干净
+  - `electron/src/renderer/components/Sidebar.tsx`
+  - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
 - **聊天气泡与 assistant 顶部标识优化**：用户消息气泡改为浅薄荷绿色圆角样式，贴近参考稿；同时在 assistant 回复卡片与流式执行面板顶部补上 `MaxClaw:` 标识，增强消息归属感
   - `electron/src/renderer/views/ChatView.tsx`
   - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
