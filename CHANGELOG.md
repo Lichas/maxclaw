@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **聊天气泡与 assistant 顶部标识优化**：用户消息气泡改为浅薄荷绿色圆角样式，贴近参考稿；同时在 assistant 回复卡片与流式执行面板顶部补上 `MaxClaw:` 标识，增强消息归属感
+  - `electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
 - **定时任务导航告警更明确，技能市场图标改为首字母头像**：将侧边栏“定时任务”的失败提示从易误解的红点改成橙色 `!` 告警徽标，明确表示最近一次定时执行失败；同时把技能市场卡片图标统一为技能名首字母，减少噪音并提升一致性
   - `electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/views/SkillsView.tsx`
   - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`

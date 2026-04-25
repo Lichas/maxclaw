@@ -332,8 +332,8 @@ const MemoizedMessageItem = memo(function MemoizedMessageItem({
               ))}
             </div>
           )}
-          <div className="group relative rounded-xl bg-primary px-5 py-4 text-sm leading-7 text-primary-foreground">
-            <pre className="whitespace-pre-wrap break-all font-sans selection:bg-primary-foreground/30">{message.content}</pre>
+          <div className="group relative rounded-[28px] bg-[#d6f3e3] px-7 py-4 text-sm leading-7 text-[#12392e] shadow-[inset_0_0_0_1px_rgba(18,57,46,0.04)]">
+            <pre className="whitespace-pre-wrap break-all font-sans selection:bg-[#12392e]/15">{message.content}</pre>
           </div>
           <div className="flex items-center justify-end gap-3 px-1 text-[11px] uppercase tracking-[0.12em] text-muted">
             <span>{formatMessageTimestamp(message.timestamp)}</span>
@@ -360,6 +360,9 @@ const MemoizedMessageItem = memo(function MemoizedMessageItem({
           </div>
         )}
         <div className="rounded-xl border border-border bg-card px-5 py-4">
+          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+            MaxClaw:
+          </div>
           {renderMarkdownWithActions(message.content, message.id)}
           <div className="mt-4 flex items-center gap-3 text-[11px] uppercase tracking-[0.12em] text-muted">
             <span>{formatMessageTimestamp(message.timestamp)}</span>
@@ -2561,6 +2564,9 @@ export function ChatView() {
                 <div className="flex justify-start">
                   <div className="w-full text-sm leading-7 text-foreground">
                     <div className="rounded-xl border border-border bg-card px-5 py-4">
+                      <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+                        MaxClaw:
+                      </div>
                       <div className="mb-4 text-[11px] uppercase tracking-[0.14em] text-muted">
                         {language === 'zh' ? '执行中' : 'Running'}
                       </div>
