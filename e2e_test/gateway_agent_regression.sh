@@ -126,6 +126,28 @@ print(value)
 ' "$field"
 }
 
+session_count() {
+    python3 -c '
+import json
+import sys
+payload = json.load(sys.stdin)
+sessions = payload.get("sessions", [])
+print(len(sessions))
+'
+}
+
+session_contains() {
+    local session_key="$1"
+    python3 -c '
+import json
+import sys
+target = sys.argv[1]
+payload = json.load(sys.stdin)
+sessions = payload.get("sessions", [])
+print("yes" if any(item.get("key") == target for item in sessions) else "no")
+' "$session_key"
+}
+
 echo "=== Gateway Agent Regression E2E ==="
 
 TEST_HOME="$(make_temp_home)"
@@ -193,6 +215,26 @@ info "Starting gateway on :$GATEWAY_PORT"
 "$BUILD_DIR/maxclaw-gateway" maxclaw-gateway -p "$GATEWAY_PORT" >"$GATEWAY_LOG" 2>&1 &
 GATEWAY_PID=$!
 wait_for_url "http://127.0.0.1:$GATEWAY_PORT/api/status" "gateway"
+
+echo "Test 0: session list only gains the target session after first message"
+initial_sessions="$(curl --noproxy '*' -fsS "http://127.0.0.1:${GATEWAY_PORT}/api/sessions")"
+initial_count="$(printf '%s' "$initial_sessions" | session_count)"
+if [ "$(printf '%s' "$initial_sessions" | session_contains "webui:e2e-session-create")" != "no" ]; then
+    fail "Target regression session unexpectedly existed before first message"
+fi
+response="$(post_message "webui:e2e-session-create" "Reply with exactly E2E_PONG." | json_field response)"
+if [ "$response" != "E2E_PONG" ]; then
+    fail "Unexpected session creation response: $response"
+fi
+sessions_after_first_message="$(curl --noproxy '*' -fsS "http://127.0.0.1:${GATEWAY_PORT}/api/sessions")"
+if [ "$(printf '%s' "$sessions_after_first_message" | session_contains "webui:e2e-session-create")" != "yes" ]; then
+    fail "Expected new session to appear only after first message"
+fi
+after_count="$(printf '%s' "$sessions_after_first_message" | session_count)"
+if [ "$after_count" -lt $((initial_count + 1)) ]; then
+    fail "Expected session list count to grow after first message"
+fi
+pass "Gateway only gains the regression session after the first real message"
 
 echo "Test 1: basic request/response"
 response="$(post_message "webui:e2e-basic" "Reply with exactly E2E_PONG." | json_field response)"

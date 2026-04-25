@@ -14,6 +14,14 @@ This file provides guidance to coding agents (Codex, Claude, and similar) when w
   - where (key files)
   - how it was verified (test/build command)
 - If no repository files were changed, explicitly state that no changelog update is needed.
+- When changing stateful UI or session-management logic, think through the full interaction loop before editing:
+  - identify every effect, auto-redirect, default selection, and persistence path that can overwrite the new state
+  - verify the intended empty/initial state, transition state, and restored state separately
+  - avoid "local fix, global regression" changes where one handler is updated but linked sync logic still forces old behavior back
+- Core flows must gain regression coverage when they change:
+  - for session creation, chat routing, interrupt/resume, spawn/callback, and other user-visible control flow, add or extend an automated E2E/regression test in `e2e_test/`
+  - do not treat manual clicking as sufficient verification for these paths
+  - if full UI automation is not available yet, still add the closest end-to-end regression that exercises the real persistence/API boundary and document the remaining gap
 
 ## Parallel Sessions (Git Worktree)
 

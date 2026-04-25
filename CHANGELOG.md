@@ -3,6 +3,12 @@
 ## [Unreleased]
 
 ### Fixed
+- **为核心会话流补充回归约束与 session 创建 E2E**：在 `AGENTS.md` 中新增规则，要求修改会话创建、聊天路由、打断恢复、spawn/callback 等核心控制流时必须补自动化回归；同时扩展 `e2e_test/gateway_agent_regression.sh`，验证会话列表初始为空，并且只有首条真实消息后 session 才会持久化出现在列表中
+  - `AGENTS.md`、`e2e_test/gateway_agent_regression.sh`
+  - 验证：`bash e2e_test/gateway_agent_regression.sh`、`make build`
+- **补充 agent 工作规范，要求修改状态型 UI/会话逻辑时先检查完整交互回路**：在 `AGENTS.md` 中新增约束，要求修改 stateful UI、会话切换、自动同步与默认态逻辑时，先梳理 effect、自动重定向、持久化和初始/恢复态，避免局部修复引入全局回跳回归
+  - `AGENTS.md`
+  - 验证：`bash e2e_test/gateway_agent_regression.sh`、`make build`
 - **修复“新建任务”被自动拉回历史会话的问题**：侧边栏的渠道同步逻辑现在会识别空白新会话态；当用户点击“新建任务”进入空白聊天页时，不再被自动重定向回最近的历史会话
   - `electron/src/renderer/components/Sidebar.tsx`
   - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
