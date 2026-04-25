@@ -363,6 +363,7 @@ body {
 .chat-line .content {
   display: block;
   margin: 4px 0;
+  white-space: pre-wrap;
 }
 
 .chat-line .time {

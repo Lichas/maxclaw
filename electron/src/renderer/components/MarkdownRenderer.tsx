@@ -189,7 +189,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
             return <>{children}</>;
           },
           p({ children }: { children?: React.ReactNode }) {
-            return <p className="my-2 leading-7">{children}</p>;
+            return <p className="my-2 leading-7 whitespace-pre-wrap">{children}</p>;
           },
           ul({ children }: { children?: React.ReactNode }) {
             return <ul className="my-2 list-disc space-y-1 pl-5">{children}</ul>;

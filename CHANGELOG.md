@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **修复消息内容换行丢失问题**：在 Web UI 和 Electron 的聊天消息渲染中增加 `white-space: pre-wrap`，确保诗歌、代码等多行文本中的换行符能正确显示
+  - `webui/src/styles.css`、`electron/src/renderer/components/MarkdownRenderer.tsx`
+  - 验证：`make build`
 - **修复首条消息创建 session 后仍残留旧草稿输入**：当用户从空白新会话态发送第一条消息时，输入缓存现在会清理草稿态对应的空 key，而不是误清理新生成的 session key，避免后续再次点击“新建任务”时重新出现上一轮已完成会话的输入内容
   - `electron/src/renderer/views/ChatView.tsx`
   - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
