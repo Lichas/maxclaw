@@ -1384,6 +1384,16 @@ export function ChatView() {
   };
 
   const reloadSession = useCallback(async (sessionKey: string) => {
+    if (!sessionKey.trim()) {
+      setMessages([]);
+      setSessionTitle('New thread');
+      setPreviewSidebarCollapsed(true);
+      setSelectedFileRef(null);
+      setPreviewData(null);
+      setPreviewLoading(false);
+      return;
+    }
+
     setPreviewSidebarCollapsed(true);
     setSelectedFileRef(null);
     setPreviewData(null);
@@ -1498,7 +1508,10 @@ export function ChatView() {
     if (!input.trim() || isGenerating) {
       return;
     }
-    const requestSessionKey = currentSessionKey;
+    const requestSessionKey = currentSessionKey.trim() || `desktop:${Date.now()}`;
+    if (!currentSessionKey.trim()) {
+      dispatch(setCurrentSessionKey(requestSessionKey));
+    }
     let waitingForBackgroundResult = false;
     setPreviewSidebarCollapsed(true);
     setSessionGenerating(requestSessionKey, true);

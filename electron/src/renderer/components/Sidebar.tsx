@@ -40,7 +40,6 @@ export function Sidebar() {
   const { getSessions, deleteSession, renameSession } = useGateway();
   const isMac = window.electronAPI.platform.isMac;
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [draftSessions, setDraftSessions] = useState<Record<string, SessionSummary>>({});
   const [channelFilter, setChannelFilter] = useState<string>('desktop');
   const [hasFailedCronJobs, setHasFailedCronJobs] = useState(false);
 
@@ -53,14 +52,6 @@ export function Sidebar() {
   const [sessionToDeleteTitle, setSessionToDeleteTitle] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
   const shouldSyncTaskContext = activeTab === 'chat' || activeTab === 'sessions' || activeTab === 'scheduled';
-
-  const buildDraftSession = (key: string): SessionSummary => ({
-    key,
-    messageCount: 0,
-    title: t('sidebar.newTask'),
-    lastMessage: t('sidebar.newTask'),
-    lastMessageAt: new Date().toISOString()
-  });
 
   // Check for failed cron jobs
   useEffect(() => {
@@ -147,20 +138,9 @@ export function Sidebar() {
 
   const confirmDelete = async () => {
     if (!sessionToDelete) return;
-    const isDraftOnly = Boolean(draftSessions[sessionToDelete]) && !sessions.some((s) => s.key === sessionToDelete);
     try {
-      if (!isDraftOnly) {
-        await deleteSession(sessionToDelete);
-      }
+      await deleteSession(sessionToDelete);
       setSessions((prev) => prev.filter((s) => s.key !== sessionToDelete));
-      setDraftSessions((prev) => {
-        if (!prev[sessionToDelete]) {
-          return prev;
-        }
-        const next = { ...prev };
-        delete next[sessionToDelete];
-        return next;
-      });
       if (currentSessionKey === sessionToDelete) {
         dispatch(setCurrentSessionKey(''));
       }
@@ -183,21 +163,9 @@ export function Sidebar() {
       setEditingSession(null);
       return;
     }
-    const isDraftOnly = Boolean(draftSessions[editingSession]) && !sessions.some((s) => s.key === editingSession);
     try {
-      if (!isDraftOnly) {
-        await renameSession(editingSession, editTitle.trim());
-      }
+      await renameSession(editingSession, editTitle.trim());
       setSessions((prev) => prev.map((s) => (s.key === editingSession ? { ...s, title: editTitle.trim() } : s)));
-      setDraftSessions((prev) => {
-        if (!prev[editingSession]) {
-          return prev;
-        }
-        return {
-          ...prev,
-          [editingSession]: { ...prev[editingSession], title: editTitle.trim() }
-        };
-      });
     } catch {
       alert(t('common.error'));
     }
@@ -217,20 +185,6 @@ export function Sidebar() {
         const list = await getSessions();
         if (!cancelled) {
           setSessions(list);
-          setDraftSessions((prev) => {
-            if (Object.keys(prev).length === 0) {
-              return prev;
-            }
-            const next = { ...prev };
-            let changed = false;
-            for (const item of list) {
-              if (next[item.key]) {
-                delete next[item.key];
-                changed = true;
-              }
-            }
-            return changed ? next : prev;
-          });
         }
       } catch {
         if (!cancelled) {
@@ -250,24 +204,16 @@ export function Sidebar() {
 
   const mergedSessions = useMemo(() => {
     const mergedMap = new Map<string, SessionSummary>();
-    Object.values(draftSessions).forEach((session) => {
-      mergedMap.set(session.key, session);
-    });
     sessions.forEach((session) => {
       mergedMap.set(session.key, session);
     });
-
-    const currentChannel = extractSessionChannel(currentSessionKey);
-    if (!mergedMap.has(currentSessionKey) && currentChannel === 'desktop') {
-      mergedMap.set(currentSessionKey, buildDraftSession(currentSessionKey));
-    }
 
     return Array.from(mergedMap.values()).sort((a, b) => {
       const ta = a.lastMessageAt ? Date.parse(a.lastMessageAt) : 0;
       const tb = b.lastMessageAt ? Date.parse(b.lastMessageAt) : 0;
       return tb - ta;
     });
-  }, [sessions, draftSessions, currentSessionKey]);
+  }, [sessions]);
 
   const channelOptions = useMemo(() => {
     const defaultOptions = [...DEFAULT_CHANNEL_ORDER];
@@ -316,34 +262,14 @@ export function Sidebar() {
         // Select the most recent session of this channel
         dispatch(setCurrentSessionKey(channelSessions[0].key));
       } else {
-        // No sessions for this channel, create a draft session
-        const newSessionKey = `${normalizedFilter}:${Date.now()}`;
-        setDraftSessions((prev) => ({
-          ...prev,
-          [newSessionKey]: buildDraftSession(newSessionKey)
-        }));
-        dispatch(setCurrentSessionKey(newSessionKey));
+        dispatch(setCurrentSessionKey(''));
       }
     }
   }, [channelFilter, channelOptions, mergedSessions, currentSessionKey, dispatch, shouldSyncTaskContext]);
 
   const handleNewTask = () => {
-    const newSessionKey = `desktop:${Date.now()}`;
-    setDraftSessions((prev) => {
-      const next = { ...prev };
-      if (
-        currentSessionKey &&
-        extractSessionChannel(currentSessionKey) === 'desktop' &&
-        !sessions.some((session) => session.key === currentSessionKey) &&
-        !next[currentSessionKey]
-      ) {
-        next[currentSessionKey] = buildDraftSession(currentSessionKey);
-      }
-      next[newSessionKey] = buildDraftSession(newSessionKey);
-      return next;
-    });
     setChannelFilter('desktop');
-    dispatch(setCurrentSessionKey(newSessionKey));
+    dispatch(setCurrentSessionKey(''));
     dispatch(setActiveTab('chat'));
   };
 

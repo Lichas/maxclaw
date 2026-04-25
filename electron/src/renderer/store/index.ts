@@ -73,7 +73,7 @@ const uiSlice = createSlice({
     sidebarCollapsed: false,
     terminalVisible: false,
     activeTab: 'chat',
-    currentSessionKey: 'desktop:default',
+    currentSessionKey: '',
     runningSessionKeys: []
   } as UIState,
   reducers: {

@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **空白新会话不再提前出现在左侧，应用启动默认停留在新会话界面**：移除未发送前的 draft session 占位逻辑，只有用户真正输入并发送第一条消息后，session 才会进入左侧历史列表；同时应用启动和托盘新建会话默认进入空白新会话态，不再自动跳进任意历史会话
+  - `electron/src/renderer/store/index.ts`、`electron/src/renderer/App.tsx`、`electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
 - **调整 assistant 顶部 `MaxClaw:` 的对齐位置**：将 `MaxClaw:` 从回复卡片内部移到 assistant 整个消息块顶部，与执行过程条和正文卡片左边界对齐，避免标签显得缩进过深
   - `electron/src/renderer/views/ChatView.tsx`
   - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`

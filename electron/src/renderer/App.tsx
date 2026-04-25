@@ -28,7 +28,7 @@ function App() {
     : { left: '120px', right: '0px', top: '0px' };
 
   useEffect(() => {
-    dispatch(setCurrentSessionKey(`desktop:${Date.now()}`));
+    dispatch(setCurrentSessionKey(''));
 
     // Load app settings from electron store
     window.electronAPI.config.get().then((config) => {
@@ -87,6 +87,7 @@ function App() {
 
     // Listen for tray events
     const unsubscribeNewChat = window.electronAPI.tray.onNewChat(() => {
+      dispatch(setCurrentSessionKey(''));
       dispatch(setActiveTab('chat'));
     });
 
