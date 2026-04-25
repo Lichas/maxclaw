@@ -492,7 +492,7 @@ func TestAgentLoopProcessMessageAutoConsolidatesWhenSessionLarge(t *testing.T) {
 	)
 
 	sess := loop.sessions.GetOrCreate("telegram:chat-42")
-	for i := 0; i < sessionConsolidateThreshold+5; i++ {
+	for i := 0; i < sessionConsolidateKeepRecent+5; i++ {
 		sess.AddMessage("user", "context")
 	}
 	require.NoError(t, loop.sessions.Save(sess))

@@ -23,7 +23,6 @@ import (
 
 const (
 	sessionContextWindow         = 500
-	sessionConsolidateThreshold  = 120
 	sessionConsolidateKeepRecent = 40
 	autoModeIterationMultiplier  = 5
 )
@@ -777,10 +776,18 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 		sess.AddMessage("assistant", finalContent)
 	}
 
-	if len(sess.Messages) > sessionConsolidateThreshold {
+	// Archive on every assistant response: long sessions keep recent messages,
+	// short sessions archive everything.
+	if len(sess.Messages) > sessionConsolidateKeepRecent {
 		if _, err := memory.ConsolidateSession(a.Workspace, sess, sessionConsolidateKeepRecent); err != nil {
 			if lg := logging.Get(); lg != nil && lg.Session != nil {
 				lg.Session.Printf("memory consolidation failed: %v", err)
+			}
+		}
+	} else if len(sess.Messages) > sess.LastConsolidated {
+		if _, err := memory.ArchiveSessionAll(a.Workspace, sess); err != nil {
+			if lg := logging.Get(); lg != nil && lg.Session != nil {
+				lg.Session.Printf("memory archive failed: %v", err)
 			}
 		}
 	}
