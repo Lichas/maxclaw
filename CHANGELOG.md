@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **中英文 README 同步 Agent 生命周期说明**：更新 `README.md` 与 `README.zh.md` 的生命周期介绍，明确当前已接通的会话钩子、上下文压缩重试链路与 provider 归因方式，并顺手把中文 README 的 Go 版本徽章同步到 `1.24+`
+  - `README.md`、`README.zh.md`
+  - 验证：`make build`
 - **Agent 生命周期压缩重试与 provider 归因修复**：生命周期错误恢复在遇到上下文溢出时，现在会先压缩当前会话消息再重试 `ChatStream`，不再直接中断；同时将生命周期统计、错误分类和压缩器中的 provider 标识改为基于 provider 类型推导，避免误把默认模型名当作 provider 名写入进化/洞察数据
   - `internal/agent/loop.go`、`internal/agent/loop_test.go`
   - 验证：`go test ./internal/agent/...`、`go test ./internal/cli/...`、`bash e2e_test/gateway_agent_regression.sh`、`make build`

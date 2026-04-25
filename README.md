@@ -164,26 +164,32 @@ Set `agents.defaults.executionMode`:
 
 ## Agent Lifecycle
 
-MaxClaw implements a **six-layer adaptive system** that continuously learns from errors and user feedback:
+MaxClaw ships with a **six-layer adaptive lifecycle** for long-running local agent sessions. It is designed to make failures recoverable, state inspectable, and behavior improvable over time:
 
 | Layer | Purpose | Key Capabilities |
 |-------|---------|------------------|
 | **1. Verification** | Error handling | Auto-classify 15+ error types with recovery strategies (Auth, RateLimit, ContextOverflow, etc.) |
-| **2. Reflection** | Context management | Smart compression with structured summaries, token usage insights, cost estimation |
-| **3. Adaptation** | Dynamic adjustment | Multi-tier model fallback, adaptive context length, retry with exponential backoff |
+| **2. Reflection** | Context management | Structured context compaction, token usage insights, cost estimation |
+| **3. Adaptation** | Dynamic adjustment | Model fallback, adaptive context length, retry with exponential backoff |
 | **4. Persistence** | Session recovery | Filesystem checkpoints, automatic recovery, resume from failures |
 | **5. Evolution** | Pattern learning | Error pattern recognition, strategy effectiveness tracking, self-improvement metrics |
 | **6. Feedback** | User learning | Three-tier feedback detection (Rules→Context→LLM), cross-session MEMORY.md persistence |
 
-**Example - Automatic Error Recovery:**
+**What is active in the current runtime:**
+- lifecycle hooks are attached in CLI, Gateway, and cron agent entrypoints
+- session start/end, API success/error tracking, tool execution tracking, and iteration checkpoints are persisted during the main loop
+- context-overflow style API failures can trigger structured context compaction and an in-loop retry instead of failing immediately
+- provider attribution for lifecycle stats uses the runtime provider identity rather than the provider's default model name
+
+**Example - Context overflow recovery:**
 ```
 Error: 400 Bad Request (context too large)
 ↓
 [Verification] Classifies as ContextOverflowError
 ↓
-[Reflection] Compresses conversation to structured summary
+[Reflection] Compacts earlier turns into a structured summary
 ↓
-[Adaptation] Reduces context length by 30%, falls back to model with larger window
+[Adaptation] Retries with updated runtime settings or a larger-window fallback model
 ↓
 [Persistence] Saves checkpoint for potential recovery
 ↓
@@ -192,7 +198,7 @@ Error: 400 Bad Request (context too large)
 [Feedback] If user corrects, learns: "Prefer explicit type annotations in Go"
 ```
 
-The system is **cost-optimized**: 70% of feedback detection uses regex rules (zero cost), only 15% require LLM semantic analysis (~$0.1/day). See `docs/agent_lifecycle.md` for details.
+The lifecycle is intentionally local-first: checkpoints, evolution stats, and learned feedback stay in the workspace. See `docs/agent_lifecycle.md` for implementation details.
 
 ## Web UI
 
