@@ -6,6 +6,35 @@
 
 ---
 
+## 2026-04-25 - OpenRouter 模型路由到错误 API 端点 (401)
+
+**问题**：
+- 使用 OpenRouter 模型如 `tencent/hy3-preview:free` 时，LLM 请求返回 401 错误
+- 错误信息显示 `provider=openai api_base=https://api.openai.com/v1`，但 API key 是 OpenRouter 的格式 (`sk-or-v1...`)
+- OpenRouter 的 key 被发送到了 OpenAI 原生端点
+
+**根因**：
+- `config.GetAPIKey()` 对无法识别的模型 ID fallback 到 ProviderSpecs 中第一个配置了 key 的 provider（openrouter 排第一）
+- `config.GetAPIBase()` 对无法识别的模型 ID 却 fallback 到 vllm 或返回空字符串，导致使用默认的 `https://api.openai.com/v1`
+- 两者 fallback 逻辑不一致：key 拿到了 OpenRouter 的，base URL 却用了 OpenAI 的
+
+**修复**：
+- 在 `GetAPIBase()` 的 `looksLikeRawModelID` fallback 路径中，当 vllm 未配置时，按 ProviderSpecs 顺序返回第一个配置了 apiBase 的 provider
+- 这样 `GetAPIBase` 和 `GetAPIKey` 的 fallback 行为保持一致
+- vLLM 显式配置时仍优先保留（不影响现有 vLLM 用户）
+
+**验证**：
+```bash
+go test ./internal/config/ -v -run "TestGetAPIBaseFallsBack|TestGetAPIBaseVLLM"
+make build
+```
+
+**修复文件**：
+- `internal/config/schema.go`
+- `internal/config/schema_test.go`
+
+---
+
 ## 2026-03-18 - React Error #310: Hooks 顺序错误
 
 **问题**：

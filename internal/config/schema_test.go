@@ -2,6 +2,53 @@ package config
 
 import "testing"
 
+func TestGetAPIBaseFallsBackToFirstConfiguredProviderForRawModelID(t *testing.T) {
+	// OpenRouter models like "tencent/hy3-preview:free" don't match any
+	// ProviderSpec keyword, but should route to OpenRouter when it is the
+	// first configured provider (matching GetAPIKey's fallback behavior).
+	cfg := &Config{
+		Agents: AgentsConfig{
+			Defaults: AgentDefaults{Model: "tencent/hy3-preview:free"},
+		},
+		Providers: ProvidersConfig{
+			OpenRouter: ProviderConfig{
+				APIKey:  "sk-or-v1-test",
+				APIBase: "https://openrouter.ai/api/v1",
+			},
+		},
+	}
+
+	base := cfg.GetAPIBase("tencent/hy3-preview:free")
+	if base != "https://openrouter.ai/api/v1" {
+		t.Fatalf("expected OpenRouter apiBase for raw model ID, got %q", base)
+	}
+}
+
+func TestGetAPIBaseVLLMTakesPriorityOverFallback(t *testing.T) {
+	// When both vLLM and OpenRouter are configured, vLLM should still win
+	// for raw model IDs because it is explicitly checked first.
+	cfg := &Config{
+		Agents: AgentsConfig{
+			Defaults: AgentDefaults{Model: "meta-llama/Llama-3.1-8B-Instruct"},
+		},
+		Providers: ProvidersConfig{
+			OpenRouter: ProviderConfig{
+				APIKey:  "sk-or-v1-test",
+				APIBase: "https://openrouter.ai/api/v1",
+			},
+			VLLM: ProviderConfig{
+				APIKey:  "sk-vllm-test",
+				APIBase: "http://localhost:8000/v1",
+			},
+		},
+	}
+
+	base := cfg.GetAPIBase("meta-llama/Llama-3.1-8B-Instruct")
+	if base != "http://localhost:8000/v1" {
+		t.Fatalf("expected vLLM apiBase to take priority, got %q", base)
+	}
+}
+
 func TestSupportsImageInputUsesExplicitModelCapability(t *testing.T) {
 	enabled := true
 	cfg := &Config{

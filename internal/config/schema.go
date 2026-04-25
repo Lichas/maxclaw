@@ -486,6 +486,16 @@ func (c *Config) GetAPIBase(model string) string {
 		if cfg, ok := providerMap["vllm"]; ok && cfg.APIBase != "" {
 			return cfg.APIBase
 		}
+		// Fallback: if no vLLM base is set, align with GetAPIKey's fallback
+		// behavior and use the first provider that has an apiBase configured.
+		// This fixes OpenRouter models like "tencent/hy3-preview:free" that
+		// lack a matching keyword in ProviderSpecs but are accessed via an
+		// aggregator that is already configured (e.g. OpenRouter).
+		for _, spec := range providers.ProviderSpecs {
+			if cfg, ok := providerMap[spec.Name]; ok && cfg.APIBase != "" {
+				return normalizeProviderAPIBase(spec.Name, model, cfg.APIBase)
+			}
+		}
 	}
 
 	return ""

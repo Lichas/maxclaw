@@ -15,6 +15,9 @@
 - **Moonshot/Kimi API 403 错误修复**: Kimi For Coding API (`api.kimi.com/coding`) 要求使用 Anthropic Messages API 格式。当检测到该 API Base 时，maxclaw 自动切换到 Anthropic Provider，并将 base URL 修正为 `https://api.kimi.com/coding`（去掉 `/v1`），从而兼容 Claude Code 风格的集成方式，避免 403 访问限制
   - `internal/providers/factory.go`、`internal/providers/factory_test.go`
   - 验证：`go test ./internal/providers/...`、`make build`
+- **OpenRouter 无关键字模型路由到错误端点 (401)**: `GetAPIKey` 和 `GetAPIBase` 对无法识别的 `provider/model` 格式模型 fallback 逻辑不一致。key 拿到 OpenRouter 的，但 base URL 默认到 OpenAI 导致 401。修复后 `GetAPIBase` 在 `looksLikeRawModelID` fallback 时与 `GetAPIKey` 保持一致，按 ProviderSpecs 顺序使用第一个配置了 apiBase 的 provider；vLLM 显式配置时仍优先保留
+  - `internal/config/schema.go`、`internal/config/schema_test.go`
+  - 验证：`go test ./internal/config/...`、`make build`
 - **OpenRouter model ID parsing**: Fixed issue where provider prefix (e.g., `openrouter/`) was not being stripped from model IDs like `openrouter/nvidia/nemotron-3-super-120b-a12b:free` when calling OpenAI-compatible APIs. Now properly normalizes model names in both `Chat()` and `ChatStream()` methods.
 - **聊天输入框输入/删除响应卡顿修复**：修复输入框在触发 `@mention` / `/slash` 检测时提前返回导致 value 未及时写回的问题，并将消息渲染相关回调改为稳定引用，减少输入期间历史消息不必要重渲染，提升连续输入与删除的流畅度
   - `electron/src/renderer/views/ChatView.tsx`
