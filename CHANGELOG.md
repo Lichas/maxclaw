@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **修复首条消息创建 session 后仍残留旧草稿输入**：当用户从空白新会话态发送第一条消息时，输入缓存现在会清理草稿态对应的空 key，而不是误清理新生成的 session key，避免后续再次点击“新建任务”时重新出现上一轮已完成会话的输入内容
+  - `electron/src/renderer/views/ChatView.tsx`
+  - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
 - **为核心会话流补充回归约束与 session 创建 E2E**：在 `AGENTS.md` 中新增规则，要求修改会话创建、聊天路由、打断恢复、spawn/callback 等核心控制流时必须补自动化回归；同时扩展 `e2e_test/gateway_agent_regression.sh`，验证会话列表初始为空，并且只有首条真实消息后 session 才会持久化出现在列表中
   - `AGENTS.md`、`e2e_test/gateway_agent_regression.sh`
   - 验证：`bash e2e_test/gateway_agent_regression.sh`、`make build`

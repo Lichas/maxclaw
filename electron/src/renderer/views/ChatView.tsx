@@ -1508,8 +1508,9 @@ export function ChatView() {
     if (!input.trim() || isGenerating) {
       return;
     }
-    const requestSessionKey = currentSessionKey.trim() || `desktop:${Date.now()}`;
-    if (!currentSessionKey.trim()) {
+    const draftSessionKey = currentSessionKey;
+    const requestSessionKey = draftSessionKey.trim() || `desktop:${Date.now()}`;
+    if (!draftSessionKey.trim()) {
       dispatch(setCurrentSessionKey(requestSessionKey));
     }
     let waitingForBackgroundResult = false;
@@ -1531,7 +1532,7 @@ export function ChatView() {
     if (shouldUpdateTitle) {
       setSessionTitle(formatSessionTitle(userMessage.content));
     }
-    clearInputForSession(requestSessionKey);
+    clearInputForSession(draftSessionKey.trim() ? requestSessionKey : draftSessionKey);
     setAttachedFiles([]);
     setSkillsPickerOpen(false);
     resetStreamingState(requestSessionKey);
