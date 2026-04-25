@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState, setActiveTab, setCurrentSessionKey } from '../store';
+import { RootState, setActiveTab, setCurrentSessionKey, toggleSidebar } from '../store';
 import { SessionSummary, useGateway } from '../hooks/useGateway';
 import { useTranslation } from '../i18n';
 import { CustomSelect } from './CustomSelect';
@@ -376,15 +376,26 @@ export function Sidebar() {
     >
       <div className="px-4 pb-3">
         <div className="rounded-xl border border-border bg-secondary px-4 py-4 text-foreground">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">Desktop Agent</p>
-              <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">MaxClaw</h2>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-[22px] font-semibold tracking-[-0.04em]">MaxClaw</h2>
+              <div className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusTone}`}>
+                <span className={`status-dot ${status}`} />
+                {statusLabel}
+              </div>
             </div>
-            <div className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusTone}`}>
-              <span className={`status-dot ${status}`} />
-              {statusLabel}
-            </div>
+            <button
+              onClick={() => dispatch(toggleSidebar())}
+              className="flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-hover hover:text-foreground"
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="16" rx="2" strokeWidth={1.5} />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 4v16" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14 9l-3 3 3 3" />
+              </svg>
+            </button>
           </div>
           <button
             onClick={handleNewTask}
@@ -397,22 +408,6 @@ export function Sidebar() {
       </div>
 
       <nav className="sidebar-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-4 [transform:translateZ(0)]">
-        <div className="mb-5 grid grid-cols-2 gap-2 px-1">
-          <div className="rounded-lg border border-border bg-secondary px-3 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {language === 'zh' ? '任务' : 'Threads'}
-            </p>
-            <p className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-foreground">{mergedSessions.length}</p>
-          </div>
-          <div className="rounded-lg border border-border bg-secondary px-3 py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {language === 'zh' ? '当前渠道' : 'Channel'}
-            </p>
-            <p className="mt-2 truncate text-sm font-semibold text-foreground">
-              {getChannelLabel(normalizeChannelKey(channelFilter), language)}
-            </p>
-          </div>
-        </div>
 
         <div className="rounded-lg border border-border bg-secondary p-1">
           {menuItems.map((item) => {

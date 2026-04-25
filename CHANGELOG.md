@@ -98,6 +98,9 @@
   - `electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/components/MarkdownRenderer.tsx`、`electron/src/renderer/components/TerminalPanel.tsx`、`electron/src/renderer/components/ConfirmDialog.tsx`、`electron/src/renderer/components/ProviderEditor.tsx`、`electron/src/renderer/components/IMBotConfig.tsx`、`electron/src/renderer/components/ExecutionHistory.tsx`、`electron/src/renderer/components/CustomSelect.tsx`、`electron/src/renderer/components/FileTreeSidebar.tsx`、`electron/src/renderer/components/FileAttachment.tsx`、`electron/src/renderer/components/FilePreviewSidebar.tsx`、`electron/src/renderer/components/TitleBar.tsx`、`electron/src/renderer/components/MermaidRenderer.tsx`、`electron/src/renderer/components/CronBuilder.css`、`electron/src/renderer/components/EmailConfig.tsx`
   - `electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/views/SessionsView.tsx`、`electron/src/renderer/views/SettingsView.tsx`、`electron/src/renderer/views/MCPView.tsx`、`electron/src/renderer/views/SkillsView.tsx`、`electron/src/renderer/views/ScheduledTasksView.tsx`
   - 验证：`cd electron && npm run build`、`make build`
+- **Sidebar 顶部区域精简布局**：移除 "Desktop Agent" 标签，将在线状态（● 在线/Offline）移至 MaxClaw 标题右侧同行显示，右上角新增折叠边栏按钮；移除下方的任务数和当前渠道统计卡片，减少视觉噪音
+  - `electron/src/renderer/components/Sidebar.tsx`
+  - 验证：`cd electron && npm run build`、`make build`
 
 ### Fixed
 
