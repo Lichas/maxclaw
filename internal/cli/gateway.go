@@ -94,6 +94,7 @@ var gatewayCmd = &cobra.Command{
 			cfg.Tools.MCPServers,
 			cfg.Agents.Defaults.EnableGlobalSkills,
 		)
+		agentLoop.InitializeLifecycle()
 		agentLoop.UpdateRuntimeExecutionMode(cfg.Agents.Defaults.ExecutionMode)
 		defer agentLoop.Close()
 

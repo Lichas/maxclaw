@@ -11,26 +11,26 @@ import (
 
 // RuntimeConfig holds the primary runtime configuration
 type RuntimeConfig struct {
-	Provider           providers.LLMProvider
-	Model              string
-	BaseURL            string
-	APIKey             string
-	APIMode            string
-	MaxIterations      int
-	MaxTokens          int
-	Temperature        float64
-	UsePromptCaching   bool
-	ContextLength      int
+	Provider         providers.LLMProvider
+	Model            string
+	BaseURL          string
+	APIKey           string
+	APIMode          string
+	MaxIterations    int
+	MaxTokens        int
+	Temperature      float64
+	UsePromptCaching bool
+	ContextLength    int
 }
 
 // FallbackProvider represents a fallback provider in the chain
 type FallbackProvider struct {
-	Provider  providers.LLMProvider
-	Model     string
-	BaseURL   string
-	APIKey    string
-	APIMode   string
-	Priority  int
+	Provider providers.LLMProvider
+	Model    string
+	BaseURL  string
+	APIKey   string
+	APIMode  string
+	Priority int
 }
 
 // AdaptationManager manages runtime adaptation including fallback and parameter adjustment
@@ -46,19 +46,19 @@ type AdaptationManager struct {
 	FallbackActivated bool
 
 	// Context adaptation
-	ContextLength        int
+	ContextLength         int
 	OriginalContextLength int
-	CompressionThreshold float64
+	CompressionThreshold  float64
 
 	// Retry state
-	RetryCount      int
-	MaxRetries      int
-	LastError       *ClassifiedError
-	LastRetryAt     time.Time
+	RetryCount  int
+	MaxRetries  int
+	LastError   *ClassifiedError
+	LastRetryAt time.Time
 
 	// Adaptive parameters
-	AdaptiveMaxTokens   bool
-	EphemeralMaxTokens  int
+	AdaptiveMaxTokens  bool
+	EphemeralMaxTokens int
 
 	// Callbacks
 	OnFallbackActivated func(from, to string)
@@ -90,7 +90,7 @@ func NewAdaptationManager(primary RuntimeConfig, maxRetries int) *AdaptationMana
 func (am *AdaptationManager) AddFallbackProvider(fp FallbackProvider) {
 	am.mu.Lock()
 	defer am.mu.Unlock()
-	
+
 	// Insert in priority order
 	inserted := false
 	for i, existing := range am.FallbackChain {
@@ -157,14 +157,14 @@ func (am *AdaptationManager) TryActivateFallback() (RuntimeConfig, bool) {
 	am.RetryCount = 0 // Reset retry count for new provider
 
 	newRuntime := RuntimeConfig{
-		Provider:     fallback.Provider,
-		Model:        fallback.Model,
-		BaseURL:      fallback.BaseURL,
-		APIKey:       fallback.APIKey,
-		APIMode:      fallback.APIMode,
+		Provider:      fallback.Provider,
+		Model:         fallback.Model,
+		BaseURL:       fallback.BaseURL,
+		APIKey:        fallback.APIKey,
+		APIMode:       fallback.APIMode,
 		MaxIterations: am.PrimaryRuntime.MaxIterations,
-		MaxTokens:    am.PrimaryRuntime.MaxTokens,
-		Temperature:  am.PrimaryRuntime.Temperature,
+		MaxTokens:     am.PrimaryRuntime.MaxTokens,
+		Temperature:   am.PrimaryRuntime.Temperature,
 	}
 
 	// Trigger callback
@@ -209,7 +209,7 @@ func (am *AdaptationManager) IsFallbackActive() bool {
 func (am *AdaptationManager) RecordRetry(classifiedErr *ClassifiedError) {
 	am.mu.Lock()
 	defer am.mu.Unlock()
-	
+
 	am.RetryCount++
 	am.LastError = classifiedErr
 	am.LastRetryAt = time.Now()
@@ -249,7 +249,7 @@ func (am *AdaptationManager) AdjustContextLength(newLength int, persistable bool
 
 	oldLength := am.ContextLength
 	am.ContextLength = newLength
-	
+
 	if !persistable {
 		// Don't update original - this is a temporary adjustment
 	} else {
@@ -271,7 +271,7 @@ func (am *AdaptationManager) StepDownContextLength() int {
 	if newLength < am.ContextLength {
 		oldLength := am.ContextLength
 		am.ContextLength = newLength
-		
+
 		if am.OnContextAdjusted != nil {
 			go am.OnContextAdjusted(oldLength, newLength)
 		}
@@ -304,7 +304,7 @@ func (am *AdaptationManager) SetEphemeralMaxTokens(tokens int) {
 func (am *AdaptationManager) GetEffectiveMaxTokens() int {
 	am.mu.RLock()
 	defer am.mu.RUnlock()
-	
+
 	if am.EphemeralMaxTokens > 0 {
 		return am.EphemeralMaxTokens
 	}
@@ -322,13 +322,13 @@ func (am *AdaptationManager) ClearEphemeralMaxTokens() {
 func (am *AdaptationManager) GetRetryBackoff() time.Duration {
 	am.mu.RLock()
 	defer am.mu.RUnlock()
-	
+
 	// Jittered exponential: 1s, 2s, 4s, 8s with randomness
 	baseDelay := time.Duration(1<<am.RetryCount) * time.Second
 	if baseDelay > 30*time.Second {
 		baseDelay = 30 * time.Second
 	}
-	
+
 	// Add jitter (±25%)
 	jitter := time.Duration(float64(baseDelay) * 0.25 * (float64(time.Now().UnixNano()%100) / 100.0))
 	if time.Now().UnixNano()%2 == 0 {
@@ -336,7 +336,7 @@ func (am *AdaptationManager) GetRetryBackoff() time.Duration {
 	} else {
 		baseDelay -= jitter
 	}
-	
+
 	return baseDelay
 }
 
@@ -363,8 +363,8 @@ func (am *AdaptationManager) HandleError(ctx context.Context, classifiedErr *Cla
 	}
 
 	// Check for context-specific errors
-	if classifiedErr.Reason == ErrorReasonContextOverflow || 
-	   classifiedErr.Reason == ErrorReasonLongContextTier {
+	if classifiedErr.Reason == ErrorReasonContextOverflow ||
+		classifiedErr.Reason == ErrorReasonLongContextTier {
 		// Step down context length
 		newLength := am.StepDownContextLength()
 		if newLength > 0 {
@@ -432,25 +432,25 @@ func (am *AdaptationManager) GetStats() map[string]interface{} {
 	defer am.mu.RUnlock()
 
 	return map[string]interface{}{
-		"fallback_activated":     am.FallbackActivated,
-		"fallback_index":         am.FallbackIndex,
-		"fallback_count":         len(am.FallbackChain),
-		"retry_count":            am.RetryCount,
-		"max_retries":            am.MaxRetries,
-		"context_length":         am.ContextLength,
+		"fallback_activated":      am.FallbackActivated,
+		"fallback_index":          am.FallbackIndex,
+		"fallback_count":          len(am.FallbackChain),
+		"retry_count":             am.RetryCount,
+		"max_retries":             am.MaxRetries,
+		"context_length":          am.ContextLength,
 		"original_context_length": am.OriginalContextLength,
-		"threshold_tokens":       int(float64(am.ContextLength) * am.CompressionThreshold),
-		"ephemeral_max_tokens":   am.EphemeralMaxTokens,
+		"threshold_tokens":        int(float64(am.ContextLength) * am.CompressionThreshold),
+		"ephemeral_max_tokens":    am.EphemeralMaxTokens,
 	}
 }
 
 // ModelSwitchRequest represents a request to switch models
 type ModelSwitchRequest struct {
-	NewModel   string
+	NewModel    string
 	NewProvider providers.LLMProvider
-	BaseURL    string
-	APIKey     string
-	APIMode    string
+	BaseURL     string
+	APIKey      string
+	APIMode     string
 }
 
 // SwitchModel switches the primary model at runtime
@@ -477,7 +477,7 @@ func (am *AdaptationManager) SwitchModel(ctx context.Context, req ModelSwitchReq
 	am.RetryCount = 0
 
 	// Update context length for new model
-	newContextLength := getModelContextLength(req.NewModel, req.BaseURL, 0)
+	newContextLength := getModelContextLength(req.NewModel, 0)
 	am.ContextLength = newContextLength
 	am.OriginalContextLength = newContextLength
 

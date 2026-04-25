@@ -62,38 +62,38 @@ type TopSession struct {
 
 // InsightsReport contains the complete insights analysis
 type InsightsReport struct {
-	Days           int            `json:"days"`
-	SourceFilter   string         `json:"source_filter,omitempty"`
-	Empty          bool           `json:"empty"`
-	GeneratedAt    time.Time      `json:"generated_at"`
-	Overview       OverviewStats  `json:"overview"`
-	Models         []ModelUsage   `json:"models"`
-	Tools          []ToolUsage    `json:"tools"`
-	Activity       ActivityStats  `json:"activity"`
-	TopSessions    []TopSession   `json:"top_sessions"`
+	Days         int           `json:"days"`
+	SourceFilter string        `json:"source_filter,omitempty"`
+	Empty        bool          `json:"empty"`
+	GeneratedAt  time.Time     `json:"generated_at"`
+	Overview     OverviewStats `json:"overview"`
+	Models       []ModelUsage  `json:"models"`
+	Tools        []ToolUsage   `json:"tools"`
+	Activity     ActivityStats `json:"activity"`
+	TopSessions  []TopSession  `json:"top_sessions"`
 }
 
 // OverviewStats contains high-level statistics
 type OverviewStats struct {
-	TotalSessions        int     `json:"total_sessions"`
-	TotalMessages        int     `json:"total_messages"`
-	TotalToolCalls       int     `json:"total_tool_calls"`
-	TotalInputTokens     int     `json:"total_input_tokens"`
-	TotalOutputTokens    int     `json:"total_output_tokens"`
-	TotalCacheReadTokens int     `json:"total_cache_read_tokens"`
-	TotalCacheWriteTokens int    `json:"total_cache_write_tokens"`
-	TotalTokens          int     `json:"total_tokens"`
-	EstimatedCostUSD     float64 `json:"estimated_cost_usd"`
-	ActualCostUSD        float64 `json:"actual_cost_usd,omitempty"`
-	TotalHours           float64 `json:"total_hours"`
-	AvgSessionDuration   float64 `json:"avg_session_duration"`
-	AvgMessagesPerSession float64 `json:"avg_messages_per_session"`
-	AvgTokensPerSession  float64 `json:"avg_tokens_per_session"`
-	UserMessages         int     `json:"user_messages"`
-	AssistantMessages    int     `json:"assistant_messages"`
-	ToolMessages         int     `json:"tool_messages"`
-	DateRangeStart       *time.Time `json:"date_range_start,omitempty"`
-	DateRangeEnd         *time.Time `json:"date_range_end,omitempty"`
+	TotalSessions         int        `json:"total_sessions"`
+	TotalMessages         int        `json:"total_messages"`
+	TotalToolCalls        int        `json:"total_tool_calls"`
+	TotalInputTokens      int        `json:"total_input_tokens"`
+	TotalOutputTokens     int        `json:"total_output_tokens"`
+	TotalCacheReadTokens  int        `json:"total_cache_read_tokens"`
+	TotalCacheWriteTokens int        `json:"total_cache_write_tokens"`
+	TotalTokens           int        `json:"total_tokens"`
+	EstimatedCostUSD      float64    `json:"estimated_cost_usd"`
+	ActualCostUSD         float64    `json:"actual_cost_usd,omitempty"`
+	TotalHours            float64    `json:"total_hours"`
+	AvgSessionDuration    float64    `json:"avg_session_duration"`
+	AvgMessagesPerSession float64    `json:"avg_messages_per_session"`
+	AvgTokensPerSession   float64    `json:"avg_tokens_per_session"`
+	UserMessages          int        `json:"user_messages"`
+	AssistantMessages     int        `json:"assistant_messages"`
+	ToolMessages          int        `json:"tool_messages"`
+	DateRangeStart        *time.Time `json:"date_range_start,omitempty"`
+	DateRangeEnd          *time.Time `json:"date_range_end,omitempty"`
 }
 
 // SessionData represents a session for insights analysis
@@ -133,7 +133,7 @@ func (ie *InsightsEngine) AddSession(data SessionData) {
 // Generate generates a complete insights report
 func (ie *InsightsEngine) Generate(days int, source string) *InsightsReport {
 	cutoff := time.Now().AddDate(0, 0, -days)
-	
+
 	// Filter sessions
 	var filtered []SessionData
 	for _, s := range ie.sessions {
@@ -161,16 +161,16 @@ func (ie *InsightsEngine) Generate(days int, source string) *InsightsReport {
 
 	// Compute overview
 	report.Overview = ie.computeOverview(filtered)
-	
+
 	// Compute model breakdown
 	report.Models = ie.computeModelBreakdown(filtered)
-	
+
 	// Compute tool usage
 	report.Tools = ie.computeToolBreakdown(filtered)
-	
+
 	// Compute activity patterns
 	report.Activity = ie.computeActivityPatterns(filtered)
-	
+
 	// Compute top sessions
 	report.TopSessions = ie.computeTopSessions(filtered)
 
@@ -180,7 +180,7 @@ func (ie *InsightsEngine) Generate(days int, source string) *InsightsReport {
 // computeOverview calculates high-level statistics
 func (ie *InsightsEngine) computeOverview(sessions []SessionData) OverviewStats {
 	var o OverviewStats
-	
+
 	for _, s := range sessions {
 		o.TotalSessions++
 		o.TotalMessages += s.MessageCount
@@ -218,7 +218,7 @@ func (ie *InsightsEngine) computeOverview(sessions []SessionData) OverviewStats 
 		}
 	}
 
-	o.TotalTokens = o.TotalInputTokens + o.TotalOutputTokens + 
+	o.TotalTokens = o.TotalInputTokens + o.TotalOutputTokens +
 		o.TotalCacheReadTokens + o.TotalCacheWriteTokens
 
 	if o.TotalSessions > 0 {
@@ -251,7 +251,7 @@ func (ie *InsightsEngine) computeModelBreakdown(sessions []SessionData) []ModelU
 		if _, ok := modelData[displayModel]; !ok {
 			modelData[displayModel] = &ModelUsage{Model: displayModel}
 		}
-		
+
 		m := modelData[displayModel]
 		m.Sessions++
 		m.InputTokens += s.InputTokens
@@ -324,10 +324,10 @@ func (ie *InsightsEngine) computeActivityPatterns(sessions []SessionData) Activi
 		// Adjust: Go's Sunday=0, we want Monday=0
 		day = (day + 6) % 7
 		dayCounts[day]++
-		
+
 		hour := s.StartedAt.Hour()
 		hourCounts[hour]++
-		
+
 		dateStr := s.StartedAt.Format("2006-01-02")
 		dailyCounts[dateStr]++
 	}
@@ -346,14 +346,14 @@ func (ie *InsightsEngine) computeActivityPatterns(sessions []SessionData) Activi
 	// Find busiest day and hour
 	var busiestDay *DayStat
 	var busiestHour *HourStat
-	
+
 	for i := range byDay {
 		if busiestDay == nil || byDay[i].Count > busiestDay.Count {
 			dayCopy := byDay[i]
 			busiestDay = &dayCopy
 		}
 	}
-	
+
 	for i := range byHour {
 		if busiestHour == nil || byHour[i].Count > busiestHour.Count {
 			hourCopy := byHour[i]
@@ -370,7 +370,7 @@ func (ie *InsightsEngine) computeActivityPatterns(sessions []SessionData) Activi
 			dates = append(dates, d)
 		}
 		sort.Strings(dates)
-		
+
 		currentStreak := 1
 		maxStreak = 1
 		for i := 1; i < len(dates); i++ {
@@ -405,7 +405,7 @@ func (ie *InsightsEngine) computeTopSessions(sessions []SessionData) []TopSessio
 	var longest *SessionData
 	for i := range sessions {
 		if sessions[i].EndedAt != nil {
-			if longest == nil || 
+			if longest == nil ||
 				sessions[i].EndedAt.Sub(sessions[i].StartedAt) > longest.EndedAt.Sub(longest.StartedAt) {
 				longest = &sessions[i]
 			}
@@ -512,16 +512,16 @@ func (r *InsightsReport) FormatTerminal() string {
 	// Overview
 	lines = append(lines, "  📋 Overview")
 	lines = append(lines, "  "+strings.Repeat("─", 56))
-	lines = append(lines, fmt.Sprintf("  Sessions:          %-12d  Messages:        %,d", o.TotalSessions, o.TotalMessages))
-	lines = append(lines, fmt.Sprintf("  Tool calls:        %-12,  User messages:   %,d", o.TotalToolCalls, o.UserMessages))
-	lines = append(lines, fmt.Sprintf("  Input tokens:      %-12,  Output tokens:   %,d", o.TotalInputTokens, o.TotalOutputTokens))
+	lines = append(lines, fmt.Sprintf("  Sessions:          %-12d  Messages:        %d", o.TotalSessions, o.TotalMessages))
+	lines = append(lines, fmt.Sprintf("  Tool calls:        %-12d  User messages:   %d", o.TotalToolCalls, o.UserMessages))
+	lines = append(lines, fmt.Sprintf("  Input tokens:      %-12d  Output tokens:   %d", o.TotalInputTokens, o.TotalOutputTokens))
 	cacheTotal := o.TotalCacheReadTokens + o.TotalCacheWriteTokens
 	if cacheTotal > 0 {
-		lines = append(lines, fmt.Sprintf("  Cache read:        %-12,  Cache write:     %,d", o.TotalCacheReadTokens, o.TotalCacheWriteTokens))
+		lines = append(lines, fmt.Sprintf("  Cache read:        %-12d  Cache write:     %d", o.TotalCacheReadTokens, o.TotalCacheWriteTokens))
 	}
-	lines = append(lines, fmt.Sprintf("  Total tokens:      %-12,  Est. cost:       $%.2f", o.TotalTokens, o.EstimatedCostUSD))
+	lines = append(lines, fmt.Sprintf("  Total tokens:      %-12d  Est. cost:       $%.2f", o.TotalTokens, o.EstimatedCostUSD))
 	if o.TotalHours > 0 {
-		lines = append(lines, fmt.Sprintf("  Active time:       ~%-11s  Avg session:     ~%s", 
+		lines = append(lines, fmt.Sprintf("  Active time:       ~%-11s  Avg session:     ~%s",
 			formatDuration(time.Duration(o.TotalHours*3600)*time.Second),
 			formatDuration(time.Duration(o.AvgSessionDuration)*time.Second)))
 	}
@@ -542,7 +542,7 @@ func (r *InsightsReport) FormatTerminal() string {
 			if !m.HasPricing {
 				costCell = "     N/A"
 			}
-			lines = append(lines, fmt.Sprintf("  %-30s %8d %12, %8s", modelName, m.Sessions, m.TotalTokens, costCell))
+			lines = append(lines, fmt.Sprintf("  %-30s %8d %12d %8s", modelName, m.Sessions, m.TotalTokens, costCell))
 		}
 		lines = append(lines, "")
 	}
@@ -557,7 +557,7 @@ func (r *InsightsReport) FormatTerminal() string {
 				lines = append(lines, fmt.Sprintf("  ... and %d more tools", len(r.Tools)-15))
 				break
 			}
-			lines = append(lines, fmt.Sprintf("  %-28s %8, %7.1f%%", t.Tool, t.Count, t.Percentage))
+			lines = append(lines, fmt.Sprintf("  %-28s %8d %7.1f%%", t.Tool, t.Count, t.Percentage))
 		}
 		lines = append(lines, "")
 	}
@@ -677,7 +677,7 @@ func barChart(values []int, maxWidth int) []string {
 func EstimateCost(model string, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens int) float64 {
 	// Default pricing per 1K tokens (simplified)
 	var inputRate, outputRate float64
-	
+
 	modelLower := strings.ToLower(model)
 	switch {
 	case strings.Contains(modelLower, "claude-3-opus"):

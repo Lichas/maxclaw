@@ -18,8 +18,8 @@ type AgentLifecycle struct {
 	AdaptationManager *AdaptationManager
 	CheckpointManager *CheckpointManager
 	EvolutionTracker  *EvolutionTracker
-	FeedbackDetector  *FeedbackDetector  // NEW: Detect user feedback sentiment
-	FeedbackLearner   *FeedbackLearner   // NEW: Learn from user feedback
+	FeedbackDetector  *FeedbackDetector // NEW: Detect user feedback sentiment
+	FeedbackLearner   *FeedbackLearner  // NEW: Learn from user feedback
 
 	// Configuration
 	Enabled           bool
@@ -27,7 +27,7 @@ type AgentLifecycle struct {
 	EnableFallbacks   bool
 	EnableCheckpoints bool
 	EnableEvolution   bool
-	EnableFeedback    bool               // NEW: Enable feedback learning
+	EnableFeedback    bool // NEW: Enable feedback learning
 }
 
 // NewAgentLifecycle creates a new agent lifecycle manager
@@ -55,17 +55,15 @@ func (al *AgentLifecycle) InitializeFeedback(llmProvider providers.LLMProvider, 
 }
 
 // InitializeCompression initializes the context compressor with model information
-func (al *AgentLifecycle) InitializeCompression(model, baseURL, apiKey, provider string, configContextLength int) {
+func (al *AgentLifecycle) InitializeCompression(model, provider string, configContextLength int) {
 	al.ContextCompressor = NewContextCompressor(
 		model,
-		0.50, // threshold percent
-		3,    // protect first N
-		20,   // protect last N
-		0.20, // summary target ratio
+		0.50,  // threshold percent
+		3,     // protect first N
+		20,    // protect last N
+		0.20,  // summary target ratio
 		false, // quiet mode
 		"",    // summary model override
-		baseURL,
-		apiKey,
 		configContextLength,
 		provider,
 	)
@@ -377,7 +375,6 @@ func ConvertCompressorMessagesToSession(messages []CompressorMessage) []session.
 	}
 	return result
 }
-
 
 // ==================== Feedback Learning Methods ====================
 

@@ -342,7 +342,7 @@ func executeCronJob(cfg *config.Config, apiKey, apiBase string, cronService *cro
 		cfg.Tools.MCPServers,
 		cfg.Agents.Defaults.EnableGlobalSkills,
 	)
-	// Use job's execution mode (defaults to auto for cron jobs to avoid waiting for user confirmation)
+	agentLoop.InitializeLifecycle()
 	executionMode := job.GetExecutionMode()
 	if executionMode == cron.ExecutionModeAsk || executionMode == "" {
 		// Cron jobs should default to auto mode to prevent hanging

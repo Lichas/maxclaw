@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **激活 Agent 生命周期初始化与基础持久化链路**：在 `agent`、`gateway`、`cron` 三个入口补上 `InitializeLifecycle()`，并同步精简生命周期压缩器的参数签名，移除无效的 `baseURL`/`apiKey` 透传；同时修复 `insights` 里非法 `fmt.Sprintf` 格式串，避免生命周期代码因编译错误或未初始化而处于“存在但不生效”的状态
+  - `internal/cli/agent.go`、`internal/cli/gateway.go`、`internal/cli/cron.go`、`internal/agent/lifecycle.go`、`internal/agent/context_compressor.go`、`internal/agent/adaptation.go`、`internal/agent/insights.go`、`BUGFIX.md`
+  - 验证：`go test ./internal/agent ./internal/cli`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
 - **spawn 子任务完成后会自动唤醒父 agent 继续迭代**：子任务结束时不再只发一条 `[Spawn] Completed` 文本通知，而是向父会话投递内部 callback 消息，驱动主 agent 基于 subagent 结果继续生成；同时给 MessageBus 增加 outbound 监听并通过 WebSocket 刷新桌面聊天页，让后台回流结果能真正出现在当前对话里
   - `internal/agent/loop.go`、`internal/agent/loop_test.go`、`internal/agent/prompts/system_prompt.md`、`internal/bus/events.go`、`internal/bus/queue.go`、`internal/bus/bus_test.go`、`internal/webui/server.go`、`electron/src/renderer/views/ChatView.tsx`
   - 验证：`go test ./internal/agent ./internal/bus ./internal/webui`、`bash e2e_test/gateway_agent_regression.sh`、`make build`

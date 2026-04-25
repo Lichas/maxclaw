@@ -86,6 +86,50 @@ cd electron && npm run build  # 构建成功无报错
 
 ---
 
+## 2026-04-25 - Agent 生命周期循环系统未激活
+
+**问题**：
+- `~/.maxclaw/workspace/.checkpoints`、`.evolution`、`.feedback` 目录从未创建
+- `.sessions/` 中只有旧版 `session.Manager` 的 JSON 文件，生命周期持久化系统完全没有写入
+- ErrorClassifier、AdaptationManager、EvolutionTracker、FeedbackLearner 等组件虽然代码完整存在，但运行时全部处于 nil/未调用状态
+
+**根因**：
+- `AgentLoop.InitializeLifecycle()` 方法存在但从未在生产代码中调用（仅在测试中出现）
+- `gateway.go`、`cli/agent.go`、`cli/cron.go` 在 `NewAgentLoop()` 之后都没有执行生命周期初始化
+- `processMessageWithIC()` 主循环中，所有生命周期钩子（StartSessionLifecycle、HandleAPIErrorWithLifecycle、RecordToolExecution、SaveCheckpoint、EndSessionLifecycle）虽然都有定义，但从未在流程中实际调用
+- `InitializeLifecycle` 还携带了不必要的 `baseURL`、`apiKey` 参数，设计上应该直接复用 `AgentLoop.Provider`
+
+**修复**：
+1. **简化初始化签名**：移除 `InitializeLifecycle(baseURL, apiKey)` 中的两个参数，`InitializeCompression` 直接使用当前会话的 provider，同时初始化 feedback detector
+2. **三处补上调用来激活**：在 `gateway.go`、`cli/agent.go`、`cli/cron.go` 的 `NewAgentLoop()` 之后各加一行 `agentLoop.InitializeLifecycle()`
+3. **主循环接入全部生命周期钩子**：
+   - 会话开始 → `StartSessionLifecycle()`
+   - defer 会话结束 → `EndSessionLifecycle()`
+   - LLM 流调用失败 → `HandleAPIErrorWithLifecycle()`（带 retry/fallback 循环）
+   - LLM 调用成功 → `RecordAPICallSuccess()`
+   - 每个工具执行后 → `RecordToolExecution()`
+   - 每轮迭代结束 → `SaveCheckpoint()`
+4. **清理冗余参数**：`ContextCompressor`、`NewContextCompressor`、`getModelContextLength`、`adaptation.go` 中的对应调用同步移除 `baseURL`/`apiKey`
+5. **顺手修复预存在编译错误**：`insights.go` 中 `fmt.Sprintf` 使用了非法的 `%,d` / `%-12,` 格式动词，导致 `go test ./internal/agent` 无法编译
+
+**验证**：
+```bash
+make build
+make test
+```
+
+**修复文件**：
+- `internal/agent/loop.go`
+- `internal/agent/lifecycle.go`
+- `internal/agent/context_compressor.go`
+- `internal/agent/adaptation.go`
+- `internal/agent/insights.go`
+- `internal/cli/gateway.go`
+- `internal/cli/agent.go`
+- `internal/cli/cron.go`
+
+---
+
 ## 2026-04-04 - 新增 MCP Server 后运行中对话无法感知新工具
 
 **问题**：

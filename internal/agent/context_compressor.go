@@ -29,18 +29,16 @@ const (
 
 // Message represents a conversation message for compression
 type CompressorMessage struct {
-	Role         string                 `json:"role"`
-	Content      string                 `json:"content"`
-	ToolCalls    []providers.ToolCall   `json:"tool_calls,omitempty"`
-	ToolCallID   string                 `json:"tool_call_id,omitempty"`
-	Reasoning    string                 `json:"reasoning,omitempty"`
+	Role       string               `json:"role"`
+	Content    string               `json:"content"`
+	ToolCalls  []providers.ToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string               `json:"tool_call_id,omitempty"`
+	Reasoning  string               `json:"reasoning,omitempty"`
 }
 
 // ContextCompressor compresses conversation context when approaching model's context limit
 type ContextCompressor struct {
 	Model                string
-	BaseURL              string
-	APIKey               string
 	Provider             string
 	ThresholdPercent     float64
 	ProtectFirstN        int
@@ -50,19 +48,19 @@ type ContextCompressor struct {
 	SummaryModelOverride string
 	ConfigContextLength  int
 
-	ContextLength        int
-	ThresholdTokens      int
-	CompressionCount     int
-	TailTokenBudget      int
-	MaxSummaryTokens     int
+	ContextLength    int
+	ThresholdTokens  int
+	CompressionCount int
+	TailTokenBudget  int
+	MaxSummaryTokens int
 
 	lastPromptTokens     int
 	lastCompletionTokens int
 	lastTotalTokens      int
 
-	contextProbed        bool
-	contextProbePersistable bool
-	previousSummary      string
+	contextProbed               bool
+	contextProbePersistable     bool
+	previousSummary             string
 	summaryFailureCooldownUntil time.Time
 
 	mu sync.RWMutex
@@ -85,8 +83,6 @@ func NewContextCompressor(
 	summaryTargetRatio float64,
 	quietMode bool,
 	summaryModelOverride string,
-	baseURL string,
-	apiKey string,
 	configContextLength int,
 	provider string,
 ) *ContextCompressor {
@@ -102,7 +98,7 @@ func NewContextCompressor(
 	summaryTargetRatio = maxFloat64(0.10, minFloat64(summaryTargetRatio, 0.80))
 
 	// Derive context length from model or config
-	contextLength := getModelContextLength(model, baseURL, configContextLength)
+	contextLength := getModelContextLength(model, configContextLength)
 	thresholdTokens := int(float64(contextLength) * thresholdPercent)
 
 	// Derive token budgets
@@ -111,8 +107,6 @@ func NewContextCompressor(
 
 	return &ContextCompressor{
 		Model:                model,
-		BaseURL:              baseURL,
-		APIKey:               apiKey,
 		Provider:             provider,
 		ThresholdPercent:     thresholdPercent,
 		ProtectFirstN:        protectFirstN,
@@ -194,7 +188,7 @@ func (cc *ContextCompressor) Compress(ctx context.Context, messages []Compressor
 	if headEnd > len(prunedMessages) {
 		headEnd = len(prunedMessages)
 	}
-	
+
 	tailStart := len(prunedMessages) - cc.ProtectLastN
 	if tailStart < headEnd {
 		tailStart = headEnd
@@ -202,10 +196,10 @@ func (cc *ContextCompressor) Compress(ctx context.Context, messages []Compressor
 
 	head := make([]CompressorMessage, headEnd)
 	copy(head, prunedMessages[:headEnd])
-	
+
 	middle := make([]CompressorMessage, tailStart-headEnd)
 	copy(middle, prunedMessages[headEnd:tailStart])
-	
+
 	tail := make([]CompressorMessage, len(prunedMessages)-tailStart)
 	copy(tail, prunedMessages[tailStart:])
 
@@ -429,11 +423,11 @@ func (cc *ContextCompressor) computeSummaryBudget(turns []CompressorMessage) int
 // serializeForSummary serializes conversation turns into labeled text
 func (cc *ContextCompressor) serializeForSummary(turns []CompressorMessage) string {
 	const (
-		contentMax    = 6000
-		contentHead   = 4000
-		contentTail   = 1500
-		toolArgsMax   = 1500
-		toolArgsHead  = 1200
+		contentMax   = 6000
+		contentHead  = 4000
+		contentTail  = 1500
+		toolArgsMax  = 1500
+		toolArgsHead = 1200
 	)
 
 	parts := make([]string, 0, len(turns))
@@ -570,7 +564,7 @@ func (cc *ContextCompressor) callSummaryLLM(ctx context.Context, prompt string, 
 
 // Helper functions
 
-func getModelContextLength(model, baseURL string, configContextLength int) int {
+func getModelContextLength(model string, configContextLength int) int {
 	if configContextLength > 0 {
 		return configContextLength
 	}
