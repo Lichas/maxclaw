@@ -19,7 +19,7 @@ export function TitleBar() {
     // macOS: Hidden title bar with traffic lights, show custom title area
     return (
       <div className="h-9 bg-background border-b border-border flex items-center justify-center draggable">
-        <span className="text-sm font-medium text-foreground/80">maxclaw</span>
+        <span className="text-sm font-medium text-muted">maxclaw</span>
       </div>
     );
   }
@@ -28,7 +28,7 @@ export function TitleBar() {
   return (
     <div className="h-9 bg-background border-b border-border flex items-center justify-between draggable">
       <div className="flex items-center gap-2 px-4">
-        <span className="text-sm font-medium text-foreground/80">maxclaw</span>
+        <span className="text-sm font-medium text-muted">maxclaw</span>
       </div>
       <div className="flex items-center no-drag">
         <button
@@ -55,7 +55,7 @@ export function TitleBar() {
         </button>
         <button
           onClick={handleClose}
-          className="w-12 h-9 flex items-center justify-center hover:bg-red-500 hover:text-white transition-colors"
+          className="w-12 h-9 flex items-center justify-center hover:bg-danger hover:text-destructive-foreground transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -2000,7 +2000,7 @@ export function ChatView() {
         )}
 
         {browserCopilotError && (
-          <p className="mt-2 rounded-md border border-red-300/60 bg-red-50/60 px-2 py-1 text-xs text-red-600">
+          <p className="mt-2 rounded-md border border-danger/25 bg-danger-bg px-2 py-1 text-xs text-danger">
             {browserCopilotError}
           </p>
         )}
@@ -2220,7 +2220,7 @@ export function ChatView() {
                   )}
                 </div>
                 {skillsLoadError && (
-                  <p className="mt-2 text-xs text-red-500">技能加载失败: {skillsLoadError}</p>
+                  <p className="mt-2 text-xs text-danger">技能加载失败: {skillsLoadError}</p>
                 )}
                 <p className="mt-2 text-[11px] text-muted">
                   已选择 {selectedSkills.length} 个技能。未选择时按系统默认策略加载。

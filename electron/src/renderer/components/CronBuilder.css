@@ -173,10 +173,10 @@
 
 .cron-description {
   font-size: 13px;
-  color: var(--foreground, #6b7280);
+  color: var(--muted, #6b7280);
   text-align: center;
   padding: 8px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+  background: var(--secondary, #f3f4f6);
   border-radius: 6px;
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  border: 1px solid var(--border, #e5e7eb);
 }

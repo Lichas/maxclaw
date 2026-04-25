@@ -27,12 +27,12 @@ export function ConfirmDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40"
         onClick={onCancel}
       />
 
       {/* Dialog */}
-      <div className="relative w-full max-w-sm rounded-2xl bg-card p-6 shadow-2xl">
+      <div className="relative w-full max-w-sm rounded-xl bg-card p-6 shadow-lg">
         {/* App Icon */}
         <div className="mb-4 flex justify-center">
           <div className="flex h-16 w-16 items-center justify-center">
@@ -50,7 +50,7 @@ export function ConfirmDialog({
         </h3>
 
         {/* Message */}
-        <p className="mb-6 text-center text-sm text-foreground/70">
+        <p className="mb-6 text-center text-sm text-muted">
           {message}
         </p>
 
@@ -66,10 +66,10 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onConfirm}
-            className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-colors ${
+            className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
               variant === 'danger'
-                ? 'bg-red-500 hover:bg-red-600'
-                : 'bg-primary hover:bg-primary/90'
+                ? 'bg-danger text-destructive-foreground hover:bg-danger/90'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
             }`}
           >
             {confirmText}

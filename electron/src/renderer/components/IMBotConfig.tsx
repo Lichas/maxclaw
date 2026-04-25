@@ -206,7 +206,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
           <div key={field.key}>
             <label className="block text-sm font-medium mb-1">
               {label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
+              {field.required && <span className="text-danger ml-1">*</span>}
             </label>
             <input
               type={field.type}
@@ -217,7 +217,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
               placeholder={placeholder}
               className={inputClass}
             />
-            {hint && <p className="text-xs text-foreground/50 mt-1">{hint}</p>}
+            {hint && <p className="text-xs text-muted mt-1">{hint}</p>}
           </div>
         );
 
@@ -226,7 +226,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
           <div key={field.key}>
             <label className="block text-sm font-medium mb-1">
               {label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
+              {field.required && <span className="text-danger ml-1">*</span>}
             </label>
             <input
               type="number"
@@ -237,7 +237,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
               placeholder={placeholder}
               className={inputClass}
             />
-            {hint && <p className="text-xs text-foreground/50 mt-1">{hint}</p>}
+            {hint && <p className="text-xs text-muted mt-1">{hint}</p>}
           </div>
         );
 
@@ -255,7 +255,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
               />
               <span className="text-sm font-medium">{label}</span>
             </label>
-            {hint && <p className="text-xs text-foreground/50 mt-1 ml-6">{hint}</p>}
+            {hint && <p className="text-xs text-muted mt-1 ml-6">{hint}</p>}
           </div>
         );
 
@@ -274,7 +274,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
               rows={3}
               className={inputClass}
             />
-            {hint && <p className="text-xs text-foreground/50 mt-1">{hint}</p>}
+            {hint && <p className="text-xs text-muted mt-1">{hint}</p>}
           </div>
         );
 
@@ -283,7 +283,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
           <div key={field.key}>
             <label className="block text-sm font-medium mb-1">
               {label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
+              {field.required && <span className="text-danger ml-1">*</span>}
             </label>
             <textarea
               value={(value as string) || ''}
@@ -294,7 +294,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
               rows={4}
               className={inputClass}
             />
-            {hint && <p className="text-xs text-foreground/50 mt-1">{hint}</p>}
+            {hint && <p className="text-xs text-muted mt-1">{hint}</p>}
           </div>
         );
 
@@ -320,12 +320,12 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   isActive
                     ? 'border-primary text-primary'
-                    : 'border-transparent text-foreground/60 hover:text-foreground'
+                    : 'border-transparent text-muted hover:text-foreground'
                 }`}
               >
                 <span className="flex items-center gap-2">
                   {isEnabled && (
-                    <span className="w-2 h-2 rounded-full bg-green-500" title="Enabled" />
+                    <span className="w-2 h-2 rounded-full bg-success" title="Enabled" />
                   )}
                   {language === 'zh' ? def.nameZh : def.name}
                 </span>
@@ -349,12 +349,12 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   {language === 'zh' ? def.nameZh : def.name}
                   {channelConfig.enabled && (
-                    <span className="px-2 py-0.5 bg-green-500/10 text-green-500 text-xs rounded-full">
+                    <span className="px-2 py-0.5 bg-success-bg text-success text-xs rounded-full">
                       {renderLabel('已启用', 'Enabled')}
                     </span>
                   )}
                 </h3>
-                <p className="text-sm text-foreground/60 mt-1">
+                <p className="text-sm text-muted mt-1">
                   {language === 'zh' ? def.descriptionZh : def.description}
                 </p>
               </div>
@@ -396,7 +396,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
                       <h4 className="text-sm font-medium">
                         {renderLabel('发送人日志', 'Sender Log')}
                       </h4>
-                      <p className="text-xs text-foreground/60 mt-1">
+                      <p className="text-xs text-muted mt-1">
                         {renderLabel(
                           '显示当前渠道最近发过消息的人、最近一条记录和发送次数，可直接加入 allowFrom。',
                           'Shows recent senders, latest inbound record, and message counts for this channel. You can add them to allowFrom directly.'
@@ -406,7 +406,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
                     <button
                       onClick={() => fetchSenderStats(def.key)}
                       disabled={senderStatsLoading}
-                      className="px-3 py-1.5 bg-background border border-border rounded-lg text-xs font-medium hover:bg-background/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="px-3 py-1.5 bg-background border border-border rounded-lg text-xs font-medium hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {senderStatsLoading
                         ? renderLabel('刷新中...', 'Refreshing...')
@@ -415,11 +415,11 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
                   </div>
 
                   {senderStatsError && (
-                    <p className="text-sm text-red-500">{senderStatsError}</p>
+                    <p className="text-sm text-danger">{senderStatsError}</p>
                   )}
 
                   {!senderStatsError && senderStats.length === 0 && !senderStatsLoading && (
-                    <p className="text-sm text-foreground/60">
+                    <p className="text-sm text-muted">
                       {renderLabel('还没有这个渠道的入站记录。', 'No inbound records for this channel yet.')}
                     </p>
                   )}
@@ -437,17 +437,17 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2 text-sm">
                               <span className="font-medium break-all">{entry.sender}</span>
-                              <span className="text-xs text-foreground/50">
+                              <span className="text-xs text-muted">
                                 {renderLabel('发送', 'Count')} {entry.messageCount}
                               </span>
-                              <span className="text-xs text-foreground/50">
+                              <span className="text-xs text-muted">
                                 {formatLastSeen(entry.lastSeen)}
                               </span>
                             </div>
-                            <p className="mt-1 text-xs text-foreground/50 break-all">
+                            <p className="mt-1 text-xs text-muted break-all">
                               Chat ID: {entry.chatId}
                             </p>
-                            <p className="mt-2 text-sm text-foreground/80 break-words">
+                            <p className="mt-2 text-sm text-muted break-words">
                               {entry.latestMessage || renderLabel('无内容', 'No content')}
                             </p>
                           </div>
@@ -457,7 +457,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
                               onClick={() => toggleAllowedSender(def.key, entry.sender)}
                               className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                                 inAllowList
-                                  ? 'bg-green-500/10 text-green-600 hover:bg-green-500/20'
+                                  ? 'bg-success-bg text-success hover:bg-success/20'
                                   : 'bg-primary text-primary-foreground hover:bg-primary/90'
                               }`}
                             >
@@ -486,12 +486,12 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
                           className="w-40 h-40"
                         />
                       </div>
-                      <div className="text-sm text-foreground/60 space-y-1">
+                      <div className="text-sm text-muted space-y-1">
                         <p>{renderLabel('1. 打开 WhatsApp 手机应用', '1. Open WhatsApp on your phone')}</p>
                         <p>{renderLabel('2. 点击设置 → 已关联设备', '2. Go to Settings → Linked Devices')}</p>
                         <p>{renderLabel('3. 点击"关联新设备"', '3. Tap "Link a Device"')}</p>
                         <p>{renderLabel('4. 扫描左侧二维码', '4. Scan the QR code on the left')}</p>
-                        <p className="text-xs mt-2 text-foreground/40">
+                        <p className="text-xs mt-2 text-muted">
                           {renderLabel('状态: ', 'Status: ')}
                           {whatsAppStatus || (loadingQR ? renderLabel('加载中...', 'Loading...') : renderLabel('等待扫码', 'Waiting for scan'))}
                         </p>
@@ -518,7 +518,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
                         <button
                           onClick={fetchWhatsAppStatus}
                           disabled={loadingQR}
-                          className="px-4 py-2 bg-secondary text-foreground rounded-lg text-sm font-medium hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="px-4 py-2 bg-secondary text-foreground rounded-lg text-sm font-medium hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {loadingQR
                             ? renderLabel('刷新中...', 'Refreshing...')
@@ -529,7 +529,7 @@ export function IMBotConfig({ config, onChange, onTestChannel, getWhatsAppStatus
                       {testResults[def.key] && (
                         <span
                           className={`text-sm ${
-                            testResults[def.key]!.success ? 'text-green-500' : 'text-red-500'
+                            testResults[def.key]!.success ? 'text-success' : 'text-danger'
                           }`}
                         >
                           {testResults[def.key]!.message}

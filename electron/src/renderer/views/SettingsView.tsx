@@ -565,7 +565,7 @@ export function SettingsView() {
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
           <aside className="lg:sticky lg:top-0">
-            <div className="rounded-2xl border border-border bg-secondary/45 p-2">
+            <div className="rounded-xl border border-border bg-secondary p-2">
               {categoryItems.map((item) => {
                 const active = activeCategory === item.id;
                 const Icon = item.icon;
@@ -574,10 +574,10 @@ export function SettingsView() {
                   <button
                     key={item.id}
                     onClick={() => setActiveCategory(item.id)}
-                    className={`mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all ${
+                    className={`mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-all ${
                       active
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-foreground/70 hover:bg-background/70 hover:text-foreground'
+                        ? 'bg-background text-foreground'
+                        : 'text-muted hover:bg-background/70 hover:text-foreground'
                     }`}
                   >
                     <Icon className="h-4 w-4 flex-shrink-0" />
@@ -591,7 +591,7 @@ export function SettingsView() {
           <main className="min-w-0 space-y-6">
             <header>
               <h2 className="text-2xl font-semibold text-foreground">{activeCategoryMeta.label}</h2>
-              <p className="mt-1 text-sm text-foreground/55">{activeCategoryMeta.description}</p>
+              <p className="mt-1 text-sm text-muted">{activeCategoryMeta.description}</p>
             </header>
 
             {activeCategory === 'general' && (
@@ -635,7 +635,7 @@ export function SettingsView() {
                     <label className="flex cursor-pointer items-center justify-between gap-4 px-4 py-3">
                       <div className="space-y-0.5">
                         <span className="block text-sm font-medium">{t('settings.renderThinkTags')}</span>
-                        <span className="block text-xs text-foreground/55">{t('settings.renderThinkTags.hint')}</span>
+                        <span className="block text-xs text-muted">{t('settings.renderThinkTags.hint')}</span>
                       </div>
                       <input
                         type="checkbox"
@@ -711,7 +711,7 @@ export function SettingsView() {
                     </div>
                   </div>
                   <div className="border-t border-border px-4 py-2">
-                    <p className="text-xs text-foreground/50">
+                    <p className="text-xs text-muted">
                       Use "CommandOrControl" for cross-platform shortcuts
                     </p>
                   </div>
@@ -736,7 +736,7 @@ export function SettingsView() {
                         {t('settings.import')}
                       </button>
                     </div>
-                    <p className="text-xs text-foreground/50">
+                    <p className="text-xs text-muted">
                       导出包含配置和会话数据，导入将覆盖当前配置
                     </p>
                   </div>
@@ -756,7 +756,7 @@ export function SettingsView() {
                       </button>
                     )}
                     {updateStatus === 'checking' && (
-                      <p className="text-sm text-foreground/60">{t('settings.checking')}</p>
+                      <p className="text-sm text-muted">{t('settings.checking')}</p>
                     )}
                     {updateStatus === 'available' && updateInfo && (
                       <div className="space-y-3">
@@ -772,11 +772,11 @@ export function SettingsView() {
                       </div>
                     )}
                     {updateStatus === 'downloading' && (
-                      <p className="text-sm text-foreground/60">{t('settings.downloading')}</p>
+                      <p className="text-sm text-muted">{t('settings.downloading')}</p>
                     )}
                     {updateStatus === 'downloaded' && (
                       <div className="space-y-3">
-                        <p className="text-sm text-green-600">{t('settings.updateReady')}</p>
+                        <p className="text-sm text-success">{t('settings.updateReady')}</p>
                         <button
                           onClick={handleInstall}
                           className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
@@ -832,7 +832,7 @@ export function SettingsView() {
                     </div>
                     <button
                       onClick={() => setShowAddProvider(false)}
-                      className="mt-3 text-sm text-foreground/60 hover:text-foreground"
+                      className="mt-3 text-sm text-muted hover:text-foreground"
                     >
                       Cancel
                     </button>
@@ -840,7 +840,7 @@ export function SettingsView() {
                 ) : (
                   <div className="space-y-3">
                     {providers.length === 0 ? (
-                      <p className="text-sm text-foreground/50">{t('settings.providers.empty') || 'No providers configured.'}</p>
+                      <p className="text-sm text-muted">{t('settings.providers.empty') || 'No providers configured.'}</p>
                     ) : (
                       providers.map((provider) => (
                         <div
@@ -849,7 +849,7 @@ export function SettingsView() {
                         >
                           <div>
                             <h4 className="font-medium">{provider.name}</h4>
-                            <p className="text-xs text-foreground/60">
+                            <p className="text-xs text-muted">
                               {provider.baseURL || 'Default endpoint'}
                             </p>
                           </div>
@@ -862,7 +862,7 @@ export function SettingsView() {
                             </button>
                             <button
                               onClick={() => handleDeleteProvider(provider.id)}
-                              className="rounded-lg border border-border px-3 py-1.5 text-sm text-red-500 hover:bg-red-500/10"
+                              className="rounded-lg border border-danger/25 px-3 py-1.5 text-sm text-danger hover:bg-danger-bg"
                             >
                               Delete
                             </button>
@@ -872,7 +872,7 @@ export function SettingsView() {
                     )}
                     <button
                       onClick={() => setShowAddProvider(true)}
-                      className="w-full rounded-lg border border-dashed border-border py-2 text-sm text-foreground/60 hover:bg-secondary hover:text-foreground"
+                      className="w-full rounded-lg border border-dashed border-border py-2 text-sm text-muted hover:bg-secondary hover:text-foreground"
                     >
                       + {t('settings.providers.add')}
                     </button>
@@ -953,7 +953,7 @@ export function SettingsView() {
                             {savingExecutionMode ? t('settings.gateway.executionMode.saving') : t('common.save')}
                           </button>
                         </div>
-                        <p className="mt-2 text-xs text-foreground/60">{t('settings.gateway.executionMode.hint')}</p>
+                        <p className="mt-2 text-xs text-muted">{t('settings.gateway.executionMode.hint')}</p>
                       </div>
 
                       <div className="mt-4">
@@ -975,7 +975,7 @@ export function SettingsView() {
                             {savingMaxToolIterations ? t('settings.gateway.maxToolIterations.saving') : t('common.save')}
                           </button>
                         </div>
-                        <p className="mt-2 text-xs text-foreground/60">{t('settings.gateway.maxToolIterations.hint')}</p>
+                        <p className="mt-2 text-xs text-muted">{t('settings.gateway.maxToolIterations.hint')}</p>
                       </div>
                     </div>
                   )}
@@ -1130,7 +1130,7 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center text-foreground/50">
+      <div className="flex h-64 items-center justify-center text-muted">
         <div className="flex items-center gap-2">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           {t('common.loading')}
@@ -1206,7 +1206,7 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
           <button
             onClick={() => setActiveTab('USER')}
             className={`relative px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'USER' ? 'text-primary' : 'text-foreground/60 hover:text-foreground'
+              activeTab === 'USER' ? 'text-primary' : 'text-muted hover:text-foreground'
             }`}
           >
             <span className="flex items-center gap-2">
@@ -1218,7 +1218,7 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
           <button
             onClick={() => setActiveTab('SOUL')}
             className={`relative px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'SOUL' ? 'text-primary' : 'text-foreground/60 hover:text-foreground'
+              activeTab === 'SOUL' ? 'text-primary' : 'text-muted hover:text-foreground'
             }`}
           >
             <span className="flex items-center gap-2">
@@ -1230,7 +1230,7 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
           <button
             onClick={() => setActiveTab('CONFIG')}
             className={`relative px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === 'CONFIG' ? 'text-primary' : 'text-foreground/60 hover:text-foreground'
+              activeTab === 'CONFIG' ? 'text-primary' : 'text-muted hover:text-foreground'
             }`}
           >
             <span className="flex items-center gap-2">
@@ -1253,8 +1253,8 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
         </button>
       </div>
 
-      {error && <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
-      {success && <div className="mb-3 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700">{success}</div>}
+      {error && <div className="mb-3 rounded-lg border border-danger/25 bg-danger-bg px-4 py-2 text-sm text-danger">{error}</div>}
+      {success && <div className="mb-3 rounded-lg border border-success/25 bg-success-bg px-4 py-2 text-sm text-success">{success}</div>}
 
       {activeTab === 'CONFIG' ? (
         <div className="flex flex-1 flex-col gap-4 overflow-hidden">
@@ -1263,7 +1263,7 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
             <h3 className="mb-3 text-sm font-semibold">{language === 'zh' ? '快速配置' : 'Quick Config'}</h3>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground/70">{t('settings.gateway.currentModel')}</label>
+                <label className="mb-1 block text-xs font-medium text-muted">{t('settings.gateway.currentModel')}</label>
                 <input
                   type="text"
                   value={configForm.model}
@@ -1273,7 +1273,7 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground/70">{t('settings.gateway.workspace')}</label>
+                <label className="mb-1 block text-xs font-medium text-muted">{t('settings.gateway.workspace')}</label>
                 <input
                   type="text"
                   value={configForm.workspace}
@@ -1283,7 +1283,7 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground/70">{t('settings.gateway.maxToolIterations')}</label>
+                <label className="mb-1 block text-xs font-medium text-muted">{t('settings.gateway.maxToolIterations')}</label>
                 <input
                   type="number"
                   value={configForm.maxIterations}
@@ -1293,7 +1293,7 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground/70">{t('settings.gateway.executionMode')}</label>
+                <label className="mb-1 block text-xs font-medium text-muted">{t('settings.gateway.executionMode')}</label>
                 <select
                   value={configForm.executionMode}
                   onChange={(e) => handleConfigFormChange('executionMode', e.target.value)}
@@ -1309,7 +1309,7 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
           {/* JSON Editor */}
           <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
             <div className="flex items-center justify-between border-b border-border bg-secondary/50 px-4 py-2">
-              <div className="flex items-center gap-2 text-xs text-foreground/60">
+              <div className="flex items-center gap-2 text-xs text-muted">
                 <FolderIcon className="h-3.5 w-3.5" />
                 <span>~/.maxclaw/config.json</span>
               </div>
@@ -1321,7 +1321,7 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
               placeholder={'{\n  "agents": {\n    ...\n  }\n}'}
               spellCheck={false}
             />
-            <div className="flex items-center justify-between border-t border-border bg-secondary/30 px-4 py-2 text-xs text-foreground/50">
+            <div className="flex items-center justify-between border-t border-border bg-secondary/30 px-4 py-2 text-xs text-muted">
               <span>{configJson.length} {language === 'zh' ? '字符' : 'chars'}</span>
               <span>JSON</span>
             </div>
@@ -1329,24 +1329,24 @@ function AdvancedSettings({ t, language }: { t: (key: string) => string; languag
         </div>
       ) : (
         <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
-          <div className="flex items-center gap-2 border-b border-border bg-secondary/50 px-4 py-2 text-xs text-foreground/60">
+          <div className="flex items-center gap-2 border-b border-border bg-secondary/50 px-4 py-2 text-xs text-muted">
             <FolderIcon className="h-3.5 w-3.5" />
             <span>~/.maxclaw/workspace/{getFileName()}</span>
             <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
               {language === 'zh' ? '就地编辑' : 'Live Edit'}
             </span>
           </div>
-          <div className="border-b border-border bg-secondary/30 px-4 py-2 text-xs text-foreground/60">
+          <div className="border-b border-border bg-secondary/30 px-4 py-2 text-xs text-muted">
             {getDescription()}
           </div>
           <textarea
             value={activeTab === 'USER' ? userContent : soulContent}
             onChange={(e) => activeTab === 'USER' ? setUserContent(e.target.value) : setSoulContent(e.target.value)}
-            className="flex-1 resize-none bg-background px-4 py-3 font-mono text-sm leading-relaxed text-foreground placeholder:text-foreground/30 focus:outline-none"
+            className="flex-1 resize-none bg-background px-4 py-3 font-mono text-sm leading-relaxed text-foreground placeholder:text-muted focus:outline-none"
             placeholder={activeTab === 'USER' ? '# User\n\nYour information here...' : '# SOUL\n\nAI personality here...'}
             spellCheck={false}
           />
-          <div className="flex items-center justify-between border-t border-border bg-secondary/30 px-4 py-2 text-xs text-foreground/50">
+          <div className="flex items-center justify-between border-t border-border bg-secondary/30 px-4 py-2 text-xs text-muted">
             <span>{(activeTab === 'USER' ? userContent : soulContent).length} {language === 'zh' ? '字符' : 'chars'}</span>
             <span>Markdown</span>
           </div>

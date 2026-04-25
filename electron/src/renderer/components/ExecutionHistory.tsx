@@ -83,19 +83,19 @@ export function ExecutionHistory({ jobId, jobTitle }: ExecutionHistoryProps) {
     switch (status) {
       case 'success':
         return (
-          <svg className="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4 w-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         );
       case 'failed':
         return (
-          <svg className="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4 w-4 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         );
       case 'running':
         return (
-          <svg className="h-4 w-4 text-blue-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4 w-4 text-info animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         );
@@ -107,19 +107,19 @@ export function ExecutionHistory({ jobId, jobTitle }: ExecutionHistoryProps) {
   const getStatusClass = (status: string) => {
     switch (status) {
       case 'success':
-        return 'bg-green-50 text-green-700 border-green-200';
+        return 'bg-success-bg text-success border-success/25';
       case 'failed':
-        return 'bg-red-50 text-red-700 border-red-200';
+        return 'bg-danger-bg text-danger border-danger/25';
       case 'running':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'bg-info-bg text-info border-info/25';
       default:
-        return 'bg-gray-50 text-gray-700 border-gray-200';
+        return 'bg-secondary text-muted border-border';
     }
   };
 
   if (loading && records.length === 0) {
     return (
-      <div className="py-8 text-center text-foreground/50">
+      <div className="py-8 text-center text-muted">
         <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2" />
         加载执行记录...
       </div>
@@ -129,13 +129,13 @@ export function ExecutionHistory({ jobId, jobTitle }: ExecutionHistoryProps) {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-danger/25 bg-danger-bg px-4 py-3 text-sm text-danger">
           {error}
         </div>
       )}
 
       {records.length === 0 ? (
-        <div className="py-8 text-center text-foreground/50">
+        <div className="py-8 text-center text-muted">
           <HistoryIcon className="h-10 w-10 mx-auto mb-2 opacity-40" />
           <p>暂无执行记录</p>
         </div>
@@ -145,7 +145,7 @@ export function ExecutionHistory({ jobId, jobTitle }: ExecutionHistoryProps) {
             <div
               key={record.id}
               onClick={() => void fetchRecordDetail(record.id)}
-              className="group cursor-pointer rounded-lg border border-border bg-background p-3 hover:bg-secondary/50 transition-colors"
+              className="group cursor-pointer rounded-lg border border-border bg-background p-3 hover:bg-secondary transition-colors"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -161,7 +161,7 @@ export function ExecutionHistory({ jobId, jobTitle }: ExecutionHistoryProps) {
                         {record.status === 'success' ? '成功' : record.status === 'failed' ? '失败' : '运行中'}
                       </span>
                     </div>
-                    <div className="mt-0.5 text-xs text-foreground/50">
+                    <div className="mt-0.5 text-xs text-muted">
                       {formatTime(record.startedAt)}
                       {record.durationMs > 0 && (
                         <span className="ml-2">耗时: {formatDuration(record.durationMs)}</span>
@@ -169,7 +169,7 @@ export function ExecutionHistory({ jobId, jobTitle }: ExecutionHistoryProps) {
                     </div>
                   </div>
                 </div>
-                <ChevronIcon className="h-4 w-4 text-foreground/30 group-hover:text-foreground/60" />
+                <ChevronIcon className="h-4 w-4 text-muted group-hover:text-muted" />
               </div>
             </div>
           ))}
@@ -187,7 +187,7 @@ export function ExecutionHistory({ jobId, jobTitle }: ExecutionHistoryProps) {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground">{selectedRecord.jobTitle}</h3>
-                  <p className="text-xs text-foreground/50">
+                  <p className="text-xs text-muted">
                     {formatTime(selectedRecord.startedAt)}
                     {selectedRecord.endedAt && ` - ${formatTime(selectedRecord.endedAt)}`}
                   </p>
@@ -195,7 +195,7 @@ export function ExecutionHistory({ jobId, jobTitle }: ExecutionHistoryProps) {
               </div>
               <button
                 onClick={() => setShowDetail(false)}
-                className="rounded-lg p-1.5 text-foreground/50 hover:bg-secondary hover:text-foreground"
+                className="rounded-lg p-1.5 text-muted hover:bg-secondary hover:text-foreground"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -207,14 +207,14 @@ export function ExecutionHistory({ jobId, jobTitle }: ExecutionHistoryProps) {
               {/* Status */}
               <div className="flex items-center gap-4 text-sm">
                 <div>
-                  <span className="text-foreground/50">状态:</span>
+                  <span className="text-muted">状态:</span>
                   <span className={`ml-1.5 rounded-full px-2 py-0.5 text-xs border ${getStatusClass(selectedRecord.status)}`}>
                     {selectedRecord.status === 'success' ? '成功' : selectedRecord.status === 'failed' ? '失败' : '运行中'}
                   </span>
                 </div>
                 {selectedRecord.durationMs > 0 && (
                   <div>
-                    <span className="text-foreground/50">耗时:</span>
+                    <span className="text-muted">耗时:</span>
                     <span className="ml-1.5 text-foreground">{formatDuration(selectedRecord.durationMs)}</span>
                   </div>
                 )}
@@ -222,17 +222,17 @@ export function ExecutionHistory({ jobId, jobTitle }: ExecutionHistoryProps) {
 
               {/* Error */}
               {selectedRecord.error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-                  <div className="text-xs font-medium text-red-700 mb-1">错误信息</div>
-                  <pre className="text-sm text-red-600 whitespace-pre-wrap break-words">{selectedRecord.error}</pre>
+                <div className="rounded-lg border border-danger/25 bg-danger-bg p-3">
+                  <div className="text-xs font-medium text-danger mb-1">错误信息</div>
+                  <pre className="text-sm text-danger whitespace-pre-wrap break-words">{selectedRecord.error}</pre>
                 </div>
               )}
 
               {/* Output */}
               {selectedRecord.output && (
                 <div>
-                  <div className="text-xs font-medium text-foreground/50 mb-1.5">输出内容</div>
-                  <div className="rounded-lg border border-border bg-secondary/50 p-3 max-h-96 overflow-y-auto prose prose-sm dark:prose-invert max-w-none">
+                  <div className="text-xs font-medium text-muted mb-1.5">输出内容</div>
+                  <div className="rounded-lg border border-border bg-secondary p-3 max-h-96 overflow-y-auto prose prose-sm dark:prose-invert max-w-none">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
@@ -263,7 +263,7 @@ export function ExecutionHistory({ jobId, jobTitle }: ExecutionHistoryProps) {
 
               {/* No output message */}
               {!selectedRecord.output && !selectedRecord.error && (
-                <div className="text-center py-8 text-foreground/50">
+                <div className="text-center py-8 text-muted">
                   无输出内容
                 </div>
               )}

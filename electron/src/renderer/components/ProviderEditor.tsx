@@ -171,7 +171,7 @@ export function ProviderEditor({ provider, onSave, onTest, onFetchModels, onCanc
                 </label>
                 <button
                   onClick={() => handleRemoveModel(index)}
-                  className="px-2 text-red-500 hover:text-red-600"
+                  className="px-2 text-danger hover:text-danger/80"
                 >
                   ×
                 </button>
@@ -184,8 +184,8 @@ export function ProviderEditor({ provider, onSave, onTest, onFetchModels, onCanc
           <div
             className={`rounded-lg p-3 text-sm ${
               fetchResult.success
-                ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-                : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                ? 'bg-success-bg text-success'
+                : 'bg-danger-bg text-danger'
             }`}
           >
             {fetchResult.message}
@@ -196,8 +196,8 @@ export function ProviderEditor({ provider, onSave, onTest, onFetchModels, onCanc
           <div
             className={`rounded-lg p-3 text-sm ${
               testResult.success
-                ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-                : 'bg-red-500/10 text-red-600 dark:text-red-400'
+                ? 'bg-success-bg text-success'
+                : 'bg-danger-bg text-danger'
             }`}
           >
             {testResult.message}

@@ -168,27 +168,27 @@ export function TerminalPanel({ sessionKey }: TerminalPanelProps) {
   };
 
   return (
-    <div className="mt-3 overflow-hidden rounded-xl border border-border/70 bg-card shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
-      <div className="flex items-center justify-between border-b border-border/50 px-3 py-2">
-        <div className="flex items-center gap-2 text-xs text-foreground/80">
+    <div className="mt-3 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+        <div className="flex items-center gap-2 text-xs text-muted">
           <TerminalPanelIcon className="h-3.5 w-3.5" />
           <span className="font-medium">Terminal</span>
-          <span className={`inline-block h-1.5 w-1.5 rounded-full ${running ? 'bg-emerald-500' : 'bg-foreground/40'}`} />
-          {starting && <span className="text-foreground/45">starting...</span>}
-          {shellLabel && <span className="text-foreground/45">{shellLabel}</span>}
+          <span className={`inline-block h-1.5 w-1.5 rounded-full ${running ? 'bg-success' : 'bg-muted'}`} />
+          {starting && <span className="text-muted">starting...</span>}
+          {shellLabel && <span className="text-muted">{shellLabel}</span>}
         </div>
         <div className="flex items-center gap-2 text-xs">
           <button
             type="button"
             onClick={handleClear}
-            className="rounded px-2 py-1 text-foreground/60 hover:bg-secondary hover:text-foreground"
+            className="rounded px-2 py-1 text-muted hover:bg-secondary hover:text-foreground"
           >
             Clear
           </button>
           <button
             type="button"
             onClick={handleStop}
-            className="rounded px-2 py-1 text-foreground/60 hover:bg-secondary hover:text-foreground"
+            className="rounded px-2 py-1 text-muted hover:bg-secondary hover:text-foreground"
           >
             Stop
           </button>

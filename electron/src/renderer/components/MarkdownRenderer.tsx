@@ -79,31 +79,17 @@ function CodeBlockCard({ code, language, isDark }: CodeBlockCardProps) {
 
   return (
     <div
-      className="my-4 overflow-hidden rounded-2xl border shadow-sm"
-      style={{
-        background: isDark
-          ? 'linear-gradient(180deg, #0f172a 0%, #111827 100%)'
-          : 'linear-gradient(180deg, #f8fbfa 0%, #edf3f1 100%)',
-        borderColor: isDark ? '#243041' : '#d5e0db'
-      }}
+      className="my-4 overflow-hidden rounded-xl border border-border shadow-sm bg-card"
     >
       <div
-        className="flex items-center justify-between border-b px-4 py-2.5"
-        style={{
-          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.78)' : 'rgba(244, 248, 246, 0.92)',
-          borderColor: isDark ? '#243041' : '#d5e0db'
-        }}
+        className="flex items-center justify-between border-b border-border px-4 py-2.5 bg-secondary"
       >
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full bg-[#ff6b6b]" />
           <span className="h-2.5 w-2.5 rounded-full bg-[#f4b942]" />
           <span className="h-2.5 w-2.5 rounded-full bg-[#53c26b]" />
           <span
-            className="ml-2 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em]"
-            style={{
-              backgroundColor: isDark ? 'rgba(148, 163, 184, 0.16)' : 'rgba(96, 125, 116, 0.12)',
-              color: isDark ? '#cbd5e1' : '#486157'
-            }}
+            className="ml-2 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] bg-secondary text-muted"
           >
             {normalizedLanguage}
           </span>
@@ -111,14 +97,9 @@ function CodeBlockCard({ code, language, isDark }: CodeBlockCardProps) {
         <button
           type="button"
           onClick={() => void handleCopy()}
-          className="rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors"
-          style={{
-            borderColor: isDark ? '#334155' : '#c8d6d0',
-            color: isDark ? '#e2e8f0' : '#365247',
-            backgroundColor: copied
-              ? (isDark ? 'rgba(34, 197, 94, 0.16)' : 'rgba(34, 197, 94, 0.1)')
-              : (isDark ? 'rgba(15, 23, 42, 0.55)' : 'rgba(255, 255, 255, 0.74)')
-          }}
+          className={`rounded-md border border-border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+            copied ? 'bg-success-bg text-success border-success/25' : 'bg-secondary text-muted'
+          }`}
         >
           {copied ? 'Copied' : 'Copy'}
         </button>
@@ -141,7 +122,7 @@ function CodeBlockCard({ code, language, isDark }: CodeBlockCardProps) {
         ) : (
           <pre
             className="m-0 whitespace-pre overflow-x-auto px-5 py-4 text-[13px] leading-6"
-            style={{ color: isDark ? '#e5e7eb' : '#1f2937' }}
+            style={{ color: 'var(--foreground)' }}
           >
             <code>{code}</code>
           </pre>
@@ -197,7 +178,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
 
             return (
               <code
-                className="rounded-md border border-border/70 bg-secondary/65 px-1.5 py-0.5 font-mono text-sm"
+                className="rounded-md border border-border bg-secondary px-1.5 py-0.5 font-mono text-sm"
                 {...props}
               >
                 {children}
@@ -230,7 +211,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
           },
           blockquote({ children }: { children?: React.ReactNode }) {
             return (
-              <blockquote className="my-3 border-l-4 border-primary/30 pl-4 italic text-foreground/70">
+              <blockquote className="my-3 border-l-4 border-primary/30 pl-4 italic text-muted">
                 {children}
               </blockquote>
             );

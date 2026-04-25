@@ -104,7 +104,7 @@ export function EmailConfig({ config, onChange, onTest }: EmailConfigProps) {
           </div>
 
           {/* Consent Checkbox */}
-          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+          <div className="bg-warning-bg border border-warning/20 rounded-lg p-4">
             <label className="flex items-start gap-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -116,7 +116,7 @@ export function EmailConfig({ config, onChange, onTest }: EmailConfigProps) {
                 <p className="font-medium mb-1">
                   {renderLabel('隐私与安全声明', 'Privacy & Security Notice')}
                 </p>
-                <p className="text-foreground/60">
+                <p className="text-muted">
                   {renderLabel(
                     '启用邮件功能后，Bot 将能够读取您的邮件内容并发送回复。您的邮箱凭证将被安全存储在本地配置文件中。请确保您信任此 Bot 后再启用此功能。',
                     'When enabled, the bot will be able to read your emails and send replies. Your email credentials will be stored securely in the local config file. Please ensure you trust this bot before enabling.'
@@ -128,7 +128,7 @@ export function EmailConfig({ config, onChange, onTest }: EmailConfigProps) {
 
           {/* IMAP Settings */}
           <div className="border border-border rounded-lg p-4 space-y-4">
-            <h4 className="font-medium text-sm uppercase tracking-wide text-foreground/60">
+            <h4 className="font-medium text-sm uppercase tracking-wide text-muted">
               {renderLabel('IMAP 收件设置', 'IMAP Incoming Settings')}
             </h4>
 
@@ -223,7 +223,7 @@ export function EmailConfig({ config, onChange, onTest }: EmailConfigProps) {
 
           {/* SMTP Settings */}
           <div className="border border-border rounded-lg p-4 space-y-4">
-            <h4 className="font-medium text-sm uppercase tracking-wide text-foreground/60">
+            <h4 className="font-medium text-sm uppercase tracking-wide text-muted">
               {renderLabel('SMTP 发件设置', 'SMTP Outgoing Settings')}
             </h4>
 
@@ -313,7 +313,7 @@ export function EmailConfig({ config, onChange, onTest }: EmailConfigProps) {
               onChange={(e) => updateField('pollIntervalSeconds', parseInt(e.target.value))}
               className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm"
             />
-            <p className="text-xs text-foreground/50 mt-1">
+            <p className="text-xs text-muted mt-1">
               {renderLabel('建议 30-60 秒，过快可能导致被封禁', 'Recommended 30-60 seconds, too fast may get blocked')}
             </p>
           </div>
@@ -330,7 +330,7 @@ export function EmailConfig({ config, onChange, onTest }: EmailConfigProps) {
               rows={3}
               className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm"
             />
-            <p className="text-xs text-foreground/50 mt-1">
+            <p className="text-xs text-muted mt-1">
               {renderLabel('每行一个邮箱地址，留空表示允许所有人', 'One email per line, leave empty to allow all')}
             </p>
           </div>
@@ -350,7 +350,7 @@ export function EmailConfig({ config, onChange, onTest }: EmailConfigProps) {
 
               {testResult && (
                 <span
-                  className={`text-sm ${testResult.success ? 'text-green-500' : 'text-red-500'}`}
+                  className={`text-sm ${testResult.success ? 'text-success' : 'text-danger'}`}
                 >
                   {testResult.message}
                 </span>

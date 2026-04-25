@@ -198,25 +198,25 @@ export function SessionsView() {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">搜索任务</h1>
-          <p className="mt-1 text-sm text-foreground/55">搜索和管理所有历史会话</p>
+          <p className="mt-1 text-sm text-muted">搜索和管理所有历史会话</p>
         </div>
 
         {/* Search and Filter Bar */}
         <div className="mb-6 flex flex-col sm:flex-row gap-3">
           {/* Search Input */}
           <div className="relative flex-1">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="搜索会话内容..."
-              className="w-full rounded-lg border border-border bg-background pl-9 pr-9 py-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+              className="w-full rounded-lg border border-border bg-background pl-9 pr-9 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground/40 hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
               >
                 <CloseIcon className="w-4 h-4" />
               </button>
@@ -235,7 +235,7 @@ export function SessionsView() {
         </div>
 
         {/* Stats */}
-        <div className="mb-4 text-sm text-foreground/50">
+        <div className="mb-4 text-sm text-muted">
           共 {filteredSessions.length} 个会话
           {searchQuery && `（搜索 "${searchQuery}"）`}
           {channelFilter !== 'all' && ` · ${getChannelLabel(channelFilter, language)}`}
@@ -243,10 +243,10 @@ export function SessionsView() {
 
         {/* Session List */}
         {loading ? (
-          <div className="py-12 text-center text-foreground/50">加载中...</div>
+          <div className="py-12 text-center text-muted">加载中...</div>
         ) : filteredSessions.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-foreground/50">{searchQuery ? '未找到匹配的会话' : '暂无会话记录'}</p>
+            <p className="text-muted">{searchQuery ? '未找到匹配的会话' : '暂无会话记录'}</p>
             {searchQuery && (
               <button
                 onClick={() => {
@@ -281,7 +281,7 @@ export function SessionsView() {
                       autoFocus
                       className="w-full text-base font-medium bg-transparent border-b border-primary/50 focus:outline-none focus:border-primary text-foreground"
                     />
-                    <p className="text-xs text-foreground/40 mt-1">按 Enter 确认，Esc 取消</p>
+                    <p className="text-xs text-muted mt-1">按 Enter 确认，Esc 取消</p>
                   </div>
                 );
               }
@@ -300,9 +300,9 @@ export function SessionsView() {
                         {title}
                       </h3>
                       {preview && preview !== title && (
-                        <p className="mt-1 truncate text-sm text-foreground/55">{preview}</p>
+                        <p className="mt-1 truncate text-sm text-muted">{preview}</p>
                       )}
-                      <div className="mt-1 flex items-center gap-3 text-xs text-foreground/50">
+                      <div className="mt-1 flex items-center gap-3 text-xs text-muted">
                         <span className="inline-flex items-center gap-1">
                           <span
                             className={`w-1.5 h-1.5 rounded-full ${
@@ -327,7 +327,7 @@ export function SessionsView() {
                           e.stopPropagation();
                           setOpenMenuKey(openMenuKey === session.key ? null : session.key);
                         }}
-                        className="p-2 rounded-lg hover:bg-secondary text-foreground/50 hover:text-foreground transition-colors"
+                        className="p-2 rounded-lg hover:bg-secondary text-muted hover:text-foreground transition-colors"
                       >
                         <DotsIcon className="w-4 h-4" />
                       </button>
@@ -348,7 +348,7 @@ export function SessionsView() {
                             </button>
                             <button
                               onClick={() => handleDelete(session.key)}
-                              className="w-full px-3 py-2 text-sm text-left hover:bg-red-50 text-red-600 flex items-center gap-2"
+                              className="w-full px-3 py-2 text-sm text-left hover:bg-danger-bg text-danger flex items-center gap-2"
                             >
                               <TrashIcon className="w-3.5 h-3.5" />
                               删除

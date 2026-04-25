@@ -99,14 +99,13 @@ function App() {
     };
   }, [dispatch]);
 
-  // Apply theme to document
+  // Apply theme to document via data-theme attribute
   useEffect(() => {
-    document.documentElement.classList.remove('light', 'dark');
     if (theme === 'system') {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.classList.add(prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
     } else {
-      document.documentElement.classList.add(theme);
+      document.documentElement.setAttribute('data-theme', theme);
     }
   }, [theme]);
 
@@ -118,12 +117,12 @@ function App() {
 
   return (
     <div className="desktop-shell h-screen overflow-hidden text-foreground">
-      <div className="desktop-panel relative flex h-full w-full gap-3 overflow-hidden bg-white/62 backdrop-blur-2xl">
+      <div className="relative flex h-full w-full gap-0 overflow-hidden bg-background">
         <div className={`absolute z-10 draggable ${isMac ? 'h-14' : 'h-12'}`} style={dragStripStyle} />
         <div className="absolute z-40 flex items-center gap-2 no-drag" style={controlAnchorStyle}>
           <button
             onClick={() => dispatch(toggleSidebar())}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/84 text-foreground/70 shadow-[0_10px_26px_rgba(31,41,55,0.09)] transition-colors hover:bg-white hover:text-foreground"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-muted transition-colors hover:bg-hover hover:text-foreground"
             aria-label="Toggle sidebar"
             title="Toggle sidebar"
           >
@@ -132,7 +131,7 @@ function App() {
           {sidebarCollapsed && (
             <button
               onClick={handleNewTask}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/70 bg-white/84 text-foreground/70 shadow-[0_10px_26px_rgba(31,41,55,0.09)] transition-colors hover:bg-white hover:text-foreground"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-muted transition-colors hover:bg-hover hover:text-foreground"
               aria-label="New task"
               title="New task"
             >
@@ -141,7 +140,7 @@ function App() {
           )}
         </div>
         <Sidebar />
-        <main className="mr-2 flex-1 overflow-hidden rounded-[30px] bg-transparent">
+        <main className="flex-1 overflow-hidden bg-transparent border-l border-border">
           {activeTab === 'chat' && <ChatView />}
           {activeTab === 'sessions' && <SessionsView />}
           {activeTab === 'scheduled' && <ScheduledTasksView />}

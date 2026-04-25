@@ -111,11 +111,11 @@ export function FileAttachment({
 
       {/* Drag overlay */}
       {isDragActive && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/20 backdrop-blur-sm">
-          <div className="rounded-2xl border-2 border-dashed border-primary bg-background px-8 py-6 text-center shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/20 ">
+          <div className="rounded-xl border-2 border-dashed border-primary bg-background px-8 py-6 text-center shadow-lg">
             <UploadIcon className="mx-auto mb-3 h-10 w-10 text-primary" />
             <p className="text-lg font-medium text-foreground">释放以上传文件</p>
-            <p className="mt-1 text-sm text-foreground/60">支持拖放多个文件</p>
+            <p className="mt-1 text-sm text-muted">支持拖放多个文件</p>
           </div>
         </div>
       )}
@@ -128,14 +128,14 @@ export function FileAttachment({
               key={file.id}
               className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs"
             >
-              <DocumentIcon className="h-4 w-4 text-foreground/60" />
+              <DocumentIcon className="h-4 w-4 text-muted" />
               <span className="max-w-[120px] truncate text-foreground">{file.filename}</span>
-              <span className="text-foreground/50">({formatFileSize(file.size)})</span>
+              <span className="text-muted">({formatFileSize(file.size)})</span>
               <button
                 type="button"
                 onClick={() => onRemoveFile(file.id)}
                 disabled={disabled}
-                className="ml-1 rounded p-0.5 text-foreground/40 hover:bg-foreground/10 hover:text-foreground disabled:opacity-50"
+                className="ml-1 rounded p-0.5 text-muted hover:bg-foreground/10 hover:text-foreground disabled:opacity-50"
               >
                 <XIcon className="h-3 w-3" />
               </button>
@@ -146,7 +146,7 @@ export function FileAttachment({
 
       {/* Error message */}
       {uploadError && (
-        <div className="mb-2 rounded-md bg-red-500/10 px-3 py-1.5 text-xs text-red-500">
+        <div className="mb-2 rounded-md bg-danger-bg px-3 py-1.5 text-xs text-danger">
           {uploadError}
         </div>
       )}
@@ -156,7 +156,7 @@ export function FileAttachment({
         type="button"
         onClick={handleAttachClick}
         disabled={disabled || uploading}
-        className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs text-foreground/70 transition-colors hover:bg-secondary/80 disabled:opacity-50"
+        className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs text-muted transition-colors hover:bg-secondary disabled:opacity-50"
       >
         {uploading ? (
           <>

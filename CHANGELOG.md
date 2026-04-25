@@ -85,6 +85,20 @@
   - `AGENTS.md`
   - 验证：`./e2e_test/gateway_agent_regression.sh`、`make build`
 
+### Changed
+
+- **UI 全面重构为 X.com 风格极简主义设计**：彻底替换原有暖色调毛玻璃拟物风格，采用黑白灰为主色调的扁平化设计，提升信息密度与视觉清晰度
+  - **设计 Token 体系**：`globals.css` 引入基于 `data-theme` 属性的语义化 CSS 变量（`--background`、`--foreground`、`--primary`、`--secondary`、`--border`、`--muted`、`--success`、`--danger` 等），支持精确的亮/暗主题切换
+  - **Tailwind 配置**：`darkMode` 改为 `['selector', '[data-theme="dark"]']`，新增语义化颜色映射（`success`、`info`、`warning`、`danger`）和统一的圆角体系（`sm: 4px` → `2xl: 20px`）
+  - **字体升级**：全局字体切换为 "Inter" + "JetBrains Mono"，提升代码与界面的可读性
+  - **移除所有毛玻璃效果**：删除全部 `backdrop-blur`、渐变背景、重阴影（`shadow-[0_14px_...]`）、任意圆角（`rounded-[30px]`）、透明度层（`bg-white/XX`）
+  - **组件级改造**：Sidebar、ChatView、SessionsView、SettingsView、MCPView、SkillsView、ScheduledTasksView 等全部视图及 MarkdownRenderer、TerminalPanel、ConfirmDialog、ProviderEditor、IMBotConfig、ExecutionHistory、CustomSelect 等组件全面应用新 Token 体系
+  - **语义化状态色统一**：所有成功/错误/警告状态统一使用 `bg-success-bg text-success`、`bg-danger-bg text-danger`、`bg-warning-bg text-warning`、`bg-info-bg text-info` 模式，消除原始色值（`text-red-500`、`bg-green-500/10` 等）的硬编码
+  - `electron/src/renderer/styles/globals.css`、`electron/tailwind.config.js`、`electron/src/renderer/App.tsx`
+  - `electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/components/MarkdownRenderer.tsx`、`electron/src/renderer/components/TerminalPanel.tsx`、`electron/src/renderer/components/ConfirmDialog.tsx`、`electron/src/renderer/components/ProviderEditor.tsx`、`electron/src/renderer/components/IMBotConfig.tsx`、`electron/src/renderer/components/ExecutionHistory.tsx`、`electron/src/renderer/components/CustomSelect.tsx`、`electron/src/renderer/components/FileTreeSidebar.tsx`、`electron/src/renderer/components/FileAttachment.tsx`、`electron/src/renderer/components/FilePreviewSidebar.tsx`、`electron/src/renderer/components/TitleBar.tsx`、`electron/src/renderer/components/MermaidRenderer.tsx`、`electron/src/renderer/components/CronBuilder.css`、`electron/src/renderer/components/EmailConfig.tsx`
+  - `electron/src/renderer/views/ChatView.tsx`、`electron/src/renderer/views/SessionsView.tsx`、`electron/src/renderer/views/SettingsView.tsx`、`electron/src/renderer/views/MCPView.tsx`、`electron/src/renderer/views/SkillsView.tsx`、`electron/src/renderer/views/ScheduledTasksView.tsx`
+  - 验证：`cd electron && npm run build`、`make build`
+
 ### Fixed
 
 - **运行中的 Gateway 现在会立即刷新 MCP 工具配置**：在桌面端/`/api/mcp` 新增、更新、删除 MCP server 后，运行中的 `AgentLoop` 会同步重载 MCP 连接与工具注册，不再必须重启 app 才能在新对话中感知到新工具

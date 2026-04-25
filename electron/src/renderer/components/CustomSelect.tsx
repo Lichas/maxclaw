@@ -176,13 +176,13 @@ export function CustomSelect({
       >
         <span className="flex items-center justify-between gap-3">
           <span className="truncate text-inherit">{selectedOption?.label || placeholder || ''}</span>
-          <ChevronDownIcon className={`h-4 w-4 text-foreground/45 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+          <ChevronDownIcon className={`h-4 w-4 text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
         </span>
       </button>
 
       {open && (
         <div
-          className={`absolute left-0 right-0 z-50 overflow-hidden rounded-xl border border-border bg-background shadow-xl ${
+          className={`absolute left-0 right-0 z-50 overflow-hidden rounded-lg border border-border bg-background shadow-lg ${
             menuPlacement === 'top' ? 'bottom-[calc(100%+0.35rem)]' : 'top-[calc(100%+0.35rem)]'
           } ${menuClassName}`}
         >
@@ -199,12 +199,12 @@ export function CustomSelect({
                   onClick={() => chooseOption(option)}
                   className={`mb-0.5 w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                     option.disabled
-                      ? 'cursor-not-allowed text-foreground/35'
+                      ? 'cursor-not-allowed text-muted'
                       : selected
-                      ? 'bg-primary/15 text-primary'
+                      ? 'bg-accent text-primary'
                       : active
                       ? 'bg-secondary text-foreground'
-                      : 'text-foreground/75 hover:bg-secondary hover:text-foreground'
+                      : 'text-muted hover:bg-secondary hover:text-foreground'
                   }`}
                 >
                   {option.label}

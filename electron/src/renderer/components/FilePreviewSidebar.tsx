@@ -74,13 +74,13 @@ export function FilePreviewSidebar({
 
   if (collapsed) {
     return (
-      <aside className="hidden h-full w-11 border-l border-border/70 bg-background/60 md:flex md:flex-col md:items-center md:pt-3">
+      <aside className="hidden h-full w-11 border-l border-border bg-background/60 md:flex md:flex-col md:items-center md:pt-3">
         <button
           onClick={() => {
             onModeChange?.('tree');
             onToggle();
           }}
-          className="rounded-md border border-border/80 bg-background p-1.5 text-foreground/70 transition-colors hover:bg-secondary hover:text-foreground"
+          className="rounded-md border border-border bg-background p-1.5 text-muted transition-colors hover:bg-secondary hover:text-foreground"
           title="展开预览栏"
           aria-label="Expand preview sidebar"
         >
@@ -92,7 +92,7 @@ export function FilePreviewSidebar({
               onModeChange('browser');
               onToggle();
             }}
-            className="mt-2 rounded-md border border-border/80 bg-background p-1.5 text-foreground/70 transition-colors hover:bg-secondary hover:text-foreground"
+            className="mt-2 rounded-md border border-border bg-background p-1.5 text-muted transition-colors hover:bg-secondary hover:text-foreground"
             title="打开 Browser Co-Pilot"
             aria-label="Open browser copilot sidebar"
           >
@@ -105,7 +105,7 @@ export function FilePreviewSidebar({
 
   return (
     <aside
-      className="relative hidden h-full shrink-0 border-l border-border/70 bg-background/45 md:flex md:flex-col"
+      className="relative hidden h-full shrink-0 border-l border-border bg-background/45 md:flex md:flex-col"
       style={{ width: `${width}px` }}
     >
       <div
@@ -115,10 +115,10 @@ export function FilePreviewSidebar({
         aria-hidden="true"
       />
 
-      <header className="flex items-center gap-2 border-b border-border/60 px-3 py-2">
+      <header className="flex items-center gap-2 border-b border-border px-3 py-2">
         <button
           onClick={onToggle}
-          className="rounded-md border border-border/80 bg-background p-1.5 text-foreground/70 transition-colors hover:bg-secondary hover:text-foreground"
+          className="rounded-md border border-border bg-background p-1.5 text-muted transition-colors hover:bg-secondary hover:text-foreground"
           title="收起预览栏"
           aria-label="Collapse preview sidebar"
         >
@@ -127,14 +127,14 @@ export function FilePreviewSidebar({
 
         <div className="min-w-0 flex-1">
           {onModeChange ? (
-            <div className="inline-flex rounded-lg border border-border/80 bg-secondary/40 p-1">
+            <div className="inline-flex rounded-lg border border-border bg-secondary/40 p-1">
               <button
                 type="button"
                 onClick={() => onModeChange('tree')}
                 className={`rounded px-2 py-1 text-[11px] transition-colors ${
                   mode === 'tree'
                     ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-foreground/70 hover:bg-background/80'
+                    : 'text-muted hover:bg-background'
                 }`}
               >
                 文件树
@@ -143,7 +143,7 @@ export function FilePreviewSidebar({
                 type="button"
                 onClick={() => onModeChange('file')}
                 className={`rounded px-2 py-1 text-[11px] transition-colors ${
-                  mode === 'file' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-foreground/70 hover:bg-background/80'
+                  mode === 'file' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted hover:bg-background'
                 }`}
               >
                 文件预览
@@ -155,7 +155,7 @@ export function FilePreviewSidebar({
                   className={`rounded px-2 py-1 text-[11px] transition-colors ${
                     mode === 'browser'
                       ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-foreground/70 hover:bg-background/80'
+                      : 'text-muted hover:bg-background'
                   }`}
                 >
                   Browser
@@ -163,14 +163,14 @@ export function FilePreviewSidebar({
               )}
             </div>
           ) : (
-            <p className="truncate text-xs font-semibold uppercase tracking-wide text-foreground/55">文件预览</p>
+            <p className="truncate text-xs font-semibold uppercase tracking-wide text-muted">文件预览</p>
           )}
         </div>
 
         {mode === 'file' && selected && (
           <button
             onClick={onOpenFile}
-            className="rounded-md border border-border/80 bg-background px-2 py-1 text-xs text-foreground/75 transition-colors hover:bg-secondary hover:text-foreground"
+            className="rounded-md border border-border bg-background px-2 py-1 text-xs text-muted transition-colors hover:bg-secondary hover:text-foreground"
           >
             打开目录
           </button>
@@ -189,7 +189,7 @@ export function FilePreviewSidebar({
             {browserAvailable ? (
               browserPanel
             ) : (
-              <div className="rounded-xl border border-dashed border-border/80 bg-card/60 px-3 py-4 text-sm text-foreground/60">
+              <div className="rounded-xl border border-dashed border-border bg-card px-3 py-4 text-sm text-muted">
                 当前会话尚无 Browser 活动。执行 browser 工具后会在这里显示协作面板。
               </div>
             )}
@@ -199,24 +199,24 @@ export function FilePreviewSidebar({
         {mode === 'file' && (
           <div className="p-3">
             {loading && (
-              <div className="rounded-xl border border-border/70 bg-card/70 px-3 py-4 text-sm text-foreground/65">正在渲染预览...</div>
+              <div className="rounded-xl border border-border bg-card px-3 py-4 text-sm text-muted">正在渲染预览...</div>
             )}
 
             {!loading && !selected && (
-              <div className="rounded-xl border border-dashed border-border/80 bg-card/60 px-3 py-4 text-sm text-foreground/60">
+              <div className="rounded-xl border border-dashed border-border bg-card px-3 py-4 text-sm text-muted">
                 点击文件树中的文件，在这里查看预览。
               </div>
             )}
 
             {!loading && selected && preview && !preview.success && (
-              <div className="rounded-xl border border-red-400/45 bg-red-500/10 px-3 py-4 text-sm text-red-400">
+              <div className="rounded-xl border border-danger/25 bg-danger-bg px-3 py-4 text-sm text-danger">
                 预览失败: {preview.error || '未知错误'}
               </div>
             )}
 
             {!loading && selected && preview && preview.success && (
               <div className="space-y-3">
-                <div className="inline-flex rounded-full bg-secondary px-2 py-1 text-[11px] uppercase tracking-wide text-foreground/60">
+                <div className="inline-flex rounded-full bg-secondary px-2 py-1 text-[11px] uppercase tracking-wide text-muted">
                   {preview.kind || selected.kind}
                 </div>
                 <FilePreviewBody
@@ -247,7 +247,7 @@ function FilePreviewBody({
 }) {
   if (preview.kind === 'markdown') {
     return (
-      <div className="rounded-xl border border-border/70 bg-card/75 p-3">
+      <div className="rounded-xl border border-border bg-card p-3">
         <MarkdownRenderer content={preview.content || ''} className="text-sm" />
       </div>
     );
@@ -255,7 +255,7 @@ function FilePreviewBody({
 
   if (preview.kind === 'text' || preview.kind === 'office') {
     return (
-      <pre className="rounded-xl border border-border/70 bg-card/75 p-3 text-xs leading-5 text-foreground/85 whitespace-pre-wrap break-all">
+      <pre className="rounded-xl border border-border bg-card p-3 text-xs leading-5 text-muted whitespace-pre-wrap break-all">
         {preview.content || '文件没有可展示内容。'}
       </pre>
     );
@@ -263,7 +263,7 @@ function FilePreviewBody({
 
   if (preview.kind === 'html' && preview.fileUrl) {
     return (
-      <div className="overflow-hidden rounded-xl border border-border/70 bg-card/80">
+      <div className="overflow-hidden rounded-xl border border-border bg-card/80">
         <iframe
           src={preview.fileUrl}
           className="h-[72vh] w-full bg-white"
@@ -276,7 +276,7 @@ function FilePreviewBody({
 
   if (preview.kind === 'image' && preview.fileUrl) {
     return (
-      <div className="overflow-hidden rounded-xl border border-border/70 bg-card/80 p-2">
+      <div className="overflow-hidden rounded-xl border border-border bg-card/80 p-2">
         <img
           src={preview.fileUrl}
           alt="preview"
@@ -298,7 +298,7 @@ function FilePreviewBody({
           }}
         />
         {imageAssist?.enabled && (
-          <p className="mt-2 text-[11px] text-foreground/55">{imageAssist.hint || '点击截图可把坐标回传给 browser 工具执行点击。'}</p>
+          <p className="mt-2 text-[11px] text-muted">{imageAssist.hint || '点击截图可把坐标回传给 browser 工具执行点击。'}</p>
         )}
       </div>
     );
@@ -306,7 +306,7 @@ function FilePreviewBody({
 
   if (preview.kind === 'pdf' && preview.fileUrl) {
     return (
-      <div className="overflow-hidden rounded-xl border border-border/70 bg-card/80">
+      <div className="overflow-hidden rounded-xl border border-border bg-card/80">
         <iframe src={preview.fileUrl} className="h-[72vh] w-full" title="PDF Preview" />
       </div>
     );
@@ -314,7 +314,7 @@ function FilePreviewBody({
 
   if (preview.kind === 'video' && preview.fileUrl) {
     return (
-      <div className="overflow-hidden rounded-xl border border-border/70 bg-card/80 p-2">
+      <div className="overflow-hidden rounded-xl border border-border bg-card/80 p-2">
         <video src={preview.fileUrl} controls className="max-h-[72vh] w-full rounded-md" />
       </div>
     );
@@ -322,7 +322,7 @@ function FilePreviewBody({
 
   if (preview.kind === 'audio' && preview.fileUrl) {
     return (
-      <div className="rounded-xl border border-border/70 bg-card/80 p-3">
+      <div className="rounded-xl border border-border bg-card/80 p-3">
         <audio src={preview.fileUrl} controls className="w-full" />
       </div>
     );
@@ -330,8 +330,8 @@ function FilePreviewBody({
 
   // Binary or unsupported files - show action buttons
   return (
-    <div className="rounded-xl border border-border/70 bg-card/70 px-4 py-6 text-center">
-      <p className="mb-4 text-sm text-foreground/60">
+    <div className="rounded-xl border border-border bg-card px-4 py-6 text-center">
+      <p className="mb-4 text-sm text-muted">
         当前文件类型暂不支持内嵌预览
       </p>
       <div className="flex justify-center gap-3">

@@ -244,14 +244,14 @@ export function SkillsView() {
   });
 
   return (
-    <div className="relative isolate h-full overflow-y-auto bg-background p-6 [backface-visibility:hidden] [contain:paint] [transform:translateZ(0)]">
-      <div className="mx-auto max-w-5xl [transform:translateZ(0)]">
+    <div className="relative isolate h-full overflow-y-auto bg-background p-6">
+      <div className="mx-auto max-w-5xl">
         <div className="relative z-20 mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
               {t('skills.title')}
             </h1>
-            <p className="mt-1 text-sm text-foreground/55">
+            <p className="mt-1 text-sm text-muted">
               {t('skills.subtitle')}
             </p>
           </div>
@@ -259,7 +259,7 @@ export function SkillsView() {
             <button
               type="button"
               onClick={() => setInstallModalOpen(true)}
-              className="inline-flex h-11 items-center gap-2 rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-[0_14px_34px_rgba(184,103,63,0.22)] transition-transform duration-150 hover:-translate-y-0.5 hover:bg-primary/90"
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-transform duration-150 hover:-translate-y-0.5 hover:bg-primary/90"
             >
               <span className="text-base leading-none">+</span>
               <span>{t('skills.install')}</span>
@@ -268,7 +268,7 @@ export function SkillsView() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+          <div className="mb-4 rounded-lg border border-danger/25 bg-danger-bg px-4 py-3 text-sm text-danger">
             {error}
           </div>
         )}
@@ -343,7 +343,7 @@ export function SkillsView() {
               {(installType === 'github' || installType === 'clawhub') && (
                 <div className="space-y-3">
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+                    <label className="mb-1.5 block text-xs font-medium text-muted">
                       {installType === 'clawhub' ? '推荐市场' : '推荐技能源'}
                     </label>
                     <select
@@ -367,7 +367,7 @@ export function SkillsView() {
 
                   {(useCustomUrl || selectedRecommend) && (
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+                      <label className="mb-1.5 block text-xs font-medium text-muted">
                         {installType === 'clawhub'
                           ? 'ClawHub slug / URL'
                           : 'GitHub URL'}
@@ -378,16 +378,16 @@ export function SkillsView() {
                         onChange={(e) => setInstallUrl(e.target.value)}
                         placeholder={getInstallPlaceholder()}
                         readOnly={installInputReadOnly}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none disabled:bg-secondary/50"
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none disabled:bg-secondary/50"
                         required
                       />
                       {!useCustomUrl && selectedRecommend && (
-                        <p className="mt-1 text-xs text-foreground/50">
+                        <p className="mt-1 text-xs text-muted">
                           已选择推荐源，如需修改请切换到"自定义 URL"
                         </p>
                       )}
                       {selectedSource?.browseUrl && (
-                        <p className="mt-1 text-xs text-foreground/50">
+                        <p className="mt-1 text-xs text-muted">
                           Browse:{' '}
                           <a
                             href={selectedSource.browseUrl}
@@ -412,7 +412,7 @@ export function SkillsView() {
                       value={installUrl}
                       onChange={(e) => setInstallUrl(e.target.value)}
                       placeholder={getInstallPlaceholder()}
-                      className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                      className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                       required
                     />
                     <button
@@ -430,7 +430,7 @@ export function SkillsView() {
                       Open
                     </button>
                   </div>
-                  <p className="text-xs text-foreground/50">
+                  <p className="text-xs text-muted">
                     {t('skills.install.zip.help') ||
                       '选择 .zip 技能包文件，或输入完整路径'}
                   </p>
@@ -445,7 +445,7 @@ export function SkillsView() {
                       value={installUrl}
                       onChange={(e) => setInstallUrl(e.target.value)}
                       placeholder={getInstallPlaceholder()}
-                      className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                      className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                       required
                     />
                     <button
@@ -461,7 +461,7 @@ export function SkillsView() {
                       Open
                     </button>
                   </div>
-                  <p className="text-xs text-foreground/50">
+                  <p className="text-xs text-muted">
                     {t('skills.install.folder.help') ||
                       '选择技能文件夹，或输入完整路径'}
                   </p>
@@ -493,23 +493,23 @@ export function SkillsView() {
             value={nameFilter}
             onChange={(event) => setNameFilter(event.target.value)}
             placeholder="按名称过滤已安装技能"
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
           />
         </div>
 
         {loading && skills.length === 0 ? (
-          <div className="py-12 text-center text-foreground/50">
+          <div className="py-12 text-center text-muted">
             {t('common.loading')}
           </div>
         ) : skills.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-foreground/50">{t('skills.empty')}</p>
-            <p className="mt-1 text-sm text-foreground/40">
+            <p className="text-muted">{t('skills.empty')}</p>
+            <p className="mt-1 text-sm text-muted">
               {t('skills.empty.hint')}
             </p>
           </div>
         ) : filteredSkills.length === 0 ? (
-          <div className="py-12 text-center text-foreground/50">
+          <div className="py-12 text-center text-muted">
             没有匹配的已安装技能
           </div>
         ) : (
@@ -532,7 +532,7 @@ export function SkillsView() {
                       <h3 className="font-semibold text-foreground">
                         {skill.displayName}
                       </h3>
-                      <p className="text-xs text-foreground/50">{skill.name}</p>
+                      <p className="text-xs text-muted">{skill.name}</p>
                     </div>
                   </div>
                   <button
@@ -550,18 +550,18 @@ export function SkillsView() {
                 </div>
 
                 {skill.description && (
-                  <div className="group relative mt-3 [transform:translateZ(0)]">
-                    <p className="cursor-help text-sm text-foreground/70 line-clamp-2">
+                  <div className="group relative mt-3">
+                    <p className="cursor-help text-sm text-muted line-clamp-2">
                       {skill.description}
                     </p>
-                    <div className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-full min-w-[16rem] translate-y-1 rounded-xl border border-border/80 bg-card p-3 text-xs leading-5 text-foreground shadow-[0_14px_34px_rgba(15,23,42,0.18)] opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+                    <div className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-full min-w-[16rem] translate-y-1 rounded-xl border border-border bg-secondary p-3 text-xs leading-5 text-foreground opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
                       {skill.description}
                     </div>
                   </div>
                 )}
 
                 {skill.installedAt && (
-                  <p className="mt-3 text-xs text-foreground/40">
+                  <p className="mt-3 text-xs text-muted">
                     {new Date(skill.installedAt).toLocaleDateString()}
                   </p>
                 )}

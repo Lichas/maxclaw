@@ -412,7 +412,7 @@ export function MCPView() {
         <div className="relative z-20 mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t('mcp.title')}</h1>
-            <p className="mt-1 text-sm text-foreground/55">{t('mcp.subtitle')}</p>
+            <p className="mt-1 text-sm text-muted">{t('mcp.subtitle')}</p>
           </div>
           <div className="relative z-20 no-drag">
             <button
@@ -425,7 +425,7 @@ export function MCPView() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
+          <div className="mb-4 rounded-lg border border-danger/25 bg-danger-bg px-4 py-3 text-sm text-danger">
             {error}
           </div>
         )}
@@ -442,7 +442,7 @@ export function MCPView() {
                 className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
                   inputMode === 'form'
                     ? 'bg-background text-foreground shadow-sm'
-                    : 'text-foreground/60 hover:text-foreground'
+                    : 'text-muted hover:text-foreground'
                 }`}
               >
                 {t('mcp.form.modeForm')}
@@ -453,7 +453,7 @@ export function MCPView() {
                 className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
                   inputMode === 'json'
                     ? 'bg-background text-foreground shadow-sm'
-                    : 'text-foreground/60 hover:text-foreground'
+                    : 'text-muted hover:text-foreground'
                 }`}
               >
                 {t('mcp.form.modeJson')}
@@ -462,7 +462,7 @@ export function MCPView() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {inputMode === 'json' ? (
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+                  <label className="mb-1.5 block text-xs font-medium text-muted">
                     {t('mcp.form.json')}
                   </label>
                   <textarea
@@ -470,16 +470,16 @@ export function MCPView() {
                     onChange={(e) => setJsonInput(e.target.value)}
                     placeholder={t('mcp.form.jsonPlaceholder')}
                     rows={12}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                     required={inputMode === 'json'}
                   />
-                  <p className="mt-1 text-xs text-foreground/50">{t('mcp.form.jsonHint')}</p>
+                  <p className="mt-1 text-xs text-muted">{t('mcp.form.jsonHint')}</p>
                 </div>
               ) : (
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+                      <label className="mb-1.5 block text-xs font-medium text-muted">
                         {t('mcp.form.name')} *
                       </label>
                       <input
@@ -488,12 +488,12 @@ export function MCPView() {
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         placeholder="my-mcp-server"
                         disabled={!!editingServer}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none disabled:bg-secondary/50"
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none disabled:bg-secondary/50"
                         required
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+                      <label className="mb-1.5 block text-xs font-medium text-muted">
                         {t('mcp.form.type')}
                       </label>
                       <select
@@ -510,7 +510,7 @@ export function MCPView() {
                   {formData.type === 'stdio' ? (
                     <>
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+                        <label className="mb-1.5 block text-xs font-medium text-muted">
                           {t('mcp.form.command')} *
                         </label>
                         <input
@@ -518,12 +518,12 @@ export function MCPView() {
                           value={formData.command}
                           onChange={(e) => setFormData({ ...formData, command: e.target.value })}
                           placeholder="npx"
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                           required={formData.type === 'stdio'}
                         />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+                        <label className="mb-1.5 block text-xs font-medium text-muted">
                           {t('mcp.form.args')}
                         </label>
                         <input
@@ -531,12 +531,12 @@ export function MCPView() {
                           value={formData.args}
                           onChange={(e) => setFormData({ ...formData, args: e.target.value })}
                           placeholder="-y @playwright/mcp@latest"
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                         />
-                        <p className="mt-1 text-xs text-foreground/50">{t('mcp.form.argsHint')}</p>
+                        <p className="mt-1 text-xs text-muted">{t('mcp.form.argsHint')}</p>
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+                        <label className="mb-1.5 block text-xs font-medium text-muted">
                           {t('mcp.form.env')}
                         </label>
                         <textarea
@@ -544,15 +544,15 @@ export function MCPView() {
                           onChange={(e) => setFormData({ ...formData, env: e.target.value })}
                           placeholder="KEY=value&#10;ANOTHER_KEY=another_value"
                           rows={3}
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                         />
-                        <p className="mt-1 text-xs text-foreground/50">{t('mcp.form.envHint')}</p>
+                        <p className="mt-1 text-xs text-muted">{t('mcp.form.envHint')}</p>
                       </div>
                     </>
                   ) : (
                     <>
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+                        <label className="mb-1.5 block text-xs font-medium text-muted">
                           {t('mcp.form.url')} *
                         </label>
                         <input
@@ -560,12 +560,12 @@ export function MCPView() {
                           value={formData.url}
                           onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                           placeholder="http://localhost:3000/sse"
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                           required={formData.type === 'sse'}
                         />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+                        <label className="mb-1.5 block text-xs font-medium text-muted">
                           {t('mcp.form.headers')}
                         </label>
                         <textarea
@@ -573,15 +573,15 @@ export function MCPView() {
                           onChange={(e) => setFormData({ ...formData, headers: e.target.value })}
                           placeholder="Authorization: Bearer token&#10;X-Custom-Header: value"
                           rows={3}
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                         />
-                        <p className="mt-1 text-xs text-foreground/50">{t('mcp.form.headersHint')}</p>
+                        <p className="mt-1 text-xs text-muted">{t('mcp.form.headersHint')}</p>
                       </div>
                     </>
                   )}
 
                   <div>
-                    <label className="mb-1.5 block text-xs font-medium text-foreground/70">
+                    <label className="mb-1.5 block text-xs font-medium text-muted">
                       {t('mcp.form.description')}
                     </label>
                     <input
@@ -589,7 +589,7 @@ export function MCPView() {
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       placeholder={t('mcp.form.descriptionPlaceholder')}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                     />
                   </div>
                 </>
@@ -618,18 +618,18 @@ export function MCPView() {
         )}
 
         {loading && servers.length === 0 ? (
-          <div className="py-12 text-center text-foreground/50">{t('common.loading')}</div>
+          <div className="py-12 text-center text-muted">{t('common.loading')}</div>
         ) : servers.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-foreground/50">{t('mcp.empty')}</p>
-            <p className="mt-1 text-sm text-foreground/40">{t('mcp.empty.hint')}</p>
+            <p className="text-muted">{t('mcp.empty')}</p>
+            <p className="mt-1 text-sm text-muted">{t('mcp.empty.hint')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {servers.map((server) => (
               <div
                 key={server.name}
-                className="rounded-xl border border-border bg-background p-5 shadow-sm transition-all hover:border-border/80"
+                className="rounded-xl border border-border bg-background p-5 shadow-sm transition-all hover:border-primary/30"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -639,10 +639,10 @@ export function MCPView() {
                     <div>
                       <h3 className="font-semibold text-foreground">{server.name}</h3>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-foreground/70">
+                        <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-muted">
                           {server.type.toUpperCase()}
                         </span>
-                        <p className="text-xs text-foreground/50 font-mono truncate max-w-md">
+                        <p className="text-xs text-muted font-mono truncate max-w-md">
                           {getEndpointDisplay(server)}
                         </p>
                       </div>
@@ -654,10 +654,10 @@ export function MCPView() {
                       disabled={testResults[server.name]?.status === 'testing'}
                       className={`rounded-lg p-2 transition-colors disabled:opacity-50 ${
                         testResults[server.name]?.status === 'success'
-                          ? 'text-green-500 bg-green-50 dark:bg-green-900/20'
+                          ? 'text-success bg-success-bg'
                           : testResults[server.name]?.status === 'error'
-                          ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
-                          : 'text-foreground/60 hover:bg-secondary hover:text-foreground'
+                          ? 'text-danger bg-danger-bg'
+                          : 'text-muted hover:bg-secondary hover:text-foreground'
                       }`}
                       title={t('common.test')}
                     >
@@ -669,14 +669,14 @@ export function MCPView() {
                     </button>
                     <button
                       onClick={() => openEditModal(server)}
-                      className="rounded-lg p-2 text-foreground/60 hover:bg-secondary hover:text-foreground transition-colors"
+                      className="rounded-lg p-2 text-muted hover:bg-secondary hover:text-foreground transition-colors"
                       title={t('common.edit')}
                     >
                       <EditIcon className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(server.name)}
-                      className="rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      className="rounded-lg p-2 text-danger hover:bg-danger-bg transition-colors"
                       title={t('common.delete')}
                     >
                       <TrashIcon className="w-4 h-4" />
@@ -685,24 +685,24 @@ export function MCPView() {
                 </div>
 
                 {server.description && (
-                  <p className="mt-3 text-sm text-foreground/70">{server.description}</p>
+                  <p className="mt-3 text-sm text-muted">{server.description}</p>
                 )}
 
                 {(testResults[server.name]?.status === 'success' || testResults[server.name]?.status === 'error') && (
                   <div className={`mt-3 rounded-lg px-3 py-2 ${
                     testResults[server.name]?.status === 'success'
-                      ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50'
-                      : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50'
+                      ? 'bg-success-bg border border-success/25'
+                      : 'bg-danger-bg border border-danger/25'
                   }`}>
                     <p className={`text-sm ${
-                      testResults[server.name]?.status === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'
+                      testResults[server.name]?.status === 'success' ? 'text-success' : 'text-danger'
                     }`}>
                       {testResults[server.name]?.message}
                     </p>
                     {testResults[server.name]?.tools && testResults[server.name].tools!.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {testResults[server.name].tools!.map(tool => (
-                          <span key={tool} className="inline-flex items-center rounded bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 text-xs text-green-700 dark:text-green-300">
+                          <span key={tool} className="inline-flex items-center rounded bg-success-bg px-1.5 py-0.5 text-xs text-success">
                             {tool}
                           </span>
                         ))}
@@ -712,11 +712,11 @@ export function MCPView() {
                 )}
 
                 {server.env && Object.keys(server.env).length > 0 && (
-                  <div className="mt-3 rounded-lg bg-secondary/50 px-3 py-2">
-                    <p className="text-xs font-medium text-foreground/60 mb-1">{t('mcp.envVars')}</p>
+                  <div className="mt-3 rounded-lg bg-secondary px-3 py-2">
+                    <p className="text-xs font-medium text-muted mb-1">{t('mcp.envVars')}</p>
                     <div className="flex flex-wrap gap-2">
                       {Object.keys(server.env).map(key => (
-                        <span key={key} className="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-xs text-foreground/70">
+                        <span key={key} className="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-xs text-muted">
                           {key}
                         </span>
                       ))}
@@ -725,11 +725,11 @@ export function MCPView() {
                 )}
 
                 {server.headers && Object.keys(server.headers).length > 0 && (
-                  <div className="mt-3 rounded-lg bg-secondary/50 px-3 py-2">
-                    <p className="text-xs font-medium text-foreground/60 mb-1">{t('mcp.form.headers')}</p>
+                  <div className="mt-3 rounded-lg bg-secondary px-3 py-2">
+                    <p className="text-xs font-medium text-muted mb-1">{t('mcp.form.headers')}</p>
                     <div className="flex flex-wrap gap-2">
                       {Object.keys(server.headers).map(key => (
-                        <span key={key} className="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-xs text-foreground/70">
+                        <span key={key} className="inline-flex items-center rounded bg-secondary px-1.5 py-0.5 text-xs text-muted">
                           {key}
                         </span>
                       ))}

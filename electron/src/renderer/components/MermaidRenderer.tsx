@@ -49,10 +49,10 @@ export const MermaidRenderer = React.memo(function MermaidRenderer({ chart, them
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-900/20">
-        <p className="text-sm text-red-700 dark:text-red-300 font-medium">Diagram Error</p>
-        <p className="text-xs text-red-600 dark:text-red-400 mt-1">{error}</p>
-        <pre className="mt-2 text-xs text-red-800 dark:text-red-200 bg-red-100 dark:bg-red-900/30 p-2 rounded overflow-x-auto">
+      <div className="rounded-lg border border-danger/25 bg-danger-bg p-4">
+        <p className="text-sm text-danger font-medium">Diagram Error</p>
+        <p className="text-xs text-danger mt-1">{error}</p>
+        <pre className="mt-2 text-xs text-danger bg-secondary p-2 rounded overflow-x-auto">
           {chart}
         </pre>
       </div>

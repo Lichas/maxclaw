@@ -312,7 +312,7 @@ export function ScheduledTasksView() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t('scheduled.title')}</h1>
-            <p className="mt-1 text-sm text-foreground/55">{t('scheduled.subtitle')}</p>
+            <p className="mt-1 text-sm text-muted">{t('scheduled.subtitle')}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -340,13 +340,13 @@ export function ScheduledTasksView() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-4 rounded-lg border border-danger/25 bg-danger-bg px-4 py-3 text-sm text-danger">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          <div className="mb-4 rounded-lg border border-success/25 bg-success-bg px-4 py-3 text-sm text-success">
             {success}
           </div>
         )}
@@ -362,7 +362,7 @@ export function ScheduledTasksView() {
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder={t('scheduled.name.placeholder')}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                   required
                 />
               </div>
@@ -374,14 +374,14 @@ export function ScheduledTasksView() {
                   onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
                   placeholder={t('scheduled.prompt.placeholder')}
                   rows={4}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                   required
                 />
               </div>
 
               <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
                 <div className="space-y-4">
-                  <div className="rounded-2xl border border-border/80 bg-secondary/25 p-4 shadow-[0_1px_0_rgba(255,255,255,0.65)_inset]">
+                  <div className="rounded-lg border border-border bg-secondary p-4">
                     <label className="mb-1.5 block text-sm font-medium text-foreground">{t('scheduled.scheduleType')}</label>
                     <CustomSelect
                       value={formData.scheduleType}
@@ -402,34 +402,34 @@ export function ScheduledTasksView() {
                     />
                   </div>
 
-                  <div className="rounded-2xl border border-border/80 bg-gradient-to-br from-secondary/35 via-background to-secondary/20 p-4 shadow-[0_1px_0_rgba(255,255,255,0.7)_inset]">
+                  <div className="rounded-lg border border-border bg-secondary p-4">
                     <div className="mb-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground/40">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
                         {t('scheduled.form.summary.eyebrow')}
                       </p>
                       <h4 className="mt-2 text-sm font-semibold text-foreground">{t('scheduled.form.summary.title')}</h4>
-                      <p className="mt-1 text-xs leading-5 text-foreground/55">{getScheduleTypeHint()}</p>
+                      <p className="mt-1 text-xs leading-5 text-muted">{getScheduleTypeHint()}</p>
                     </div>
 
                     <div className="space-y-3">
-                      <div className="rounded-xl border border-border/70 bg-background/80 px-3 py-2.5">
-                        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-foreground/35">
+                      <div className="rounded-lg border border-border bg-secondary px-3 py-2.5">
+                        <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted">
                           {t('scheduled.form.summary.schedule')}
                         </p>
                         <p className="mt-1 text-sm font-medium text-foreground">{getDraftScheduleLabel()}</p>
                       </div>
 
                       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                        <div className="rounded-xl border border-border/70 bg-background/75 px-3 py-2.5">
-                          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-foreground/35">
+                        <div className="rounded-lg border border-border bg-secondary px-3 py-2.5">
+                          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted">
                             {t('scheduled.form.summary.mode')}
                           </p>
                           <p className="mt-1 text-sm font-medium text-foreground">
                             {getExecutionModeLabel(formData.executionMode)}
                           </p>
                         </div>
-                        <div className="rounded-xl border border-border/70 bg-background/75 px-3 py-2.5">
-                          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-foreground/35">
+                        <div className="rounded-lg border border-border bg-secondary px-3 py-2.5">
+                          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted">
                             {t('scheduled.form.summary.channels')}
                           </p>
                           <p className="mt-1 text-sm font-medium text-foreground">
@@ -453,7 +453,7 @@ export function ScheduledTasksView() {
                     />
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4 shadow-[0_1px_0_rgba(255,255,255,0.65)_inset]">
+                  <div className="rounded-lg border border-border bg-secondary p-4">
                     <label className="mb-1.5 block text-sm font-medium text-foreground">
                       {formData.scheduleType === 'every' ? t('scheduled.intervalMs') : t('scheduled.execTime')}
                     </label>
@@ -462,10 +462,10 @@ export function ScheduledTasksView() {
                       value={formData.scheduleValue}
                       onChange={(e) => setFormData({ ...formData, scheduleValue: e.target.value })}
                       placeholder={formData.scheduleType === 'every' ? t('scheduled.intervalMs.placeholder') : t('scheduled.execTime.placeholder')}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                       required
                     />
-                    <p className="mt-3 text-xs leading-5 text-foreground/50">{getScheduleTypeHint()}</p>
+                    <p className="mt-3 text-xs leading-5 text-muted">{getScheduleTypeHint()}</p>
                   </div>
                 )}
               </div>
@@ -477,7 +477,7 @@ export function ScheduledTasksView() {
                   value={formData.workDir}
                   onChange={(e) => setFormData({ ...formData, workDir: e.target.value })}
                   placeholder={t('scheduled.workdir.placeholder')}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                 />
               </div>
 
@@ -493,7 +493,7 @@ export function ScheduledTasksView() {
                   ]}
                   size="md"
                 />
-                <p className="mt-1 text-xs text-foreground/50">
+                <p className="mt-1 text-xs text-muted">
                   {formData.executionMode === 'safe' && t('scheduled.executionMode.safe.desc')}
                   {formData.executionMode === 'ask' && t('scheduled.executionMode.ask.desc')}
                   {formData.executionMode === 'auto' && t('scheduled.executionMode.auto.desc')}
@@ -516,8 +516,8 @@ export function ScheduledTasksView() {
                       }}
                       className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all ${
                         formData.channels.includes(option.value)
-                          ? 'border-primary bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/20'
-                          : 'border-border bg-background text-foreground/80 hover:bg-secondary'
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-border bg-background text-muted hover:bg-secondary'
                       }`}
                     >
                       {formData.channels.includes(option.value) && (
@@ -529,7 +529,7 @@ export function ScheduledTasksView() {
                     </button>
                   ))}
                 </div>
-                <p className="mt-1 text-xs text-foreground/50">
+                <p className="mt-1 text-xs text-muted">
                   {formData.channels.length === 1 && formData.channels[0] === 'desktop'
                     ? t('scheduled.channel.desktop.desc')
                     : t('scheduled.channels.desc').replace('{channels}', formData.channels.map((channel) => {
@@ -537,7 +537,7 @@ export function ScheduledTasksView() {
                       return match ? match.label : channel;
                     }).join(', '))}
                 </p>
-                <p className="mt-1 text-xs text-foreground/40">{t('scheduled.channels.multiHint')}</p>
+                <p className="mt-1 text-xs text-muted">{t('scheduled.channels.multiHint')}</p>
               </div>
 
               {/* To field - shown when channels other than desktop are selected */}
@@ -556,12 +556,12 @@ export function ScheduledTasksView() {
                       setTimeout(() => setShowRecipientSuggestions(false), 200);
                     }}
                     placeholder={t('scheduled.to.placeholder') || '输入接收者 ID (如 Telegram Chat ID)'}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/40 focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-primary/40 focus:outline-none"
                   />
                   {/* Recipient suggestions dropdown */}
                   {showRecipientSuggestions && getSuggestedRecipients().length > 0 && (
                     <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-background shadow-lg">
-                      <div className="px-3 py-2 text-xs font-medium text-foreground/50 border-b border-border">
+                      <div className="px-3 py-2 text-xs font-medium text-muted border-b border-border">
                         {t('scheduled.to.recent') || '最近的接收者'}
                       </div>
                       <div className="max-h-48 overflow-y-auto">
@@ -578,16 +578,16 @@ export function ScheduledTasksView() {
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-foreground">{recipient.chatId}</span>
                               {recipient.sender && recipient.sender !== recipient.chatId && (
-                                <span className="text-xs text-foreground/60">({recipient.sender})</span>
+                                <span className="text-xs text-muted">({recipient.sender})</span>
                               )}
                             </div>
-                            <span className="text-xs text-foreground/40 capitalize">{recipient.channel}</span>
+                            <span className="text-xs text-muted capitalize">{recipient.channel}</span>
                           </button>
                         ))}
                       </div>
                     </div>
                   )}
-                  <p className="mt-1 text-xs text-foreground/50">
+                  <p className="mt-1 text-xs text-muted">
                     {t('scheduled.to.desc') || '用于接收任务结果的 Chat ID、用户名或邮箱地址'}
                   </p>
                 </div>
@@ -613,11 +613,11 @@ export function ScheduledTasksView() {
         )}
 
         {loading && jobs.length === 0 ? (
-          <div className="py-12 text-center text-foreground/50">{t('scheduled.loading')}</div>
+          <div className="py-12 text-center text-muted">{t('scheduled.loading')}</div>
         ) : jobs.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-foreground/50">{t('scheduled.empty')}</p>
-            <p className="mt-1 text-sm text-foreground/40">{t('scheduled.empty.hint')}</p>
+            <p className="text-muted">{t('scheduled.empty')}</p>
+            <p className="mt-1 text-sm text-muted">{t('scheduled.empty.hint')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -635,15 +635,15 @@ export function ScheduledTasksView() {
                       <span
                         className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
                           job.enabled
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-600'
+                            ? 'bg-success-bg text-success'
+                            : 'bg-secondary text-muted'
                         }`}
                       >
                         {job.enabled ? t('scheduled.enabled') : t('scheduled.disabled')}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm text-foreground/70 line-clamp-2">{job.prompt}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-foreground/50">
+                    <p className="mt-1 text-sm text-muted line-clamp-2">{job.prompt}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
                       <span className="inline-flex items-center gap-1">
                         <ClockIcon className="h-3.5 w-3.5" />
                         {getScheduleLabel(job)}
@@ -656,10 +656,10 @@ export function ScheduledTasksView() {
                       )}
                       <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${
                         job.executionMode === 'auto'
-                          ? 'bg-purple-100 text-purple-700'
+                          ? 'bg-info-bg text-info'
                           : job.executionMode === 'safe'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-yellow-100 text-yellow-700'
+                          ? 'bg-success-bg text-success'
+                          : 'bg-warning-bg text-warning'
                       }`}>
                         {getExecutionModeLabel(job.executionMode)}
                       </span>
@@ -684,7 +684,7 @@ export function ScheduledTasksView() {
                     <button
                       onClick={() => void runJobNow(job.id)}
                       disabled={runningJobId === job.id}
-                      className="rounded-lg bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-600 hover:bg-green-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="rounded-lg bg-success-bg px-3 py-1.5 text-xs font-medium text-success hover:bg-success/20 disabled:cursor-not-allowed disabled:opacity-60"
                       title={t('scheduled.runNow.title')}
                     >
                       {runningJobId === job.id ? t('scheduled.runNow.running') : `▶ ${t('scheduled.runNow')}`}
@@ -715,7 +715,7 @@ export function ScheduledTasksView() {
                     </button>
                     <button
                       onClick={() => void deleteJob(job.id)}
-                      className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                      className="rounded-lg border border-danger/25 px-3 py-1.5 text-xs font-medium text-danger hover:bg-danger-bg"
                       title={t('scheduled.delete.title')}
                     >
                       {t('common.delete')}
@@ -734,7 +734,7 @@ export function ScheduledTasksView() {
               <div className="flex items-center justify-between border-b border-border px-4 py-3">
                 <div>
                   <h3 className="font-semibold text-foreground">{t('scheduled.executionHistory')}</h3>
-                  <p className="text-xs text-foreground/50">
+                  <p className="text-xs text-muted">
                     {selectedJobId
                       ? jobs.find((j) => j.id === selectedJobId)?.title || t('scheduled.executionHistory')
                       : t('scheduled.executionHistory.all')}
@@ -751,7 +751,7 @@ export function ScheduledTasksView() {
                   )}
                   <button
                     onClick={() => setShowHistory(false)}
-                    className="rounded-lg p-1.5 text-foreground/50 hover:bg-secondary hover:text-foreground"
+                    className="rounded-lg p-1.5 text-muted hover:bg-secondary hover:text-foreground"
                   >
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -349,10 +349,10 @@ export function Sidebar() {
 
   const statusTone =
     status === 'running'
-      ? 'border-emerald-500/22 bg-emerald-500/12 text-emerald-800'
+      ? 'border-success/25 bg-success-bg text-success'
       : status === 'starting'
-        ? 'border-amber-500/22 bg-amber-500/10 text-amber-800'
-        : 'border-rose-500/18 bg-rose-500/10 text-rose-700';
+        ? 'border-warning/25 bg-warning-bg text-warning'
+        : 'border-danger/25 bg-danger-bg text-danger';
   const statusLabel =
     language === 'zh'
       ? status === 'running'
@@ -372,13 +372,13 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`relative z-10 m-2 mr-0 flex h-[calc(100%-1rem)] w-[308px] shrink-0 flex-col overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,252,248,0.94),rgba(248,244,238,0.9))] shadow-[0_24px_56px_rgba(28,36,50,0.1),inset_0_1px_0_rgba(255,255,255,0.92)] [backface-visibility:hidden] [contain:paint] [transform:translateZ(0)] dark:bg-[linear-gradient(180deg,rgba(24,31,45,0.92),rgba(20,27,39,0.9))] ${isMac ? 'pt-10' : 'pt-3'}`}
+      className={`relative z-10 flex h-full w-[280px] shrink-0 flex-col overflow-hidden border-r border-border bg-background ${isMac ? 'pt-10' : 'pt-3'}`}
     >
       <div className="px-4 pb-3">
-        <div className="rounded-[26px] border border-white/80 bg-[linear-gradient(150deg,rgba(255,250,245,0.97),rgba(244,236,226,0.95)_58%,rgba(230,238,229,0.9))] px-4 py-4 text-foreground shadow-[0_18px_40px_rgba(104,88,75,0.14),inset_0_1px_0_rgba(255,255,255,0.86)] dark:border-white/10 dark:bg-[linear-gradient(150deg,rgba(34,42,56,0.94),rgba(27,35,48,0.94)_58%,rgba(24,47,44,0.9))] dark:text-white">
+        <div className="rounded-xl border border-border bg-secondary px-4 py-4 text-foreground">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground/46 dark:text-white/58">Desktop Agent</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">Desktop Agent</p>
               <h2 className="mt-2 text-[22px] font-semibold tracking-[-0.04em]">MaxClaw</h2>
             </div>
             <div className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusTone}`}>
@@ -388,7 +388,7 @@ export function Sidebar() {
           </div>
           <button
             onClick={handleNewTask}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/80 bg-white/88 px-4 py-3 text-sm font-semibold text-[#253142] shadow-[0_14px_30px_rgba(120,101,83,0.12)] transition-all duration-150 hover:-translate-y-0.5 hover:border-[#d9c6b5] hover:bg-white dark:border-white/10 dark:bg-white/8 dark:text-white dark:hover:bg-white/12"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition-all duration-150 hover:bg-hover dark:hover:bg-hover"
           >
             <EditIcon className="h-5 w-5 flex-shrink-0" />
             <span>{t('sidebar.newTask')}</span>
@@ -398,14 +398,14 @@ export function Sidebar() {
 
       <nav className="sidebar-scroll min-h-0 flex-1 overflow-y-auto px-3 pb-4 [transform:translateZ(0)]">
         <div className="mb-5 grid grid-cols-2 gap-2 px-1">
-          <div className="rounded-2xl border border-white/70 bg-white/70 px-3 py-3 shadow-[0_12px_28px_rgba(28,36,50,0.06)] dark:bg-white/5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-foreground/42">
+          <div className="rounded-lg border border-border bg-secondary px-3 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
               {language === 'zh' ? '任务' : 'Threads'}
             </p>
             <p className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-foreground">{mergedSessions.length}</p>
           </div>
-          <div className="rounded-2xl border border-white/70 bg-white/70 px-3 py-3 shadow-[0_12px_28px_rgba(28,36,50,0.06)] dark:bg-white/5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-foreground/42">
+          <div className="rounded-lg border border-border bg-secondary px-3 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
               {language === 'zh' ? '当前渠道' : 'Channel'}
             </p>
             <p className="mt-2 truncate text-sm font-semibold text-foreground">
@@ -414,7 +414,7 @@ export function Sidebar() {
           </div>
         </div>
 
-        <div className="rounded-[24px] border border-white/70 bg-white/52 p-2 shadow-[0_16px_36px_rgba(28,36,50,0.05)] dark:bg-white/5">
+        <div className="rounded-lg border border-border bg-secondary p-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -424,17 +424,17 @@ export function Sidebar() {
               <button
                 key={item.id}
                 onClick={() => dispatch(setActiveTab(item.id))}
-                className={`group mb-1 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200 ${
+                className={`group mb-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all duration-200 ${
                   isActive
-                    ? 'border border-[#dbcbbc] bg-[linear-gradient(135deg,rgba(248,241,233,0.98),rgba(238,228,216,0.94))] font-medium text-foreground shadow-[0_14px_28px_rgba(124,103,84,0.12)] dark:border-white/10 dark:bg-white/10 dark:text-white'
-                    : 'text-secondary-foreground hover:bg-white/72 hover:text-foreground dark:hover:bg-white/10'
+                    ? 'border-l-2 border-primary bg-hover font-medium text-foreground'
+                    : 'text-secondary-foreground hover:bg-hover hover:text-foreground'
                 }`}
               >
                 <div className="relative">
                   <Icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
                   {showFailedBadge && (
                     <span
-                      className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white/80"
+                      className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-danger ring-2 ring-background"
                       title={language === 'zh' ? '有任务执行失败' : 'Some tasks have failed'}
                     />
                   )}
@@ -447,10 +447,10 @@ export function Sidebar() {
 
         <div className="mt-5 px-2">
           <div className="mb-3 flex items-center justify-between gap-3 px-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
               {t('sidebar.history')}
             </p>
-            <span className="rounded-full border border-white/65 bg-white/65 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-foreground/45 dark:bg-white/5">
+            <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted">
               {sessionItems.length}
             </span>
           </div>
@@ -467,14 +467,14 @@ export function Sidebar() {
                 label: getChannelLabel(channel, language)
               }))}
               size="md"
-              triggerClassName="rounded-2xl border-white/70 bg-white/75 shadow-[0_12px_28px_rgba(28,36,50,0.05)] dark:bg-white/10"
-              menuClassName="border-white/70 bg-white/95 dark:bg-[#151d2b]"
+              triggerClassName="rounded-lg border-border bg-secondary dark:bg-secondary"
+              menuClassName="border-border bg-background dark:bg-card"
             />
           </div>
 
           <div className="mt-3 space-y-1.5">
             {sessionItems.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-white/70 px-3 py-4 text-sm text-foreground/50 dark:border-white/10">
+              <div className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted">
                 {t('sidebar.empty')}
               </div>
             )}
@@ -487,7 +487,7 @@ export function Sidebar() {
 
               if (isEditing) {
                 return (
-                  <div key={session.key} className="rounded-[22px] border border-white/70 bg-white px-3 py-3 shadow-[0_12px_28px_rgba(28,36,50,0.08)] dark:bg-white/10">
+                  <div key={session.key} className="rounded-lg border border-border bg-background px-3 py-3 dark:bg-card">
                     <input
                       type="text"
                       value={editTitle}
@@ -514,12 +514,12 @@ export function Sidebar() {
               return (
                 <div
                   key={session.key}
-                  className={`group relative flex cursor-pointer items-center gap-1 rounded-[22px] border px-3 py-3 transition-colors duration-150 ${
+                  className={`group relative flex cursor-pointer items-center gap-1 rounded-lg border px-3 py-3 transition-colors duration-150 ${
                     isCurrent
-                      ? 'border-[#d9c7b8] bg-[linear-gradient(135deg,rgba(247,240,231,0.98),rgba(237,227,214,0.94))] text-foreground shadow-[0_18px_34px_rgba(128,106,88,0.12)] dark:border-white/10 dark:bg-white/10 dark:text-white'
+                      ? 'border-border bg-hover text-foreground'
                       : isMenuOpen
-                        ? 'border-white/70 bg-white/78 dark:bg-white/10'
-                        : 'border-transparent hover:border-white/70 hover:bg-white/60 dark:hover:bg-white/8'
+                        ? 'border-border bg-secondary'
+                        : 'border-transparent hover:border-border hover:bg-secondary'
                   }`}
                 >
                   <button
@@ -529,15 +529,15 @@ export function Sidebar() {
                     }}
                     className="min-w-0 flex-1 text-left"
                   >
-                    <p className={`truncate text-[14px] font-medium leading-5 ${isCurrent ? 'text-foreground dark:text-white' : 'text-foreground'}`}>
+                    <p className={`truncate text-[14px] font-medium leading-5 ${isCurrent ? 'text-foreground' : 'text-foreground'}`}>
                       {getSessionDisplayTitle(session)}
                     </p>
                     {preview && (
-                      <p className={`truncate text-[11px] leading-4 ${isCurrent ? 'text-foreground/62 dark:text-white/65' : 'text-foreground/50'}`}>
+                      <p className={`truncate text-[11px] leading-4 ${isCurrent ? 'text-muted' : 'text-muted'}`}>
                         {preview}
                       </p>
                     )}
-                    <p className={`mt-1 text-[11px] leading-5 ${isCurrent ? 'text-foreground/50 dark:text-white/55' : 'text-foreground/45'}`}>
+                    <p className={`mt-1 text-[11px] leading-5 ${isCurrent ? 'text-muted' : 'text-muted'}`}>
                       {getChannelLabel(extractSessionChannel(session.key), language)} · {formatRelativeTime(session.lastMessageAt)}
                     </p>
                   </button>
@@ -552,15 +552,15 @@ export function Sidebar() {
                         isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                       }`}
                       style={{
-                        background: isMenuOpen ? 'rgba(184, 103, 63, 0.08)' : 'transparent'
+                        background: isMenuOpen ? 'var(--secondary)' : 'transparent'
                       }}
                     >
-                      <DotsIcon className="h-4 w-4" style={{ color: isCurrent ? 'rgba(28,36,50,0.58)' : 'var(--muted)' }} />
+                      <DotsIcon className="h-4 w-4" style={{ color: isCurrent ? 'var(--muted)' : 'var(--muted)' }} />
                     </button>
 
                     {isMenuOpen && (
                       <div
-                        className="absolute right-10 top-1/2 z-50 w-36 -translate-y-1/2 rounded-2xl border border-white/70 bg-white py-1 shadow-[0_18px_40px_rgba(36,48,67,0.14)] dark:bg-[#151d2b]"
+                        className="absolute right-10 top-1/2 z-50 w-36 -translate-y-1/2 rounded-lg border border-border bg-background py-1 shadow-lg dark:bg-card"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
@@ -586,9 +586,9 @@ export function Sidebar() {
                               handleDelete(session);
                             }}
                             className="mx-1 flex w-[calc(100%-8px)] items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors duration-150"
-                            style={{ color: '#e74c3c' }}
+                            style={{ color: 'var(--danger)' }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = 'rgba(231, 76, 60, 0.1)';
+                              e.currentTarget.style.background = 'var(--danger-bg)';
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.background = 'transparent';
@@ -608,27 +608,23 @@ export function Sidebar() {
       </nav>
 
       {/* Settings Button with Gateway Status */}
-      <div
-        className="mt-auto border-t border-white/55 p-3"
-        style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.2), rgba(255,255,255,0.78))' }}
-      >
+      <div className="mt-auto border-t border-border p-3">
         <button
           onClick={() => dispatch(setActiveTab('settings'))}
-          className="group flex w-full items-center gap-2 rounded-2xl px-3 py-3 transition-all duration-200 hover:bg-white/70"
+          className="group flex w-full items-center gap-2 rounded-lg px-3 py-3 transition-all duration-200 hover:bg-hover"
         >
           <div className="relative">
             <SettingsIcon
-              className="w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:rotate-45"
-              style={{ color: 'var(--secondary-foreground)' }}
+              className="w-4 h-4 flex-shrink-0 transition-transform duration-200 group-hover:rotate-45 text-secondary-foreground"
             />
             <div
               className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full"
               style={{
-                background: status === 'running' ? '#84a98c' : status === 'error' ? '#e74c3c' : '#f39c12'
+                background: status === 'running' ? 'var(--success)' : status === 'error' ? 'var(--danger)' : 'var(--warning)'
               }}
             />
           </div>
-          <span className="text-sm" style={{ color: 'var(--secondary-foreground)' }}>
+          <span className="text-sm text-secondary-foreground">
             {t('nav.settings')}
           </span>
         </button>
