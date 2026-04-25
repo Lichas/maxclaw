@@ -230,10 +230,11 @@ export function Sidebar() {
   const sessionItems = useMemo(
     () =>
       mergedSessions
-        .filter((session) => extractSessionChannel(session.key) === normalizeChannelKey(channelFilter))
-        .slice(0, 20),
+        .filter((session) => extractSessionChannel(session.key) === normalizeChannelKey(channelFilter)),
     [mergedSessions, channelFilter]
   );
+
+  const currentChannelSessionCount = sessionItems.length;
 
   // Sync current session with channel filter - when switching channels, select the most recent session of that channel
   useEffect(() => {
@@ -450,7 +451,7 @@ export function Sidebar() {
               {t('sidebar.history')}
             </p>
             <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted">
-              {sessionItems.length}
+              {currentChannelSessionCount}
             </span>
           </div>
 
@@ -472,7 +473,7 @@ export function Sidebar() {
           </div>
 
           <div className="mt-3 space-y-1.5">
-            {sessionItems.length === 0 && (
+            {currentChannelSessionCount === 0 && (
               <div className="rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted">
                 {t('sidebar.empty')}
               </div>

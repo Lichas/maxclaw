@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **左侧历史任务列表改为完整滚动，计数显示当前渠道总数**：移除侧边栏历史任务列表的 20 条截断限制，支持按当前渠道浏览完整会话历史；同时将历史区右上角数字改为当前渠道的真实会话总数，避免和可见条目数混淆
+  - `electron/src/renderer/components/Sidebar.tsx`
+  - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
 - **空白新会话不再提前出现在左侧，应用启动默认停留在新会话界面**：移除未发送前的 draft session 占位逻辑，只有用户真正输入并发送第一条消息后，session 才会进入左侧历史列表；同时应用启动和托盘新建会话默认进入空白新会话态，不再自动跳进任意历史会话
   - `electron/src/renderer/store/index.ts`、`electron/src/renderer/App.tsx`、`electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/views/ChatView.tsx`
   - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
