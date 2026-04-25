@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -168,6 +169,36 @@ func (p *panicProvider) SupportsImageInput(model string) bool {
 	return true
 }
 
+type compressRetryProvider struct {
+	callCount     int
+	messageCounts []int
+}
+
+func (p *compressRetryProvider) Chat(ctx context.Context, messages []providers.Message, defs []map[string]interface{}, model string) (*providers.Response, error) {
+	return nil, nil
+}
+
+func (p *compressRetryProvider) ChatStream(ctx context.Context, messages []providers.Message, defs []map[string]interface{}, model string, handler providers.StreamHandler) error {
+	p.messageCounts = append(p.messageCounts, len(messages))
+	if p.callCount == 0 {
+		p.callCount++
+		return errors.New("context length exceeded")
+	}
+
+	handler.OnContent("compressed ok")
+	handler.OnComplete()
+	p.callCount++
+	return nil
+}
+
+func (p *compressRetryProvider) GetDefaultModel() string {
+	return "compress-default-model"
+}
+
+func (p *compressRetryProvider) SupportsImageInput(model string) bool {
+	return false
+}
+
 func TestAgentLoopProcessMessageInjectsRuntimeContextForCron(t *testing.T) {
 	workspace := t.TempDir()
 	messageBus := bus.NewMessageBus(10)
@@ -200,6 +231,71 @@ func TestAgentLoopProcessMessageInjectsRuntimeContextForCron(t *testing.T) {
 	assert.Equal(t, []string{"telegram"}, jobs[0].Payload.Channels)
 	assert.Equal(t, "chat-42", jobs[0].Payload.To)
 	assert.Equal(t, "Ping me", jobs[0].Payload.Message)
+}
+
+func TestAgentLoopProviderIdentityUsesProviderTypeNotDefaultModel(t *testing.T) {
+	workspace := t.TempDir()
+	messageBus := bus.NewMessageBus(10)
+	provider := &staticProvider{}
+
+	loop := NewAgentLoop(
+		messageBus,
+		provider,
+		workspace,
+		"runtime-model",
+		3,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		nil,
+		nil,
+		false,
+	)
+
+	loop.InitializeLifecycle()
+
+	assert.Equal(t, "static", loop.providerIdentity())
+	require.NotNil(t, loop.Lifecycle)
+	require.NotNil(t, loop.Lifecycle.ContextCompressor)
+	assert.Equal(t, "static", loop.Lifecycle.ContextCompressor.Provider)
+}
+
+func TestAgentLoopProcessMessageCompressesContextAndRetries(t *testing.T) {
+	workspace := t.TempDir()
+	messageBus := bus.NewMessageBus(10)
+	provider := &compressRetryProvider{}
+
+	loop := NewAgentLoop(
+		messageBus,
+		provider,
+		workspace,
+		"test-model",
+		3,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		nil,
+		nil,
+		false,
+	)
+	loop.InitializeLifecycle()
+
+	sess := loop.sessions.GetOrCreate("telegram:chat-42")
+	for i := 0; i < 16; i++ {
+		sess.AddMessage("user", strings.Repeat("u", 800))
+		sess.AddMessage("assistant", strings.Repeat("a", 800))
+	}
+	require.NoError(t, loop.sessions.Save(sess))
+
+	msg := bus.NewInboundMessage("telegram", "user-1", "chat-42", "please continue")
+	resp, err := loop.ProcessMessage(context.Background(), msg)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, "compressed ok", resp.Content)
+	require.Len(t, provider.messageCounts, 2)
+	assert.Greater(t, provider.messageCounts[0], provider.messageCounts[1])
 }
 
 func TestAgentLoopProcessMessageMCPFailureDoesNotBreakMainFlow(t *testing.T) {

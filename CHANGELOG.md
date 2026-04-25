@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **Agent 生命周期压缩重试与 provider 归因修复**：生命周期错误恢复在遇到上下文溢出时，现在会先压缩当前会话消息再重试 `ChatStream`，不再直接中断；同时将生命周期统计、错误分类和压缩器中的 provider 标识改为基于 provider 类型推导，避免误把默认模型名当作 provider 名写入进化/洞察数据
+  - `internal/agent/loop.go`、`internal/agent/loop_test.go`
+  - 验证：`go test ./internal/agent/...`、`go test ./internal/cli/...`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
 - **自定义模型/provider 无法持久化保存与在对话框中选择**: 修复了 `ProvidersConfig` 仅支持预定义 provider 的问题。新增 `Custom` 字段存储未知 provider，并通过自定义 `MarshalJSON`/`UnmarshalJSON` 使其在 `config.json` 中平铺保存；同时修复前端 Settings 页面加载自定义 provider 时 `type='custom'` 丢失的问题，确保自定义模型能正确显示在对话框模型选择器中
   - `internal/config/schema.go`、`internal/config/config_test.go`、`electron/src/renderer/views/SettingsView.tsx`
   - 验证：`go test ./internal/config/...`、`cd electron && npm run build`、`make build`

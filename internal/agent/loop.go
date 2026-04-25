@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/Lichas/maxclaw/internal/bus"
 	"github.com/Lichas/maxclaw/internal/config"
@@ -295,6 +297,66 @@ func (h *streamHandler) GetToolCalls() []providers.ToolCall {
 	return h.toolCalls
 }
 
+func providerIdentity(provider providers.LLMProvider) string {
+	if provider == nil {
+		return ""
+	}
+
+	t := reflect.TypeOf(provider)
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	name := strings.TrimSuffix(t.Name(), "Provider")
+	if name == "" {
+		return "provider"
+	}
+
+	var b strings.Builder
+	for i, r := range name {
+		if unicode.IsUpper(r) && i > 0 {
+			prev := rune(name[i-1])
+			if unicode.IsLower(prev) || unicode.IsDigit(prev) {
+				b.WriteByte('_')
+			} else if i+1 < len(name) {
+				next := rune(name[i+1])
+				if unicode.IsLower(next) {
+					b.WriteByte('_')
+				}
+			}
+		}
+		b.WriteRune(unicode.ToLower(r))
+	}
+
+	return b.String()
+}
+
+func convertProviderMessagesToCompressor(messages []providers.Message) []CompressorMessage {
+	result := make([]CompressorMessage, len(messages))
+	for i, msg := range messages {
+		result[i] = CompressorMessage{
+			Role:       msg.Role,
+			Content:    msg.Content,
+			ToolCalls:  append([]providers.ToolCall(nil), msg.ToolCalls...),
+			ToolCallID: msg.ToolCallID,
+		}
+	}
+	return result
+}
+
+func convertCompressorMessagesToProvider(messages []CompressorMessage) []providers.Message {
+	result := make([]providers.Message, len(messages))
+	for i, msg := range messages {
+		result[i] = providers.Message{
+			Role:       msg.Role,
+			Content:    msg.Content,
+			ToolCalls:  append([]providers.ToolCall(nil), msg.ToolCalls...),
+			ToolCallID: msg.ToolCallID,
+		}
+	}
+	return result
+}
+
 func (a *AgentLoop) runtimeSnapshot() (providers.LLMProvider, string, int) {
 	a.runtimeMu.RLock()
 	defer a.runtimeMu.RUnlock()
@@ -305,6 +367,12 @@ func (a *AgentLoop) executionModeSnapshot() string {
 	a.runtimeMu.RLock()
 	defer a.runtimeMu.RUnlock()
 	return config.NormalizeExecutionMode(a.executionMode)
+}
+
+func (a *AgentLoop) providerIdentity() string {
+	a.runtimeMu.RLock()
+	defer a.runtimeMu.RUnlock()
+	return providerIdentity(a.Provider)
 }
 
 // ListToolNames returns the currently registered tool names.
@@ -435,6 +503,10 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 
 	// 获取或创建会话
 	sess := a.sessions.GetOrCreate(msg.SessionKey)
+
+	// Start lifecycle tracking for this session
+	a.StartSessionLifecycle(msg.SessionKey)
+	defer a.EndSessionLifecycle(sess)
 
 	// Load existing plan or check for continue intent
 	plan, _ := a.PlanManager.Load(msg.SessionKey)
@@ -593,12 +665,34 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 			return nil, fmt.Errorf("LLM provider is not configured")
 		}
 
-		err := provider.ChatStream(ctx, messages, toolDefs, model, handler)
-		if err != nil {
-			if err == context.Canceled {
-				return nil, err
+		var chatErr error
+		for {
+			chatErr = provider.ChatStream(ctx, messages, toolDefs, model, handler)
+			if chatErr == nil {
+				a.RecordAPICallSuccess(0, 0)
+				break
 			}
-			return nil, fmt.Errorf("LLM stream error: %w", err)
+			if chatErr == context.Canceled {
+				return nil, chatErr
+			}
+
+			approxTokens := estimateMessagesTokensRough(convertProviderMessagesToCompressor(messages))
+			numMessages := len(messages)
+			action, retry, handleErr := a.HandleAPIErrorWithLifecycle(ctx, chatErr, approxTokens, numMessages)
+			if action != nil && *action == ActionCompress {
+				compressedMessages, compressErr := a.compressMessagesForRetry(ctx, messages)
+				if compressErr != nil {
+					return nil, fmt.Errorf("LLM stream error after compression failure: %w", compressErr)
+				}
+				messages = compressedMessages
+			}
+			if !retry {
+				return nil, fmt.Errorf("LLM stream error: %w", handleErr)
+			}
+			// Refresh runtime state in case fallback changed provider/model
+			provider, model, _ = a.runtimeSnapshot()
+			// Reset handler for retry
+			handler = newStreamHandler(msg.Channel, msg.ChatID, a.Bus, streamCallback)
 		}
 
 		// CLI 换行
@@ -668,6 +762,8 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 
 				toolCtx := tools.WithRuntimeContextWithSession(ctx, msg.Channel, msg.ChatID, msg.SessionKey)
 				result, execErr := a.tools.Execute(toolCtx, tc.Function.Name, args)
+				toolSuccess := execErr == nil
+				a.RecordToolExecution(tc.Function.Name, toolSuccess, 0)
 				if execErr != nil {
 					result = fmt.Sprintf("Error: %v", execErr)
 				}
@@ -741,6 +837,21 @@ func (a *AgentLoop) processMessageWithIC(ic *InterruptibleContext, msg *bus.Inbo
 			})
 			break
 		}
+
+		// Save checkpoint at end of each iteration
+		checkpointMsgs := make([]session.Message, len(messages))
+		for i, m := range messages {
+			checkpointMsgs[i] = session.Message{
+				Role:      m.Role,
+				Content:   m.Content,
+				Timestamp: time.Now(),
+			}
+		}
+		systemPrompt := ""
+		if len(messages) > 0 && messages[0].Role == "system" {
+			systemPrompt = messages[0].Content
+		}
+		a.SaveCheckpoint(msg.SessionKey, checkpointMsgs, systemPrompt, iteration)
 	}
 
 	if finalContent == "" {
@@ -1364,34 +1475,28 @@ func cloneStringMap(in map[string]string) map[string]string {
 }
 
 // InitializeLifecycle initializes the lifecycle management with runtime configuration
-func (a *AgentLoop) InitializeLifecycle(baseURL, apiKey string) {
+func (a *AgentLoop) InitializeLifecycle() {
 	if a.Lifecycle == nil {
 		return
 	}
 
 	// Initialize compression with model info
-	providerName := ""
-	if a.Provider != nil {
-		providerName = a.Provider.GetDefaultModel()
-	}
-	
 	a.Lifecycle.InitializeCompression(
 		a.Model,
-		baseURL,
-		apiKey,
-		providerName,
+		a.providerIdentity(),
 		0, // config context length - could be passed from config
 	)
+
+	// Initialize feedback detector with current provider
+	if a.Provider != nil {
+		a.Lifecycle.InitializeFeedback(a.Provider, a.Model)
+	}
 }
 
 // StartSessionLifecycle starts lifecycle tracking for a session
 func (a *AgentLoop) StartSessionLifecycle(sessionKey string) {
 	if a.Lifecycle != nil {
-		provider := ""
-		if a.Provider != nil {
-			provider = a.Provider.GetDefaultModel()
-		}
-		a.Lifecycle.StartSession(sessionKey, a.Model, provider)
+		a.Lifecycle.StartSession(sessionKey, a.Model, a.providerIdentity())
 	}
 }
 
@@ -1404,18 +1509,13 @@ func (a *AgentLoop) EndSessionLifecycle(sess *session.Session) {
 }
 
 // HandleAPIErrorWithLifecycle handles API errors using the lifecycle management
-func (a *AgentLoop) HandleAPIErrorWithLifecycle(ctx context.Context, err error, approxTokens, numMessages int) (bool, error) {
+func (a *AgentLoop) HandleAPIErrorWithLifecycle(ctx context.Context, err error, approxTokens, numMessages int) (*AdaptationAction, bool, error) {
 	if a.Lifecycle == nil {
-		return false, err
+		return nil, false, err
 	}
 
-	providerName := ""
-	if a.Provider != nil {
-		providerName = a.Provider.GetDefaultModel()
-	}
+	action, newRuntime, handleErr := a.Lifecycle.HandleAPIError(ctx, err, a.providerIdentity(), a.Model, approxTokens, numMessages)
 
-	action, newRuntime, handleErr := a.Lifecycle.HandleAPIError(ctx, err, providerName, a.Model, approxTokens, numMessages)
-	
 	if action != nil {
 		switch *action {
 		case ActionFallback:
@@ -1424,28 +1524,25 @@ func (a *AgentLoop) HandleAPIErrorWithLifecycle(ctx context.Context, err error, 
 				a.Provider = newRuntime.Provider
 				a.Model = newRuntime.Model
 				a.runtimeMu.Unlock()
-				return true, nil // Retry with new provider
+				a.InitializeLifecycle()
+				return action, true, nil // Retry with new provider
 			}
 		case ActionRetry:
-			return true, nil // Retry with backoff
+			return action, true, nil // Retry with backoff
 		case ActionAdjustContext, ActionReduceOutput:
-			return true, nil // Retry after adjustment
+			return action, true, nil // Retry after adjustment
 		case ActionCompress:
-			return false, fmt.Errorf("context compression required: %w", err)
+			return action, true, nil // Caller will compress messages before retry
 		}
 	}
 
-	return false, handleErr
+	return action, false, handleErr
 }
 
 // RecordAPICallSuccess records a successful API call for lifecycle tracking
 func (a *AgentLoop) RecordAPICallSuccess(tokens int, latency time.Duration) {
 	if a.Lifecycle != nil {
-		provider := ""
-		if a.Provider != nil {
-			provider = a.Provider.GetDefaultModel()
-		}
-		a.Lifecycle.RecordSuccess(a.Model, provider, tokens, latency)
+		a.Lifecycle.RecordSuccess(a.Model, a.providerIdentity(), tokens, latency)
 	}
 }
 
@@ -1487,6 +1584,31 @@ func (a *AgentLoop) SaveCheckpoint(sessionKey string, messages []session.Message
 	}
 }
 
+func (a *AgentLoop) compressMessagesForRetry(ctx context.Context, messages []providers.Message) ([]providers.Message, error) {
+	if a.Lifecycle == nil {
+		return nil, fmt.Errorf("lifecycle is not initialized")
+	}
+
+	systemPrompt := ""
+	if len(messages) > 0 && messages[0].Role == "system" {
+		systemPrompt = messages[0].Content
+	}
+
+	compressorMessages := convertProviderMessagesToCompressor(messages)
+	beforeTokens := estimateMessagesTokensRough(compressorMessages)
+	compressedMessages, err := a.Lifecycle.CompressContext(ctx, compressorMessages, systemPrompt)
+	if err != nil {
+		return nil, err
+	}
+
+	afterTokens := estimateMessagesTokensRough(compressedMessages)
+	if afterTokens >= beforeTokens {
+		return nil, fmt.Errorf("context compression did not reduce prompt size (%d -> %d tokens)", beforeTokens, afterTokens)
+	}
+
+	return convertCompressorMessagesToProvider(compressedMessages), nil
+}
+
 // IsFallbackActive returns true if a fallback provider is currently active
 func (a *AgentLoop) IsFallbackActive() bool {
 	if a.Lifecycle == nil {
@@ -1500,7 +1622,7 @@ func (a *AgentLoop) RestorePrimaryRuntime() {
 	if a.Lifecycle == nil {
 		return
 	}
-	
+
 	config := a.Lifecycle.RestorePrimaryRuntime()
 	if config.Provider != nil {
 		a.runtimeMu.Lock()
@@ -1509,7 +1631,6 @@ func (a *AgentLoop) RestorePrimaryRuntime() {
 		a.runtimeMu.Unlock()
 	}
 }
-
 
 // ==================== Feedback Learning Methods ====================
 
