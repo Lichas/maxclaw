@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **修复“新建任务”被自动拉回历史会话的问题**：侧边栏的渠道同步逻辑现在会识别空白新会话态；当用户点击“新建任务”进入空白聊天页时，不再被自动重定向回最近的历史会话
+  - `electron/src/renderer/components/Sidebar.tsx`
+  - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
 - **左侧历史任务列表改为完整滚动，计数显示当前渠道总数**：移除侧边栏历史任务列表的 20 条截断限制，支持按当前渠道浏览完整会话历史；同时将历史区右上角数字改为当前渠道的真实会话总数，避免和可见条目数混淆
   - `electron/src/renderer/components/Sidebar.tsx`
   - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`

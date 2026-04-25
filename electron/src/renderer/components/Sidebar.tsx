@@ -242,6 +242,10 @@ export function Sidebar() {
       return;
     }
 
+    if (activeTab === 'chat' && currentSessionKey.trim() === '') {
+      return;
+    }
+
     if (channelOptions.length === 0) {
       return;
     }
@@ -266,7 +270,7 @@ export function Sidebar() {
         dispatch(setCurrentSessionKey(''));
       }
     }
-  }, [channelFilter, channelOptions, mergedSessions, currentSessionKey, dispatch, shouldSyncTaskContext]);
+  }, [activeTab, channelFilter, channelOptions, mergedSessions, currentSessionKey, dispatch, shouldSyncTaskContext]);
 
   const handleNewTask = () => {
     setChannelFilter('desktop');
