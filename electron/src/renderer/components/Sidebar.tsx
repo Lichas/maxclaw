@@ -413,9 +413,11 @@ export function Sidebar() {
                 <Icon className="h-5 w-5" />
                 {showFailedBadge && (
                   <span
-                    className="absolute right-1 top-1 h-2 w-2 rounded-full bg-danger"
-                    title={language === 'zh' ? '有任务执行失败' : 'Some tasks have failed'}
-                  />
+                    className="absolute right-0 top-0 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-warning text-[9px] font-bold leading-none text-background shadow-[0_0_0_2px_var(--secondary)]"
+                    title={language === 'zh' ? '有定时任务最近一次执行失败' : 'A scheduled task failed on its latest run'}
+                  >
+                    !
+                  </span>
                 )}
               </button>
             );
@@ -503,9 +505,11 @@ export function Sidebar() {
                   <Icon className="h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
                   {showFailedBadge && (
                     <span
-                      className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-danger ring-2 ring-background"
-                      title={language === 'zh' ? '有任务执行失败' : 'Some tasks have failed'}
-                    />
+                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-warning text-[10px] font-bold leading-none text-background ring-2 ring-background"
+                      title={language === 'zh' ? '有定时任务最近一次执行失败' : 'A scheduled task failed on its latest run'}
+                    >
+                      !
+                    </span>
                   )}
                 </div>
                 <span>{t(item.labelKey)}</span>

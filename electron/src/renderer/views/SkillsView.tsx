@@ -12,6 +12,12 @@ interface Skill {
 
 type InstallType = 'zip' | 'folder' | 'github' | 'clawhub';
 
+function getSkillInitial(skill: Skill) {
+  const seed = (skill.displayName || skill.name).trim();
+  const letter = seed.charAt(0).toUpperCase();
+  return /[A-Z0-9]/.test(letter) ? letter : 'S';
+}
+
 interface RecommendedSkillSource {
   id: string;
   name: string;
@@ -194,27 +200,6 @@ export function SkillsView() {
       setSelectedRecommend(next.id);
       setInstallUrl(nextValue);
     }
-  };
-
-  const getSkillIcon = (skill: Skill) => {
-    if (skill.icon) return skill.icon;
-    if (skill.name.includes('docx') || skill.name.includes('document'))
-      return '📄';
-    if (
-      skill.name.includes('xlsx') ||
-      skill.name.includes('excel') ||
-      skill.name.includes('sheet')
-    )
-      return '📊';
-    if (skill.name.includes('pptx') || skill.name.includes('slide'))
-      return '📽️';
-    if (skill.name.includes('pdf')) return '📑';
-    if (skill.name.includes('web') || skill.name.includes('search'))
-      return '🌐';
-    if (skill.name.includes('image') || skill.name.includes('img')) return '🖼️';
-    if (skill.name.includes('cron') || skill.name.includes('schedule'))
-      return '⏰';
-    return '🦞';
   };
 
   const getInstallPlaceholder = () => {
@@ -525,8 +510,8 @@ export function SkillsView() {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-xl">
-                      {getSkillIcon(skill)}
+                    <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-secondary text-sm font-semibold uppercase tracking-[0.08em] text-foreground">
+                      {getSkillInitial(skill)}
                     </span>
                     <div>
                       <h3 className="font-semibold text-foreground">

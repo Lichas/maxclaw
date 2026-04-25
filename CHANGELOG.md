@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- **定时任务导航告警更明确，技能市场图标改为首字母头像**：将侧边栏“定时任务”的失败提示从易误解的红点改成橙色 `!` 告警徽标，明确表示最近一次定时执行失败；同时把技能市场卡片图标统一为技能名首字母，减少噪音并提升一致性
+  - `electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/views/SkillsView.tsx`
+  - 验证：`cd electron && npm run build`、`bash e2e_test/gateway_agent_regression.sh`、`make build`
 - **聊天界面去掉 assistant 黑色头像，并补会话运行态橙点与消息复制按钮**：左侧历史任务列表会为当前仍在运行的 session 显示橙色状态点；聊天消息卡片移除 `MaxClaw/AI` 黑色头像头部；每条消息在时间戳最右侧新增复制按钮，便于直接复制用户或 assistant 内容
   - `electron/src/renderer/store/index.ts`、`electron/src/renderer/App.tsx`、`electron/src/renderer/components/Sidebar.tsx`、`electron/src/renderer/views/ChatView.tsx`
   - 验证：`cd electron && npm run build`、`make build`
