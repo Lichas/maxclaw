@@ -466,7 +466,8 @@ func TestExecToolRestrictToWorkspace(t *testing.T) {
 			"command": "cd .. && ls",
 		})
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "outside workspace")
+		// cd is blocked entirely in restricted mode; path traversal is caught earlier.
+		assert.Contains(t, err.Error(), "not allowed")
 	})
 
 	t.Run("block home expansion", func(t *testing.T) {

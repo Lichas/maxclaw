@@ -154,6 +154,17 @@ func validateCommandInWorkspace(command, workspace string) error {
 		return fmt.Errorf("workspace is required")
 	}
 
+	// Reject directory-changing commands in restricted mode.
+	// Since cmd.Dir is already set to the workspace, cd has no legitimate use.
+	if hasCDCommand(command) {
+		return fmt.Errorf("'cd' is not allowed in restricted workspace mode")
+	}
+
+	// Reject default-value expansions that can bypass path checks.
+	if strings.Contains(command, "${") && strings.Contains(command, ":-") {
+		return fmt.Errorf("default-value shell expansion is not allowed in restricted mode")
+	}
+
 	tokens := splitShellWords(command)
 	for _, token := range tokens {
 		if token == "" {
@@ -194,6 +205,26 @@ func validateCommandInWorkspace(command, workspace string) error {
 	}
 
 	return nil
+}
+
+// hasCDCommand checks whether the command contains a cd sub-command.
+// It looks for 'cd' as a standalone command (not part of another word).
+func hasCDCommand(command string) bool {
+	// Simple token-based check: if any token is exactly "cd" after splitting.
+	tokens := splitShellWords(command)
+	for i, token := range tokens {
+		if token == "cd" {
+			// Verify it's not something like "abcde" by checking the previous separator.
+			if i == 0 {
+				return true
+			}
+			prev := tokens[i-1]
+			if isShellSeparator(prev) || prev == ";" || prev == "|" || prev == "&" || prev == "&&" || prev == "||" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func looksLikePath(token string) bool {

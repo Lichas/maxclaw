@@ -74,6 +74,29 @@
   - `electron/src/main/index.ts`
   - 验证：`bash e2e_test/interrupt_test.sh`、`bash e2e_test/gateway_agent_regression.sh`、`cd electron && npm run build`、`make build`
 
+### Security
+
+- **Shell 执行工具强化工作区隔离**：restricted mode 下禁止 `cd` 命令和 `${VAR:-/path}` 默认值扩展，防止通过子 shell 切换目录绕过工作区边界
+  - `pkg/tools/shell.go`
+  - 验证：`go test ./pkg/tools/ -run TestExecTool`
+
+### Added
+
+- **为 CLI 入口补充集成测试**：新增 `cmd/maxclaw/main_test.go`，覆盖 `version` 命令输出验证和 `gateway` 子命令启动-停止生命周期测试
+  - `cmd/maxclaw/main_test.go`
+  - Gateway 命令改用 `cmd.Context()` 作为基础上下文，支持测试注入超时取消
+  - `internal/cli/root.go`、`internal/cli/gateway.go`
+  - 验证：`go test ./cmd/maxclaw/ -v`
+
+### Changed
+
+- **拆分 `internal/webui/server.go` 辅助函数**：将 448 行独立工具函数提取到 `utils.go`，`server.go` 从 3052 行降至 2604 行，保持零行为变更
+  - `internal/webui/utils.go`（新增）、`internal/webui/server.go`
+  - 验证：`go test ./internal/webui/ -v`、`go build ./...`
+- **Agent stream error 改为结构化日志**：`streamHandler.OnError` 不再使用 `fmt.Printf` 直接打印，而是通过 `logging.Get().Session` 写入带 channel/chatID 上下文的结构化日志
+  - `internal/agent/loop.go`
+  - 验证：`go test ./internal/agent/ -v`
+
 ### Added
 
 - **Gateway 生命周期增强 — 端口独占启动与 READY 协议**

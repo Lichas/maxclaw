@@ -287,7 +287,9 @@ func (h *streamHandler) OnToolCallEnd(id string) {
 func (h *streamHandler) OnComplete() {}
 
 func (h *streamHandler) OnError(err error) {
-	fmt.Printf("[Stream Error] %v\n", err)
+	if lg := logging.Get(); lg != nil && lg.Session != nil {
+		lg.Session.Printf("stream error channel=%s chat=%s err=%v", h.channel, h.chatID, err)
+	}
 }
 
 func (h *streamHandler) GetContent() string {

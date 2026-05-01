@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -21,6 +23,20 @@ var rootCmd = &cobra.Command{
 // Execute 执行根命令
 func Execute() error {
 	return rootCmd.Execute()
+}
+
+// ExecuteWithOutput runs the root command writing output to the provided writer.
+func ExecuteWithOutput(out *bytes.Buffer) error {
+	rootCmd.SetOut(out)
+	rootCmd.SetErr(out)
+	return rootCmd.Execute()
+}
+
+// ExecuteWithContext runs the root command with the supplied context.
+func ExecuteWithContext(ctx context.Context, out *bytes.Buffer) error {
+	rootCmd.SetOut(out)
+	rootCmd.SetErr(out)
+	return rootCmd.ExecuteContext(ctx)
 }
 
 // ExecuteGateway runs the gateway command as a standalone binary entrypoint.
@@ -46,6 +62,6 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("%s maxclaw v%s\n", logo, version)
+		fmt.Fprintf(cmd.OutOrStdout(), "%s maxclaw v%s\n", logo, version)
 	},
 }

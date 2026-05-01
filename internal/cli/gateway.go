@@ -276,7 +276,7 @@ var gatewayCmd = &cobra.Command{
 		}
 
 		// 启动所有服务
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()
 
 		// 启动 Web UI/API 服务器
