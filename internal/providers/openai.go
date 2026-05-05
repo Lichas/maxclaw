@@ -291,7 +291,7 @@ func (p *OpenAIProvider) detectProvider(model string) string {
 	if normalizedModel != "" && strings.Contains(normalizedModel, "/") {
 		prefix := strings.SplitN(normalizedModel, "/", 2)[0]
 		switch prefix {
-		case "openrouter", "anthropic", "openai", "deepseek", "zhipu", "groq", "gemini", "dashscope", "moonshot", "minimax", "vllm":
+		case "openrouter", "anthropic", "openai", "deepseek", "zhipu", "xiaomi", "groq", "gemini", "dashscope", "moonshot", "minimax", "vllm":
 			return prefix
 		}
 	}

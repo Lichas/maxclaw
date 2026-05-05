@@ -1791,7 +1791,12 @@ func (s *Server) fetchCompatibleModels(ctx context.Context, req ProviderTestRequ
 	client := &http.Client{Timeout: 10 * time.Second}
 	baseURL := req.BaseURL
 	if baseURL == "" {
-		baseURL = "https://api.openai.com/v1"
+		switch req.Name {
+		case "Xiaomi":
+			baseURL = "https://api.xiaomimimo.com/v1"
+		default:
+			baseURL = "https://api.openai.com/v1"
+		}
 	}
 
 	// 对 Kimi / Anthropic 兼容端点，/models 通常也在 baseURL 下（已带 /v1 或不带）
@@ -1880,6 +1885,8 @@ func (s *Server) testCompatibleProvider(ctx context.Context, req ProviderTestReq
 				baseURL = "https://open.bigmodel.cn/api/coding/paas/v4"
 			case "Moonshot":
 				baseURL = "https://api.moonshot.cn/v1"
+			case "Xiaomi":
+				baseURL = "https://api.xiaomimimo.com/v1"
 			case "Groq":
 				baseURL = "https://api.groq.com/openai/v1"
 			default:

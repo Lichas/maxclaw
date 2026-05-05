@@ -75,6 +75,18 @@ export const PRESET_PROVIDERS: Omit<ProviderConfig, 'id' | 'apiKey'>[] = [
     enabled: false,
   },
   {
+    name: 'Xiaomi',
+    type: 'openai',
+    baseURL: 'https://api.xiaomimimo.com/v1',
+    apiFormat: 'openai',
+    models: [
+      { id: 'mimo-v2.5-pro', name: 'MiMo V2.5 Pro', enabled: true, supportsImageInput: true },
+      { id: 'mimo-v2.5', name: 'MiMo V2.5', enabled: true, supportsImageInput: true },
+      { id: 'mimo-v2-omni', name: 'MiMo V2 Omni', enabled: true, supportsImageInput: true },
+    ],
+    enabled: false,
+  },
+  {
     name: 'Moonshot',
     type: 'openai',
     baseURL: 'https://api.moonshot.cn/v1',

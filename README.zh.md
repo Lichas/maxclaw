@@ -230,6 +230,24 @@ Anthropic 原生模型通过官方 `anthropic-sdk-go` 接入，默认 API Base �
 }
 ```
 
+### Xiaomi MiMo 配置示例
+```json
+{
+  "providers": {
+    "xiaomi": {
+      "apiKey": "your-xiaomi-key"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "mimo-v2.5-pro"
+    }
+  }
+}
+```
+
+默认 API Base：`https://api.xiaomimimo.com/v1`（可在 `providers.xiaomi.apiBase` 覆盖，例如 Token Plan 可改成专属 `base_url`）。
+
 提示：如果你使用中国大陆站点密钥（`minimaxi.com`），可显式设置：
 
 ```json

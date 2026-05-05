@@ -34,6 +34,12 @@ func SupportsImageInput(providerName, model string) bool {
 			strings.Contains(modelName, "glm-ocr") ||
 			strings.Contains(modelName, "vision") ||
 			strings.Contains(modelName, "vl")
+	case "xiaomi":
+		return strings.Contains(modelName, "mimo-v2.5") ||
+			strings.Contains(modelName, "mimo-v2-omni") ||
+			strings.Contains(modelName, "omni") ||
+			strings.Contains(modelName, "vision") ||
+			strings.Contains(modelName, "vl")
 	case "gemini":
 		return true
 	case "openrouter":

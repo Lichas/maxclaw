@@ -213,6 +213,12 @@ func TestSupportsImageInputDisablesDeepSeekChat(t *testing.T) {
 	if SupportsImageInput("zhipu", "glm-5") {
 		t.Fatal("expected glm-5 to keep image content parts disabled by fallback")
 	}
+	if !SupportsImageInput("xiaomi", "mimo-v2.5") {
+		t.Fatal("expected mimo-v2.5 to allow image content parts")
+	}
+	if !SupportsImageInput("xiaomi", "mimo-v2-omni") {
+		t.Fatal("expected mimo-v2-omni to allow image content parts")
+	}
 }
 
 func TestOpenAIProviderSupportsImageInputUsesResolver(t *testing.T) {

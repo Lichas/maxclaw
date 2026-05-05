@@ -110,7 +110,7 @@ export function SettingsView() {
         if (config.providers) {
           const knownProviders = new Set([
             'openrouter', 'anthropic', 'openai', 'deepseek', 'zhipu',
-            'groq', 'gemini', 'dashscope', 'moonshot', 'minimax', 'vllm'
+            'xiaomi', 'groq', 'gemini', 'dashscope', 'moonshot', 'minimax', 'vllm'
           ]);
           const loadedProviders: ProviderConfig[] = [];
           Object.entries(config.providers).forEach(([key, value]: [string, any]) => {

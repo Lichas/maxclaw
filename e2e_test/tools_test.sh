@@ -131,7 +131,7 @@ fi
 
 # Test 9: Provider 配置
 echo "Test 9: Provider configuration"
-providers=("openrouter" "anthropic" "openai" "deepseek" "groq" "gemini" "moonshot" "vllm")
+providers=("openrouter" "anthropic" "openai" "deepseek" "xiaomi" "groq" "gemini" "moonshot" "vllm")
 all_present=true
 for provider in "${providers[@]}"; do
     if ! grep -q "\"$provider\"" "$HOME/.maxclaw/config.json"; then

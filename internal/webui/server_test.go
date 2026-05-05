@@ -207,6 +207,31 @@ func TestHandleTestProviderOpenAIUsesOfficialSDKModelsEndpoint(t *testing.T) {
 	assert.Equal(t, "Bearer sk-openai", authHeader)
 }
 
+func TestHandleTestProviderXiaomiUsesModelsEndpoint(t *testing.T) {
+	var (
+		requestPath string
+		authHeader  string
+	)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestPath = r.URL.Path
+		authHeader = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"object":"list","data":[]}`))
+	}))
+	defer upstream.Close()
+
+	s := &Server{}
+	body := bytes.NewBufferString(fmt.Sprintf(`{"name":"Xiaomi","apiKey":"sk-xiaomi","baseURL":"%s/v1","apiFormat":"openai"}`, upstream.URL))
+	req := httptest.NewRequest(http.MethodPost, "/api/providers/test", body)
+	rec := httptest.NewRecorder()
+
+	s.handleTestProvider(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "/v1/models", requestPath)
+	assert.Equal(t, "Bearer sk-xiaomi", authHeader)
+}
+
 func TestReadChannelSenderStatsAggregatesInboundMessages(t *testing.T) {
 	logPath := filepath.Join(t.TempDir(), "session.log")
 	content := strings.Join([]string{

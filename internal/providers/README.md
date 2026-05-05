@@ -80,6 +80,24 @@ DashScope / Qwen 配置示例：
 }
 ```
 
+Xiaomi MiMo 配置示例：
+
+```json
+{
+  "providers": {
+    "xiaomi": {
+      "apiKey": "YOUR_XIAOMI_KEY",
+      "apiBase": "https://api.xiaomimimo.com/v1"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "mimo-v2.5-pro"
+    }
+  }
+}
+```
+
 智谱 GLM（编码套餐端点）配置示例：
 
 ```json

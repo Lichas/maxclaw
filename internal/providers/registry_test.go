@@ -65,3 +65,25 @@ func TestProviderSpecsContainsZhipuForGLM(t *testing.T) {
 		t.Fatalf("expected zhipu spec in ProviderSpecs")
 	}
 }
+
+func TestProviderSpecsContainsXiaomiForMiMo(t *testing.T) {
+	found := false
+	for _, spec := range ProviderSpecs {
+		if spec.Name == "xiaomi" {
+			found = true
+			if spec.DefaultAPIBase != "https://api.xiaomimimo.com/v1" {
+				t.Fatalf("expected xiaomi default api base, got %q", spec.DefaultAPIBase)
+			}
+			if !spec.MatchesModel("xiaomi/mimo-v2.5-pro") {
+				t.Fatalf("expected xiaomi spec to match prefixed mimo model")
+			}
+			if !spec.MatchesModel("mimo-v2.5") {
+				t.Fatalf("expected xiaomi spec to match mimo model")
+			}
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected xiaomi spec in ProviderSpecs")
+	}
+}

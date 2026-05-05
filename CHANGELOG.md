@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added
+- **新增 Xiaomi MiMo 模型提供商与设置页支持**：后端 provider 注册表、配置解析、默认 API Base、连接测试/模型拉取默认地址已支持 `xiaomi`；Electron 设置页新增 Xiaomi 预设、已知 provider 识别与 MiMo 默认模型，文档补充 Xiaomi MiMo 配置示例
+  - `internal/providers/registry.go`、`internal/providers/factory.go`、`internal/providers/openai.go`、`internal/providers/capabilities.go`、`internal/config/schema.go`、`internal/config/config_test.go`、`internal/providers/*_test.go`、`internal/webui/server.go`、`internal/webui/server_test.go`、`electron/src/renderer/types/providers.ts`、`electron/src/renderer/views/SettingsView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`README.zh.md`、`internal/providers/README.md`、`e2e_test/tools_test.sh`
+  - 验证：`go test ./internal/providers ./internal/config ./internal/webui`、`cd electron && npm run build`、`bash ./e2e_test/tools_test.sh`、`make build`
+
 ### Fixed
 - **修复消息内容换行丢失问题**：在 Web UI 和 Electron 的聊天消息渲染中增加 `white-space: pre-wrap`，确保诗歌、代码等多行文本中的换行符能正确显示
   - `webui/src/styles.css`、`electron/src/renderer/components/MarkdownRenderer.tsx`

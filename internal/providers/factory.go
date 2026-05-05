@@ -71,6 +71,8 @@ func DetectProviderNameFromAPIBase(apiBase string) string {
 		return "deepseek"
 	case strings.Contains(base, "bigmodel.cn"):
 		return "zhipu"
+	case strings.Contains(base, "xiaomimimo.com"):
+		return "xiaomi"
 	case strings.Contains(base, "groq.com"):
 		return "groq"
 	case strings.Contains(base, "generativelanguage.googleapis.com"):
@@ -96,7 +98,7 @@ func normalizeModelForProvider(providerName, model string) string {
 	if len(parts) == 2 && strings.EqualFold(parts[0], providerName) {
 		return parts[1]
 	}
-	// 对于未知 provider（如自定义 provider），也去掉前缀（xiaomi/mimo-v2-flash → mimo-v2-flash）
+	// 对于未知 provider（如自定义 provider），也去掉前缀（my-provider/custom-model → custom-model）
 	if providerName == "unknown" && len(parts) == 2 {
 		return parts[1]
 	}

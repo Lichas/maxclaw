@@ -13,6 +13,7 @@ func TestResolveProviderKind(t *testing.T) {
 		{name: "anthropic model uses official provider", model: "anthropic/claude-sonnet-4-5", apiFormat: "anthropic", expected: providerKindAnthropic},
 		{name: "openai model uses official provider", model: "openai/gpt-5.1", apiFormat: "openai", expected: providerKindOpenAI},
 		{name: "openrouter stays compat", model: "openrouter/auto", apiBase: "https://openrouter.ai/api/v1", apiFormat: "openai", expected: providerKindCompatOpenAI},
+		{name: "xiaomi stays compat", model: "xiaomi/mimo-v2.5-pro", apiBase: "https://api.xiaomimimo.com/v1", apiFormat: "openai", expected: providerKindCompatOpenAI},
 		{name: "anthropic api base can recover official provider", model: "custom", apiBase: "https://api.anthropic.com", apiFormat: "anthropic", expected: providerKindAnthropic},
 		{name: "kimi coding api uses anthropic provider", model: "kimi-2.5", apiBase: "https://api.kimi.com/coding/v1", apiFormat: "openai", expected: providerKindAnthropic},
 		{name: "kimi coding api without v1 uses anthropic provider", model: "kimi-for-coding", apiBase: "https://api.kimi.com/coding", apiFormat: "", expected: providerKindAnthropic},
@@ -34,7 +35,7 @@ func TestNormalizeModelForProvider(t *testing.T) {
 		expected string
 	}{
 		{"openrouter", "openrouter/nvidia/nemotron-3-super-120b-a12b:free", "nvidia/nemotron-3-super-120b-a12b:free"},
-		{"unknown", "xiaomi/mimo-v2-flash", "mimo-v2-flash"},
+		{"unknown", "my-provider/custom-model", "custom-model"},
 		{"unknown", "my-provider/custom-model", "custom-model"},
 		{"anthropic", "anthropic/claude-sonnet-4-5", "claude-sonnet-4-5"},
 		{"openai", "gpt-4", "gpt-4"},

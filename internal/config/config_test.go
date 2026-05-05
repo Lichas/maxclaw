@@ -52,6 +52,7 @@ func TestGetAPIKey(t *testing.T) {
 	cfg.Providers.MiniMax.APIKey = "minimax-key"
 	cfg.Providers.DashScope.APIKey = "dashscope-key"
 	cfg.Providers.Zhipu.APIKey = "zhipu-key"
+	cfg.Providers.Xiaomi.APIKey = "xiaomi-key"
 
 	tests := []struct {
 		model    string
@@ -66,6 +67,8 @@ func TestGetAPIKey(t *testing.T) {
 		{"qwen-max", "dashscope-key"},
 		{"glm-4.5", "zhipu-key"},
 		{"zai/glm-5", "zhipu-key"},
+		{"xiaomi/mimo-v2.5-pro", "xiaomi-key"},
+		{"mimo-v2.5", "xiaomi-key"},
 		{"unknown-model", "openrouter-key"}, // fallback to first available
 	}
 
@@ -89,6 +92,7 @@ func TestGetAPIBase(t *testing.T) {
 	cfg.Providers.Moonshot.APIBase = "https://api.moonshot.ai/v1"
 	cfg.Providers.DashScope.APIBase = "https://dashscope.custom/v1"
 	cfg.Providers.Zhipu.APIBase = "https://open.bigmodel.cn/api/coding/paas/v4"
+	cfg.Providers.Xiaomi.APIBase = "https://api.xiaomimimo.com/v1"
 
 	tests := []struct {
 		model    string
@@ -106,6 +110,8 @@ func TestGetAPIBase(t *testing.T) {
 		{"zai/glm-5", "https://open.bigmodel.cn/api/coding/paas/v4"},
 		{"glm-4.6v", "https://open.bigmodel.cn/api/paas/v4"},
 		{"glm-ocr", "https://open.bigmodel.cn/api/paas/v4"},
+		{"xiaomi/mimo-v2.5-pro", "https://api.xiaomimimo.com/v1"},
+		{"mimo-v2.5", "https://api.xiaomimimo.com/v1"},
 		{"anthropic/claude", "https://api.anthropic.com"},
 	}
 
@@ -161,6 +167,12 @@ func TestGetAPIBaseZhipuVisionDefault(t *testing.T) {
 	assert.Equal(t, "https://open.bigmodel.cn/api/paas/v4", got)
 }
 
+func TestGetAPIBaseXiaomiDefault(t *testing.T) {
+	cfg := DefaultConfig()
+	got := cfg.GetAPIBase("xiaomi/mimo-v2.5-pro")
+	assert.Equal(t, "https://api.xiaomimimo.com/v1", got)
+}
+
 func TestGetAPIFormat(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.Providers.Anthropic.APIFormat = "anthropic"
@@ -207,24 +219,24 @@ func TestLoadSaveConfig(t *testing.T) {
 func TestCustomProviderModelResolution(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.Providers.Custom = map[string]ProviderConfig{
-		"xiaomi": {
-			APIKey:    "sk-xiaomi-key",
-			APIBase:   "https://api.xiaomi.com/v1",
+		"myprovider": {
+			APIKey:    "sk-custom-key",
+			APIBase:   "https://api.custom.com/v1",
 			APIFormat: "openai",
 			Models: []ProviderModelConfig{
-				{ID: "mimo-v2-flash", Name: "MIMO V2 Flash", Enabled: true},
+				{ID: "custom-model", Name: "Custom Model", Enabled: true},
 			},
 		},
 	}
 
-	assert.Equal(t, "sk-xiaomi-key", cfg.GetAPIKey("mimo-v2-flash"))
-	assert.Equal(t, "https://api.xiaomi.com/v1", cfg.GetAPIBase("mimo-v2-flash"))
-	assert.Equal(t, "openai", cfg.GetAPIFormat("mimo-v2-flash"))
+	assert.Equal(t, "sk-custom-key", cfg.GetAPIKey("custom-model"))
+	assert.Equal(t, "https://api.custom.com/v1", cfg.GetAPIBase("custom-model"))
+	assert.Equal(t, "openai", cfg.GetAPIFormat("custom-model"))
 
 	// 也支持带 provider 前缀的写法
-	assert.Equal(t, "sk-xiaomi-key", cfg.GetAPIKey("xiaomi/mimo-v2-flash"))
-	assert.Equal(t, "https://api.xiaomi.com/v1", cfg.GetAPIBase("xiaomi/mimo-v2-flash"))
-	assert.Equal(t, "openai", cfg.GetAPIFormat("xiaomi/mimo-v2-flash"))
+	assert.Equal(t, "sk-custom-key", cfg.GetAPIKey("myprovider/custom-model"))
+	assert.Equal(t, "https://api.custom.com/v1", cfg.GetAPIBase("myprovider/custom-model"))
+	assert.Equal(t, "openai", cfg.GetAPIFormat("myprovider/custom-model"))
 }
 
 func TestCustomProviderRoundTrip(t *testing.T) {
@@ -236,8 +248,8 @@ func TestCustomProviderRoundTrip(t *testing.T) {
 	cfg := DefaultConfig()
 	cfg.Providers.Custom = map[string]ProviderConfig{
 		"myprovider": {
-			APIKey: "sk-custom",
-			APIBase: "https://api.custom.com/v1",
+			APIKey:    "sk-custom",
+			APIBase:   "https://api.custom.com/v1",
 			APIFormat: "openai",
 			Models: []ProviderModelConfig{
 				{ID: "custom-model", Name: "Custom Model", Enabled: true},

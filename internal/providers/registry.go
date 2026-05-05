@@ -26,6 +26,7 @@ var ProviderSpecs = []ProviderSpec{
 	{Name: "openrouter", Keywords: []string{"openrouter"}, DefaultAPIBase: "https://openrouter.ai/api/v1"},
 	{Name: "deepseek", Keywords: []string{"deepseek"}, DefaultAPIBase: "https://api.deepseek.com/v1"},
 	{Name: "zhipu", Keywords: []string{"zhipu", "glm", "zai"}, DefaultAPIBase: "https://open.bigmodel.cn/api/coding/paas/v4"},
+	{Name: "xiaomi", Keywords: []string{"xiaomi", "mimo"}, DefaultAPIBase: "https://api.xiaomimimo.com/v1"},
 	{Name: "anthropic", Keywords: []string{"anthropic", "claude"}, DefaultAPIBase: "https://api.anthropic.com"},
 	{Name: "openai", Keywords: []string{"openai", "gpt"}, DefaultAPIBase: "https://api.openai.com/v1"},
 	{Name: "gemini", Keywords: []string{"gemini"}},
