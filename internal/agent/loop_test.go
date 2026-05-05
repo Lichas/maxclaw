@@ -339,6 +339,67 @@ func TestAgentLoopProviderIdentityUsesProviderTypeNotDefaultModel(t *testing.T) 
 	assert.Equal(t, "static", loop.Lifecycle.ContextCompressor.Provider)
 }
 
+func TestHandleInterruptionTargetsMatchingSession(t *testing.T) {
+	workspace := t.TempDir()
+	messageBus := bus.NewMessageBus(10)
+	loop := NewAgentLoop(
+		messageBus,
+		&staticProvider{},
+		workspace,
+		"test-model",
+		3,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		nil,
+		nil,
+		false,
+	)
+
+	icA := NewInterruptibleContext(context.Background(), messageBus)
+	icB := NewInterruptibleContext(context.Background(), messageBus)
+	loop.registerInterruptContext("desktop:session-a", icA)
+	loop.registerInterruptContext("desktop:session-b", icB)
+
+	msg := bus.NewInboundMessage("desktop", "user", "session-b", "stop")
+	msg.SessionKey = "desktop:session-b"
+
+	mode := loop.HandleInterruption(msg, InterruptCancel)
+	assert.Equal(t, InterruptCancel, mode)
+	assert.False(t, icA.IsCancelled(), "interrupt should not cancel another active session")
+	assert.True(t, icB.IsCancelled(), "interrupt should cancel the targeted session")
+}
+
+func TestHandleInterruptionReturnsNoneWhenSessionDoesNotMatchActiveRun(t *testing.T) {
+	workspace := t.TempDir()
+	messageBus := bus.NewMessageBus(10)
+	loop := NewAgentLoop(
+		messageBus,
+		&staticProvider{},
+		workspace,
+		"test-model",
+		3,
+		"",
+		tools.WebFetchOptions{},
+		config.ExecToolConfig{Timeout: 5},
+		false,
+		nil,
+		nil,
+		false,
+	)
+
+	icA := NewInterruptibleContext(context.Background(), messageBus)
+	loop.registerInterruptContext("desktop:session-a", icA)
+
+	msg := bus.NewInboundMessage("desktop", "user", "session-b", "stop")
+	msg.SessionKey = "desktop:session-b"
+
+	mode := loop.HandleInterruption(msg, InterruptCancel)
+	assert.Equal(t, InterruptNone, mode)
+	assert.False(t, icA.IsCancelled(), "missing session match should not cancel another run")
+}
+
 func TestAgentLoopProcessMessageCompressesContextAndRetries(t *testing.T) {
 	workspace := t.TempDir()
 	messageBus := bus.NewMessageBus(10)

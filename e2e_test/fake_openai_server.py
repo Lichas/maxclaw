@@ -2,6 +2,7 @@
 import argparse
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import time
 
 
 def text_from_message(message):
@@ -74,6 +75,16 @@ class Handler(BaseHTTPRequestHandler):
 
         if "Reply with exactly E2E_PONG." in last_text:
             self.send_chat_response(body, model, {"role": "assistant", "content": "E2E_PONG"})
+            return
+
+        if "Reply with exactly SLOW_A after waiting." in last_text:
+            time.sleep(1.5)
+            self.send_chat_response(body, model, {"role": "assistant", "content": "SLOW_A"})
+            return
+
+        if "Reply with exactly SLOW_B after waiting." in last_text:
+            time.sleep(1.5)
+            self.send_chat_response(body, model, {"role": "assistant", "content": "SLOW_B"})
             return
 
         if "Compute 17 + 28. Reply with only the number." in last_text:

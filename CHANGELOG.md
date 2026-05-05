@@ -8,6 +8,9 @@
   - 验证：`go test ./internal/providers ./internal/config ./internal/webui`、`cd electron && npm run build`、`bash ./e2e_test/tools_test.sh`、`make build`
 
 ### Fixed
+- **修复并发 running session 时中断串到别的会话**：`AgentLoop` 的中断上下文改为按 `sessionKey` 精确路由，不再用单个全局 `currentIC`；同时修正 WebSocket 中断/聊天消息把完整 `sessionKey` 又重复加上 `desktop:` 前缀的问题，确保当前选中会话的中断只作用于对应运行中的 session，并补充并发中断回归
+  - `internal/agent/loop.go`、`internal/agent/loop_test.go`、`internal/webui/websocket.go`、`e2e_test/fake_openai_server.py`、`e2e_test/concurrent_interrupt_regression.sh`
+  - 验证：`go test ./internal/agent -run "TestHandleInterruption"`、`bash ./e2e_test/concurrent_interrupt_regression.sh`、`make build`
 - **修复消息内容换行丢失问题**：在 Web UI 和 Electron 的聊天消息渲染中增加 `white-space: pre-wrap`，确保诗歌、代码等多行文本中的换行符能正确显示
   - `webui/src/styles.css`、`electron/src/renderer/components/MarkdownRenderer.tsx`
   - 验证：`make build`

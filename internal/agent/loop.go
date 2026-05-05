@@ -57,7 +57,7 @@ type AgentLoop struct {
 
 	// 中断处理相关
 	intentAnalyzer *IntentAnalyzer
-	currentIC      *InterruptibleContext
+	sessionICs     map[string]*InterruptibleContext
 	icMu           sync.RWMutex
 
 	PlanManager *PlanManager // Task plan manager for multi-step execution
@@ -124,6 +124,7 @@ func NewAgentLoop(
 		sessions:            session.NewManager(workspace),
 		tools:               tools.NewRegistry(),
 		intentAnalyzer:      NewIntentAnalyzer(),
+		sessionICs:          make(map[string]*InterruptibleContext),
 		PlanManager:         NewPlanManager(workspace),
 		executionMode:       config.ExecutionModeAsk,
 	}
@@ -408,12 +409,45 @@ func (a *AgentLoop) ListToolNames() []string {
 	return a.tools.List()
 }
 
+func (a *AgentLoop) registerInterruptContext(sessionKey string, ic *InterruptibleContext) {
+	sessionKey = strings.TrimSpace(sessionKey)
+	if ic == nil || sessionKey == "" {
+		return
+	}
+
+	a.icMu.Lock()
+	defer a.icMu.Unlock()
+	a.sessionICs[sessionKey] = ic
+}
+
+func (a *AgentLoop) unregisterInterruptContext(sessionKey string, ic *InterruptibleContext) {
+	sessionKey = strings.TrimSpace(sessionKey)
+	if ic == nil || sessionKey == "" {
+		return
+	}
+
+	a.icMu.Lock()
+	defer a.icMu.Unlock()
+	if current, ok := a.sessionICs[sessionKey]; ok && current == ic {
+		delete(a.sessionICs, sessionKey)
+	}
+}
+
+func (a *AgentLoop) interruptContextForSession(sessionKey string) *InterruptibleContext {
+	sessionKey = strings.TrimSpace(sessionKey)
+	if sessionKey == "" {
+		return nil
+	}
+
+	a.icMu.RLock()
+	defer a.icMu.RUnlock()
+	return a.sessionICs[sessionKey]
+}
+
 // HandleInterruption 处理插话请求
 // explicitMode 为可选参数，如果提供则直接使用，否则通过意图分析判断
 func (a *AgentLoop) HandleInterruption(msg *bus.InboundMessage, explicitMode ...InterruptMode) InterruptMode {
-	a.icMu.RLock()
-	ic := a.currentIC
-	a.icMu.RUnlock()
+	ic := a.interruptContextForSession(msg.SessionKey)
 
 	if ic == nil {
 		// 没有在处理中的任务，作为普通消息处理
@@ -462,16 +496,8 @@ func (a *AgentLoop) HandleInterruption(msg *bus.InboundMessage, explicitMode ...
 func (a *AgentLoop) ProcessMessage(ctx context.Context, msg *bus.InboundMessage) (*bus.OutboundMessage, error) {
 	// 创建可中断上下文
 	ic := NewInterruptibleContext(ctx, a.Bus)
-
-	a.icMu.Lock()
-	a.currentIC = ic
-	a.icMu.Unlock()
-
-	defer func() {
-		a.icMu.Lock()
-		a.currentIC = nil
-		a.icMu.Unlock()
-	}()
+	a.registerInterruptContext(msg.SessionKey, ic)
+	defer a.unregisterInterruptContext(msg.SessionKey, ic)
 
 	// 启动后台 goroutine 监听同一会话的新消息（用于 Telegram 等轮询渠道）
 	stopCheck := make(chan struct{})
@@ -1232,14 +1258,8 @@ func (a *AgentLoop) ProcessDirectStream(
 
 	// 创建可中断上下文
 	ic := NewInterruptibleContext(ctx, a.Bus)
-	a.icMu.Lock()
-	a.currentIC = ic
-	a.icMu.Unlock()
-	defer func() {
-		a.icMu.Lock()
-		a.currentIC = nil
-		a.icMu.Unlock()
-	}()
+	a.registerInterruptContext(msg.SessionKey, ic)
+	defer a.unregisterInterruptContext(msg.SessionKey, ic)
 
 	resp, err := a.processMessageWithIC(ic, msg, onDelta, nil, "")
 	if err != nil {
@@ -1285,14 +1305,8 @@ func (a *AgentLoop) ProcessDirectEventStreamWithMediaAndSkills(
 
 	// 创建可中断上下文
 	ic := NewInterruptibleContext(ctx, a.Bus)
-	a.icMu.Lock()
-	a.currentIC = ic
-	a.icMu.Unlock()
-	defer func() {
-		a.icMu.Lock()
-		a.currentIC = nil
-		a.icMu.Unlock()
-	}()
+	a.registerInterruptContext(msg.SessionKey, ic)
+	defer a.unregisterInterruptContext(msg.SessionKey, ic)
 
 	resp, err := a.processMessageWithIC(ic, msg, nil, onEvent, "")
 	if err != nil {

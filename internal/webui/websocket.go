@@ -141,6 +141,7 @@ func (c *Client) readPump() {
 			// 普通聊天消息 - 通过 Bus 发送
 			if serverRef.server != nil {
 				inbound := bus.NewInboundMessage("desktop", "user", msg.Session, msg.Content)
+				inbound.SessionKey = msg.Session
 				serverRef.server.agentLoop.Bus.PublishInbound(inbound)
 			}
 
@@ -148,6 +149,7 @@ func (c *Client) readPump() {
 			// 中断请求
 			if serverRef.server != nil {
 				inbound := bus.NewInboundMessage("desktop", "user", msg.Session, msg.Content)
+				inbound.SessionKey = msg.Session
 				mode := agent.InterruptCancel
 				if msg.Mode == "append" {
 					mode = agent.InterruptAppend
