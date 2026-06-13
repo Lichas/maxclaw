@@ -36,7 +36,7 @@ Go Gateway (build/maxclaw-gateway)
 ### Prerequisites
 
 - Go 1.24+
-- Node.js 18+
+- Node.js 20+
 
 ### Install dependencies
 
@@ -71,10 +71,9 @@ npm run dist:linux     # Linux AppImage + .deb
 
 ## Project Structure
 
-- `src/main/` — Electron main process (Node.js)
-- `src/preload/` — Secure IPC bridge
-- `src/renderer/` — React frontend (Chromium)
-- `src/shared/` — Shared types
+- `src/main/` — Electron main process (window, tray, gateway, updater, IPC)
+- `src/preload/` — Secure IPC bridge exposed to the renderer
+- `src/renderer/` — React frontend (views, components, store, hooks, i18n)
 
 ## Verification
 
@@ -82,7 +81,7 @@ npm run dist:linux     # Linux AppImage + .deb
 
 ```bash
 # Terminal 1: start Gateway manually
-../build/maxclaw-gateway maxclaw-gateway --port 18892
+../build/maxclaw-gateway --port 18892
 
 # Should see "READY:127.0.0.1:18892" in stdout before "Press Ctrl+C to stop"
 ```

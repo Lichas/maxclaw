@@ -51,7 +51,7 @@ If you are familiar with OpenClaw, maxclaw follows similar local-first principle
 
 ## Quick Start
 
-1. Install Go 1.24+ and Node.js 18+
+1. Install Go 1.24+ and Node.js 20+
 2. Build: `make build`
 3. Initialize workspace: `./build/maxclaw onboard`
 4. Configure: edit `~/.maxclaw/config.json`
@@ -116,6 +116,8 @@ npm run start                 # launch Electron
 cd electron
 npm run dev                   # runs Vite watchers + Electron simultaneously
 ```
+
+Note: the desktop/dev helper scripts may also build or start the WhatsApp bridge, whose package currently requires Node.js 20+.
 
 **Packaging:**
 

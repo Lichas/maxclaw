@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+- **刷新过时的桌面端与跨平台文档**：将 `README`、`electron/README`、Electron 状态/PRD、跨平台支持文档更新为与当前代码、打包配置和 Node.js 要求一致，移除对未落地能力（如 Linux rpm/snap、自定义协议注册、Windows 缩略图工具栏、SQLite 缓存层等）的过时描述
+  - `README.md`、`README.zh.md`、`electron/README.md`、`docs/Electron_PRD.md`、`docs/Electron_STATUS.md`、`docs/CROSS_PLATFORM.md`
+  - 验证：`bash ./e2e_test/gateway_agent_regression.sh`、`cd electron && npm run build`、`make build`
+
 ### Added
 - **新增 Xiaomi MiMo 模型提供商与设置页支持**：后端 provider 注册表、配置解析、默认 API Base、连接测试/模型拉取默认地址已支持 `xiaomi`；Electron 设置页新增 Xiaomi 预设、已知 provider 识别与 MiMo 默认模型，文档补充 Xiaomi MiMo 配置示例
   - `internal/providers/registry.go`、`internal/providers/factory.go`、`internal/providers/openai.go`、`internal/providers/capabilities.go`、`internal/config/schema.go`、`internal/config/config_test.go`、`internal/providers/*_test.go`、`internal/webui/server.go`、`internal/webui/server_test.go`、`electron/src/renderer/types/providers.ts`、`electron/src/renderer/views/SettingsView.tsx`、`electron/src/renderer/hooks/useGateway.ts`、`README.zh.md`、`internal/providers/README.md`、`e2e_test/tools_test.sh`

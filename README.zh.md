@@ -106,7 +106,7 @@ make build && make restart-daemon && make electron-start
 
 ### 标准流程
 
-1. 安装依赖：Go 1.24+，Node.js 18+
+1. 安装依赖：Go 1.24+，Node.js 20+
 2. 构建：`make build`
 3. 初始化：`./build/maxclaw onboard`
 4. 配置：编辑 `~/.maxclaw/config.json`
@@ -124,6 +124,8 @@ make backend-restart
 make dev-electron
 make electron-restart
 ```
+
+说明：仓库里的桌面开发辅助脚本会一起构建或启动 WhatsApp bridge，而 bridge 当前在 `bridge/package.json` 中要求 Node.js 20+。
 
 Agent CLI 常用参数：
 - `--session/-s` 指定会话 ID（默认 `cli:direct`）
